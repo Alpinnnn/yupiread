@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
 
@@ -12,14 +15,95 @@ class PhotoViewScreen extends StatefulWidget {
   State<PhotoViewScreen> createState() => _PhotoViewScreenState();
 }
 
-class _PhotoViewScreenState extends State<PhotoViewScreen> {
+class _PhotoViewScreenState extends State<PhotoViewScreen>
+    with TickerProviderStateMixin {
   final DataService _dataService = DataService();
   PhotoModel? photo;
+  bool _showBottomBar = false;
+  String? _imageResolution;
+  String? _fileSize;
+  late AnimationController _animationController;
+  late Animation<Offset> _slideAnimation;
+  final TransformationController _transformationController =
+      TransformationController();
 
   @override
   void initState() {
     super.initState();
     photo = _dataService.getPhoto(widget.photoId);
+    _loadImageInfo();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadImageInfo() async {
+    if (photo == null) return;
+
+    try {
+      final file = File(photo!.imagePath);
+
+      // Get file size
+      final fileStat = await file.stat();
+      final sizeInBytes = fileStat.size;
+      _fileSize = _formatFileSize(sizeInBytes);
+
+      // Get image resolution
+      final bytes = await file.readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+
+      _imageResolution = '${image.width} x ${image.height}';
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      _imageResolution = 'Tidak diketahui';
+      _fileSize = 'Tidak diketahui';
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  void _toggleBottomBar() {
+    setState(() {
+      _showBottomBar = !_showBottomBar;
+    });
+
+    if (_showBottomBar) {
+      _animationController.forward();
+    } else {
+      _animationController.reverse();
+    }
+  }
+
+  void _resetZoom() {
+    _transformationController.value = Matrix4.identity();
   }
 
   @override
@@ -40,62 +124,41 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text(photo!.title),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => _editPhoto(),
+            icon: const Icon(Icons.zoom_out_map),
+            onPressed: _resetZoom,
+            tooltip: 'Reset Zoom',
           ),
-          PopupMenuButton<String>(
+          IconButton(
             icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              switch (value) {
-                case 'share':
-                  _sharePhoto();
-                  break;
-                case 'delete':
-                  _deletePhoto();
-                  break;
-              }
-            },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'share',
-                    child: Row(
-                      children: [
-                        Icon(Icons.share, size: 16),
-                        SizedBox(width: 8),
-                        Text('Bagikan'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 16, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Hapus', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
+            onPressed: _toggleBottomBar,
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 3.0,
+          // Main photo view with proper zoom
+          Center(
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              minScale: 0.5,
+              maxScale: 4.0,
+              panEnabled: true,
+              scaleEnabled: true,
+              boundaryMargin: const EdgeInsets.all(20),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width,
+                  maxHeight: MediaQuery.of(context).size.height,
+                ),
                 child: Image.file(
                   File(photo!.imagePath),
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
+                      width: MediaQuery.of(context).size.width * 0.8,
+                      height: MediaQuery.of(context).size.height * 0.6,
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -121,83 +184,260 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[900],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+
+          // Bottom sheet with photo details and actions
+          if (_showBottomBar)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[900],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Handle bar
+                        Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[600],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+
+                        // Photo details
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Photo title
+                              Text(
+                                photo!.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                photo!.timeAgo,
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                ),
+                              ),
+
+                              // Description
+                              if (photo!.description.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  photo!.description,
+                                  style: TextStyle(
+                                    color: Colors.grey[300],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+
+                              // Technical info
+                              const SizedBox(height: 12),
+                              _buildTechnicalInfo(),
+
+                              // Tags
+                              if (photo!.tags.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children:
+                                      photo!.tags.map((tag) {
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFF2563EB,
+                                            ).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(
+                                                0xFF2563EB,
+                                              ).withOpacity(0.5),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            tag,
+                                            style: const TextStyle(
+                                              color: Color(0xFF2563EB),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        // Action buttons
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[850],
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildActionButton(
+                                icon: Icons.edit,
+                                label: 'Edit',
+                                onTap: () {
+                                  _toggleBottomBar();
+                                  _editPhoto();
+                                },
+                              ),
+                              _buildActionButton(
+                                icon: Icons.share,
+                                label: 'Bagikan',
+                                onTap: () {
+                                  _toggleBottomBar();
+                                  _sharePhoto();
+                                },
+                              ),
+                              _buildActionButton(
+                                icon: Icons.delete,
+                                label: 'Hapus',
+                                color: Colors.red,
+                                onTap: () {
+                                  _toggleBottomBar();
+                                  _deletePhoto();
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        photo!.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.white),
-                      onPressed: () => _editPhoto(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  photo!.timeAgo,
-                  style: TextStyle(color: Colors.grey[400], fontSize: 14),
-                ),
-                if (photo!.description.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    photo!.description,
-                    style: TextStyle(color: Colors.grey[300], fontSize: 14),
-                  ),
-                ],
-                if (photo!.tags.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children:
-                        photo!.tags.map((tag) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF2563EB).withOpacity(0.5),
-                              ),
-                            ),
-                            child: Text(
-                              tag,
-                              style: const TextStyle(
-                                color: Color(0xFF2563EB),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                  ),
-                ],
-              ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTechnicalInfo() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Info Teknis',
+            style: TextStyle(
+              color: Colors.grey[300],
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfoItem(
+                  'Resolusi',
+                  _imageResolution ?? 'Memuat...',
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildInfoItem('Ukuran', _fileSize ?? 'Memuat...'),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 10)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color ?? Colors.white, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color ?? Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -324,11 +564,53 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     );
   }
 
-  void _sharePhoto() {
-    // Implement share functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fitur berbagi akan segera tersedia')),
-    );
+  Future<void> _sharePhoto() async {
+    try {
+      final file = File(photo!.imagePath);
+
+      if (await file.exists()) {
+        // Create share text
+        String shareText = photo!.title;
+        if (photo!.description.isNotEmpty) {
+          shareText += '\n\n${photo!.description}';
+        }
+        shareText += '\n\nDibagikan dari Yupiwatch';
+
+        await Share.shareXFiles(
+          [XFile(photo!.imagePath)],
+          text: shareText,
+          subject: photo!.title,
+        );
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto berhasil dibagikan'),
+              backgroundColor: Color(0xFF10B981),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File foto tidak ditemukan'),
+              backgroundColor: Color(0xFFEF4444),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membagikan foto: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
   }
 
   void _deletePhoto() {

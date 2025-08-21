@@ -48,65 +48,68 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Gallery',
+                        'Galeri Foto',
                         style: Theme.of(context).textTheme.headlineLarge,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Koleksi foto catatan Anda',
+                        '${_filteredPhotos.length} foto catatan',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: _showFilterDialog,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            _selectedTags.isEmpty
-                                ? Colors.white
-                                : const Color(0xFF2563EB),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.filter_list,
-                            size: 16,
-                            color:
-                                _selectedTags.isEmpty
-                                    ? Colors.grey[600]
-                                    : Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _selectedTags.isEmpty
-                                ? 'Filter'
-                                : '${_selectedTags.length}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color:
-                                  _selectedTags.isEmpty
-                                      ? Colors.grey[600]
-                                      : Colors.white,
-                              fontWeight: FontWeight.w500,
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Stack(
+                            children: [
+                              const Icon(
+                                Icons.filter_list,
+                                color: Color(0xFF2563EB),
+                              ),
+                              if (_selectedTags.isNotEmpty)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFEF4444),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 12,
+                                      minHeight: 12,
+                                    ),
+                                    child: Text(
+                                      '${_selectedTags.length}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                        ],
+                          onPressed: _showFilterDialog,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -484,6 +487,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
       );
 
       if (image != null) {
@@ -491,10 +496,27 @@ class _GalleryScreenState extends State<GalleryScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'Gagal mengambil foto';
+
+        // Handle specific Windows camera error
+        if (e.toString().contains('cameraDelegate')) {
+          errorMessage =
+              'Kamera tidak tersedia di platform ini. Silakan gunakan galeri.';
+        } else {
+          errorMessage = 'Gagal mengambil foto: ${e.toString()}';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengambil foto: $e'),
+            content: Text(errorMessage),
             backgroundColor: const Color(0xFFEF4444),
+            action: SnackBarAction(
+              label: 'Gunakan Galeri',
+              textColor: Colors.white,
+              onPressed: () {
+                _addPhotoFromGallery();
+              },
+            ),
           ),
         );
       }
@@ -506,6 +528,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
       );
 
       if (image != null) {
@@ -515,7 +539,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal memilih foto: $e'),
+            content: Text('Gagal memilih foto: ${e.toString()}'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -535,7 +559,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal menyimpan foto: $e'),
+            content: Text('Gagal menyimpan foto: ${e.toString()}'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
