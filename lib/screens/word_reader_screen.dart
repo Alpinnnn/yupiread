@@ -92,10 +92,6 @@ class _WordReaderScreenState extends State<WordReaderScreen>
       final file = File(_ebook!.filePath);
       if (await file.exists()) {
         final bytes = await file.readAsBytes();
-        
-        // Debug: Print file info
-        print('Word file size: ${bytes.length} bytes');
-        
         String text = docxToText(bytes);
         
         // Clean up XML tags if present
@@ -113,14 +109,9 @@ class _WordReaderScreenState extends State<WordReaderScreen>
           }
         }
         
-        // Debug: Print extracted text info
-        print('Cleaned text length: ${text.length} characters');
-        print('First 100 characters: ${text.length > 100 ? text.substring(0, 100) : text}');
-        
         // Split content into pages (approximately 1000 characters per page)
         _splitContentIntoPages(text);
       } else {
-        print('Word file does not exist: ${_ebook!.filePath}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -131,7 +122,6 @@ class _WordReaderScreenState extends State<WordReaderScreen>
         }
       }
     } catch (e) {
-      print('Error loading Word content: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -159,13 +149,6 @@ class _WordReaderScreenState extends State<WordReaderScreen>
       }
     }
     
-    // Debug: Print page info
-    print('Total pages created: ${pages.length}');
-    if (pages.isNotEmpty) {
-      print('First page preview: ${pages[0].length > 50 ? pages[0].substring(0, 50) : pages[0]}...');
-      print('Page 1 full content: ${pages[0]}');
-    }
-    
     setState(() {
       _pages = pages;
       _totalPages = pages.length;
@@ -173,8 +156,6 @@ class _WordReaderScreenState extends State<WordReaderScreen>
         _currentPage = 1; // Ensure current page is set
       }
     });
-    
-    print('After setState - _pages.length: ${_pages.length}, _totalPages: $_totalPages, _currentPage: $_currentPage');
     
     // Update total pages in data service
     _dataService.updateEbookTotalPages(widget.ebookId, _totalPages);
@@ -341,7 +322,7 @@ class _WordReaderScreenState extends State<WordReaderScreen>
               ),
               // Content
               Expanded(
-                child: _pages.isNotEmpty
+                child: _pages.isNotEmpty && _currentPage > 0 && _currentPage <= _pages.length
                     ? Container(
                         padding: const EdgeInsets.all(16),
                         child: SingleChildScrollView(

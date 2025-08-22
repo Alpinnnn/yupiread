@@ -269,12 +269,14 @@ class DataService {
     List<String> tags = const [],
     String description = '',
     int totalPages = 1,
+    String fileType = 'pdf',
   }) {
     final id = _generateId();
     final ebook = EbookModel(
       id: id,
       title: title,
       filePath: filePath,
+      fileType: fileType,
       createdAt: DateTime.now(),
       tags: tags,
       description: description,

@@ -192,7 +192,7 @@ class _EbookScreenState extends State<EbookScreen> {
               borderRadius: BorderRadius.circular(50),
             ),
             child: const Icon(
-              Icons.menu_book,
+              Icons.library_books,
               size: 48,
               color: Color(0xFF2563EB),
             ),
@@ -278,7 +278,7 @@ class _EbookScreenState extends State<EbookScreen> {
                     bottom: 8,
                     right: 8,
                     child: Icon(
-                      Icons.menu_book,
+                      ebook.fileType == 'word' ? Icons.description : Icons.picture_as_pdf,
                       color: Colors.white.withOpacity(0.7),
                       size: 16,
                     ),
@@ -627,16 +627,12 @@ class _EbookScreenState extends State<EbookScreen> {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        print('Word file does not exist for page count: $filePath');
         return 1; // Default fallback
       }
       
       // Extract text from Word document
       final bytes = await file.readAsBytes();
-      print('Word file size for page count: ${bytes.length} bytes');
-      
       String text = docxToText(bytes);
-      print('Raw extracted text length: ${text.length} characters');
       
       // Clean up XML tags if present
       if (text.startsWith('<?xml')) {
@@ -653,18 +649,13 @@ class _EbookScreenState extends State<EbookScreen> {
         }
       }
       
-      print('Cleaned text length for page count: ${text.length} characters');
-      
       // Estimate pages based on text length
       // Assuming ~500 words per page (average)
       final words = text.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
       final estimatedPages = (words / 500).ceil();
       
-      print('Word count: $words, Estimated pages: $estimatedPages');
-      
       return estimatedPages > 0 ? estimatedPages : 1;
     } catch (e) {
-      print('Error getting Word page count: $e');
       // Fallback to 1 if unable to read Word document
       return 1;
     }
@@ -776,6 +767,7 @@ class _EbookScreenState extends State<EbookScreen> {
                             tags: selectedTags,
                             description: ebookDescription,
                             totalPages: totalPages,
+                            fileType: fileType,
                           );
                           _updateFilteredEbooks();
                           Navigator.pop(context);
