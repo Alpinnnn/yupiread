@@ -1,6 +1,6 @@
 [Setup]
 AppName=YupiRead
-AppVersion=0.0.1
+AppVersion=0.0.2
 AppPublisher=Euphyfve
 AppPublisherURL=https://github.com/Alpinnnn/yupiread
 AppSupportURL=https://github.com/Alpinnnn/yupiread/issues
