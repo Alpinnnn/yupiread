@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/photo_model.dart';
+import '../models/ebook_model.dart';
+import '../models/activity_type.dart';
 
 class DataService {
   static final DataService _instance = DataService._internal();
@@ -11,6 +13,7 @@ class DataService {
   DataService._internal();
 
   final List<PhotoModel> _photos = [];
+  final List<EbookModel> _ebooks = [];
   final List<ActivityModel> _activities = [];
   final List<String> _availableTags = [
     'Matematika',
@@ -31,12 +34,14 @@ class DataService {
   ];
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
+  List<EbookModel> get ebooks => List.unmodifiable(_ebooks);
   List<ActivityModel> get activities => List.unmodifiable(_activities);
   List<String> get availableTags => List.unmodifiable(_availableTags);
 
   // Initialize data when app starts
   Future<void> initializeData() async {
     await _loadPhotos();
+    await _loadEbooks();
     await _loadActivities();
     if (_activities.isEmpty) {
       initializeSampleData();
@@ -229,9 +234,191 @@ class DataService {
 
   // Get statistics for dashboard
   int get totalPhotos => _photos.length;
-  int get totalEbooks => 8; // Static for now, can be made dynamic later
+  int get totalEbooks => _ebooks.length;
   String get totalReadingTime => '12h 30m'; // Static for now
   int get activityStreak => 7; // Static for now
+
+  // Ebook CRUD operations
+  String addEbook({
+    required String title,
+    required String filePath,
+    List<String> tags = const [],
+    String description = '',
+  }) {
+    final id = _generateId();
+    final ebook = EbookModel(
+      id: id,
+      title: title,
+      filePath: filePath,
+      createdAt: DateTime.now(),
+      tags: tags,
+      description: description,
+    );
+
+    _ebooks.insert(0, ebook); // Add to beginning for newest first
+    _saveEbooks(); // Save to persistent storage
+
+    // Log activity with specific ebook name
+    _logActivity(
+      title: 'Ebook "$title" ditambahkan',
+      description: 'Ebook catatan baru berhasil disimpan',
+      type: ActivityType.ebookAdded,
+    );
+
+    return id;
+  }
+
+  bool deleteEbook(String id) {
+    final index = _ebooks.indexWhere((ebook) => ebook.id == id);
+    if (index != -1) {
+      final ebook = _ebooks[index];
+      _ebooks.removeAt(index);
+      _saveEbooks(); // Save to persistent storage
+
+      // Delete physical file
+      _deleteEbookFile(ebook.filePath);
+
+      // Log activity with specific ebook name
+      _logActivity(
+        title: 'Ebook "${ebook.title}" dihapus',
+        description: 'Ebook catatan telah dihapus dari galeri',
+        type: ActivityType.ebookDeleted,
+      );
+
+      return true;
+    }
+    return false;
+  }
+
+  bool updateEbook({
+    required String id,
+    String? title,
+    List<String>? tags,
+    String? description,
+  }) {
+    final index = _ebooks.indexWhere((ebook) => ebook.id == id);
+    if (index != -1) {
+      final oldEbook = _ebooks[index];
+      final newEbook = oldEbook.copyWith(
+        title: title,
+        tags: tags,
+        description: description,
+      );
+
+      _ebooks[index] = newEbook;
+      _saveEbooks(); // Save to persistent storage
+
+      // Log activity based on what changed
+      if (title != null && title != oldEbook.title) {
+        _logActivity(
+          title: 'Ebook "${oldEbook.title}" diubah menjadi "$title"',
+          description: 'Nama ebook berhasil diperbarui',
+          type: ActivityType.ebookEdited,
+        );
+      } else {
+        _logActivity(
+          title: 'Ebook "${newEbook.title}" diedit',
+          description: 'Detail ebook berhasil diperbarui',
+          type: ActivityType.ebookEdited,
+        );
+      }
+
+      return true;
+    }
+    return false;
+  }
+
+  EbookModel? getEbook(String id) {
+    try {
+      return _ebooks.firstWhere((ebook) => ebook.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<EbookModel> getFilteredEbooks(List<String> selectedTags) {
+    if (selectedTags.isEmpty) {
+      return ebooks;
+    }
+
+    return _ebooks.where((ebook) {
+      return ebook.tags.any((tag) => selectedTags.contains(tag));
+    }).toList();
+  }
+
+  List<String> getUsedEbookTags() {
+    final Set<String> usedTags = {};
+    for (final ebook in _ebooks) {
+      usedTags.addAll(ebook.tags);
+    }
+    return usedTags.toList()..sort();
+  }
+
+  // Delete ebook file from storage
+  Future<void> _deleteEbookFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      // Ignore deletion errors
+    }
+  }
+
+  // Update ebook progress tracking
+  bool updateEbookProgress(String id, int currentPage) {
+    final index = _ebooks.indexWhere((ebook) => ebook.id == id);
+    if (index != -1) {
+      final oldEbook = _ebooks[index];
+      final newEbook = oldEbook.copyWith(
+        currentPage: currentPage,
+        lastReadAt: DateTime.now(),
+      );
+
+      _ebooks[index] = newEbook;
+      _saveEbooks(); // Save to persistent storage
+
+      return true;
+    }
+    return false;
+  }
+
+  // Update ebook total pages
+  bool updateEbookTotalPages(String id, int totalPages) {
+    final index = _ebooks.indexWhere((ebook) => ebook.id == id);
+    if (index != -1) {
+      final oldEbook = _ebooks[index];
+      final newEbook = oldEbook.copyWith(totalPages: totalPages);
+
+      _ebooks[index] = newEbook;
+      _saveEbooks(); // Save to persistent storage
+
+      return true;
+    }
+    return false;
+  }
+
+  // Save ebook file to app directory
+  Future<String> saveEbookFile(String sourcePath) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final ebookDir = Directory('${appDir.path}/ebooks');
+      if (!await ebookDir.exists()) {
+        await ebookDir.create(recursive: true);
+      }
+
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final targetPath = '${ebookDir.path}/$fileName';
+
+      final sourceFile = File(sourcePath);
+      await sourceFile.copy(targetPath);
+
+      return targetPath;
+    } catch (e) {
+      throw Exception('Failed to save ebook: $e');
+    }
+  }
 
   // Data persistence methods
   Future<void> _savePhotos() async {
@@ -281,6 +468,72 @@ class DataService {
               description: photoData['description'] ?? '',
             );
             _photos.add(photo);
+          }
+        }
+      }
+    } catch (e) {
+      // Handle load error
+    }
+  }
+
+  Future<void> _saveEbooks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ebooksJson =
+          _ebooks
+              .map(
+                (ebook) => {
+                  'id': ebook.id,
+                  'title': ebook.title,
+                  'filePath': ebook.filePath,
+                  'createdAt': ebook.createdAt.millisecondsSinceEpoch,
+                  'tags': ebook.tags,
+                  'description': ebook.description,
+                  'currentPage': ebook.currentPage,
+                  'totalPages': ebook.totalPages,
+                  'lastReadAt': ebook.lastReadAt?.millisecondsSinceEpoch,
+                },
+              )
+              .toList();
+
+      await prefs.setString('ebooks', jsonEncode(ebooksJson));
+    } catch (e) {
+      // Handle save error
+    }
+  }
+
+  Future<void> _loadEbooks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ebooksString = prefs.getString('ebooks');
+
+      if (ebooksString != null) {
+        final ebooksJson = jsonDecode(ebooksString) as List;
+        _ebooks.clear();
+
+        for (final ebookData in ebooksJson) {
+          // Check if ebook file still exists
+          final file = File(ebookData['filePath']);
+          if (await file.exists()) {
+            final ebook = EbookModel(
+              id: ebookData['id'],
+              title: ebookData['title'],
+              filePath: ebookData['filePath'],
+              createdAt: DateTime.fromMillisecondsSinceEpoch(
+                ebookData['createdAt'],
+              ),
+              tags: List<String>.from(ebookData['tags']),
+              description: ebookData['description'] ?? '',
+              currentPage: ebookData['currentPage'],
+              totalPages: ebookData['totalPages'],
+              lastReadAt:
+                  ebookData['lastReadAt'] != null
+                      ? DateTime.fromMillisecondsSinceEpoch(
+                        ebookData['lastReadAt'],
+                      )
+                      : null,
+            );
+            _ebooks.add(ebook);
           }
         }
       }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
+import '../models/activity_type.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -272,12 +273,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     switch (type) {
       case ActivityType.photoAdded:
         return Icons.photo_camera;
+      case ActivityType.photoViewed:
+        return Icons.visibility;
       case ActivityType.photoDeleted:
         return Icons.delete;
       case ActivityType.photoEdited:
         return Icons.edit;
+      case ActivityType.ebookAdded:
+        return Icons.add_circle;
       case ActivityType.ebookRead:
         return Icons.menu_book;
+      case ActivityType.ebookCompleted:
+        return Icons.check_circle;
+      case ActivityType.ebookDeleted:
+        return Icons.delete;
+      case ActivityType.ebookEdited:
+        return Icons.edit;
       case ActivityType.ebookCreated:
         return Icons.add_circle;
     }

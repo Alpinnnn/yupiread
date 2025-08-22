@@ -262,68 +262,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           );
                         },
                       ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: PopupMenuButton<String>(
-                          icon: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(
-                              Icons.more_vert,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                          onSelected: (value) {
-                            if (value == 'view') {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) =>
-                                          PhotoViewScreen(photoId: photo.id),
-                                ),
-                              ).then((_) => _updateFilteredPhotos());
-                            } else if (value == 'delete') {
-                              _deletePhoto(photo);
-                            }
-                          },
-                          itemBuilder:
-                              (context) => [
-                                const PopupMenuItem(
-                                  value: 'view',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.visibility, size: 16),
-                                      SizedBox(width: 8),
-                                      Text('Lihat'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.delete,
-                                        size: 16,
-                                        color: Colors.red,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Hapus',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                        ),
-                      ),
                       if (photo.tags.isNotEmpty)
                         Positioned(
                           bottom: 8,

@@ -1,3 +1,5 @@
+import 'activity_type.dart';
+
 class PhotoModel {
   final String id;
   final String title;
@@ -84,14 +86,6 @@ class ActivityModel {
   }
 }
 
-enum ActivityType {
-  photoAdded,
-  photoDeleted,
-  photoEdited,
-  ebookRead,
-  ebookCreated,
-}
-
 extension ActivityTypeExtension on ActivityType {
   String get icon {
     switch (this) {
@@ -105,6 +99,16 @@ extension ActivityTypeExtension on ActivityType {
         return 'menu_book';
       case ActivityType.ebookCreated:
         return 'add_circle';
+      case ActivityType.ebookAdded:
+        return 'add_circle';
+      case ActivityType.ebookCompleted:
+        return 'check_circle';
+      case ActivityType.ebookDeleted:
+        return 'delete';
+      case ActivityType.ebookEdited:
+        return 'edit';
+      case ActivityType.photoViewed:
+        return 'visibility';
     }
   }
 
@@ -120,6 +124,16 @@ extension ActivityTypeExtension on ActivityType {
         return 0xFF10B981;
       case ActivityType.ebookCreated:
         return 0xFF8B5CF6;
+      case ActivityType.ebookAdded:
+        return 0xFF8B5CF6;
+      case ActivityType.ebookCompleted:
+        return 0xFF10B981;
+      case ActivityType.ebookDeleted:
+        return 0xFFEF4444;
+      case ActivityType.ebookEdited:
+        return 0xFFF59E0B;
+      case ActivityType.photoViewed:
+        return 0xFF06B6D4;
     }
   }
 }

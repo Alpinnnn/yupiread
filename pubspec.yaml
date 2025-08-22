@@ -13,6 +13,9 @@ dependencies:
   shared_preferences: ^2.2.2
   path_provider: ^2.1.1
   share_plus: ^7.2.1
+  file_picker: ^6.1.1
+  syncfusion_flutter_pdfviewer: ^24.1.41
+  uuid: ^4.2.1
 
 dev_dependencies:
   flutter_test:
