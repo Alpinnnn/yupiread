@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -28,7 +27,8 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
   String? _imageResolution;
   String? _fileSize;
   late AnimationController _animationController;
-  late Animation<Offset> _slideAnimation;
+  double _dragOffset = 0.0;
+  double _bottomBarHeight = 300.0;
   final TransformationController _transformationController =
       TransformationController();
 
@@ -48,12 +48,6 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
   }
 
   @override
@@ -102,14 +96,15 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
 
   void _toggleBottomBar() {
     setState(() {
-      _showBottomBar = !_showBottomBar;
+      if (_showBottomBar) {
+        // Closing bottom bar
+        _showBottomBar = false;
+      } else {
+        // Opening bottom bar - always reset drag offset
+        _showBottomBar = true;
+        _dragOffset = 0.0; // Reset to default position when opening
+      }
     });
-
-    if (_showBottomBar) {
-      _animationController.forward();
-    } else {
-      _animationController.reverse();
-    }
   }
 
   void _resetZoom() {
@@ -199,12 +194,32 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
           // Bottom sheet with photo details and actions
           if (_showBottomBar)
             Positioned(
-              bottom: 0,
+              bottom: _dragOffset,
               left: 0,
               right: 0,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Container(
+              child: GestureDetector(
+                onPanStart: (details) {
+                  _dragOffset = 0.0;
+                },
+                onPanUpdate: (details) {
+                  setState(() {
+                    _dragOffset = (_dragOffset - details.delta.dy).clamp(-_bottomBarHeight, 0.0);
+                  });
+                },
+                onPanEnd: (details) {
+                  if (_dragOffset < -_bottomBarHeight * 0.5) {
+                    // Close if dragged more than 50%
+                    _toggleBottomBar();
+                  } else {
+                    // Snap back to original position
+                    setState(() {
+                      _dragOffset = 0.0;
+                    });
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: 200),
+                  child: Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[900],
                     borderRadius: const BorderRadius.only(
@@ -360,6 +375,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                       ],
                     ),
                   ),
+                ),
                 ),
               ),
             ),

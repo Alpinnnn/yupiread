@@ -3,7 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
 import '../models/ebook_model.dart';
-import '../models/activity_type.dart';
 import '../services/data_service.dart';
 
 class EbookReaderScreen extends StatefulWidget {
@@ -29,7 +28,8 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   bool _showBottomBar = false;
   bool _showEbookInfo = false;
   late AnimationController _animationController;
-  late Animation<Offset> _slideAnimation;
+  double _dragOffset = 0.0;
+  double _bottomBarHeight = 400.0;
 
   // Reading time tracking
   DateTime? _sessionStartTime;
@@ -50,12 +50,6 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
   }
 
   void _loadEbook() {
@@ -234,13 +228,15 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
             icon: const Icon(Icons.more_vert, color: Colors.black),
             onPressed: () {
               setState(() {
-                _showBottomBar = !_showBottomBar;
+                if (_showBottomBar) {
+                  // Closing bottom bar
+                  _showBottomBar = false;
+                } else {
+                  // Opening bottom bar - always reset drag offset
+                  _showBottomBar = true;
+                  _dragOffset = 0.0; // Reset to default position when opening
+                }
               });
-              if (_showBottomBar) {
-                _animationController.forward();
-              } else {
-                _animationController.reverse();
-              }
             },
           ),
         ],
@@ -360,12 +356,35 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                 // Bottom sheet menu
                 if (_showBottomBar)
                   Positioned(
-                    bottom: 0,
+                    bottom: _dragOffset,
                     left: 0,
                     right: 0,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Container(
+                    child: GestureDetector(
+                      onPanStart: (details) {
+                        _dragOffset = 0.0;
+                      },
+                      onPanUpdate: (details) {
+                        setState(() {
+                          _dragOffset = (_dragOffset - details.delta.dy).clamp(-_bottomBarHeight, 0.0);
+                        });
+                      },
+                      onPanEnd: (details) {
+                        if (_dragOffset < -_bottomBarHeight * 0.5) {
+                          // Close if dragged more than 50%
+                          setState(() {
+                            _showBottomBar = false;
+                          });
+                          _animationController.reverse();
+                        } else {
+                          // Snap back to original position
+                          setState(() {
+                            _dragOffset = 0.0;
+                          });
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: Duration(milliseconds: 200),
+                        child: Container(
                         decoration: BoxDecoration(
                           color: Colors.grey[900],
                           borderRadius: const BorderRadius.only(
@@ -600,6 +619,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                               ),
                             ],
                           ),
+                        ),
                         ),
                       ),
                     ),

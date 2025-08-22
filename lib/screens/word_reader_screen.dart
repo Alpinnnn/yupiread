@@ -23,8 +23,12 @@ class _WordReaderScreenState extends State<WordReaderScreen>
   int _totalPages = 1;
   List<String> _pages = [];
   bool _showEbookInfo = false;
+  bool _showBottomNav = false;
+  double _dragOffset = 0.0;
+  double _bottomNavHeight = 200.0;
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
+  late AnimationController _bottomNavAnimationController;
   final ScrollController _scrollController = ScrollController();
 
   // Reading time tracking
@@ -47,12 +51,18 @@ class _WordReaderScreenState extends State<WordReaderScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
+
+    _bottomNavAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
   }
 
   @override
   void dispose() {
     _endReadingSession();
     _animationController.dispose();
+    _bottomNavAnimationController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -196,6 +206,19 @@ class _WordReaderScreenState extends State<WordReaderScreen>
     }
   }
 
+  void _toggleBottomNav() {
+    setState(() {
+      if (_showBottomNav) {
+        // Closing bottom nav
+        _showBottomNav = false;
+      } else {
+        // Opening bottom nav - always reset drag offset
+        _showBottomNav = true;
+        _dragOffset = 0.0; // Reset to default position when opening
+      }
+    });
+  }
+
   void _showJumpToPageDialog() {
     final TextEditingController pageController = TextEditingController();
     
@@ -252,7 +275,19 @@ class _WordReaderScreenState extends State<WordReaderScreen>
       );
     }
 
-    return Scaffold(
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKeyEvent: (KeyEvent event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            _previousPage();
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            _nextPage();
+          }
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -281,8 +316,8 @@ class _WordReaderScreenState extends State<WordReaderScreen>
             },
           ),
           IconButton(
-            icon: const Icon(Icons.skip_next, color: Colors.black),
-            onPressed: _showJumpToPageDialog,
+            icon: const Icon(Icons.more_vert, color: Colors.black),
+            onPressed: _toggleBottomNav,
           ),
         ],
       ),
@@ -442,7 +477,165 @@ class _WordReaderScreenState extends State<WordReaderScreen>
                 ),
               ),
             ),
+
+          // Bottom navigation menu
+          if (_showBottomNav)
+            Positioned(
+              bottom: _dragOffset,
+              left: 0,
+              right: 0,
+              child: GestureDetector(
+                onPanStart: (details) {
+                  _dragOffset = 0.0;
+                },
+                onPanUpdate: (details) {
+                  setState(() {
+                    _dragOffset = (_dragOffset - details.delta.dy).clamp(-_bottomNavHeight, 0.0);
+                  });
+                },
+                onPanEnd: (details) {
+                  if (_dragOffset < -_bottomNavHeight * 0.5) {
+                    // Close if dragged more than 50%
+                    _toggleBottomNav();
+                  } else {
+                    // Snap back to original position
+                    setState(() {
+                      _dragOffset = 0.0;
+                    });
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: 200),
+                  transform: Matrix4.translationValues(0, 0, 0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Handle bar
+                          Container(
+                            margin: const EdgeInsets.only(top: 12),
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[600],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+
+                          // Navigation options
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              children: [
+                                _buildNavOption(
+                                  icon: Icons.skip_next,
+                                  title: 'Lompat ke Halaman',
+                                  subtitle: 'Navigasi cepat ke halaman tertentu',
+                                  onTap: () {
+                                    _toggleBottomNav();
+                                    _showJumpToPageDialog();
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _buildNavOption(
+                                  icon: Icons.text_fields,
+                                  title: 'Pengaturan Teks',
+                                  subtitle: 'Ubah ukuran dan gaya teks',
+                                  onTap: () {
+                                    _toggleBottomNav();
+                                    // TODO: Implement text settings
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+      ),
+    );
+  }
+
+  Widget _buildNavOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[800],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: const Color(0xFF2563EB),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[600],
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }
