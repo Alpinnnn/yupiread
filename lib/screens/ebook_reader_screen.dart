@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
 import '../models/ebook_model.dart';
@@ -21,6 +22,8 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
   bool _isLoading = true;
   int _currentPage = 1;
   int _totalPages = 1;
+  double _currentZoomLevel = 1.0;
+  double _initialZoomLevel = 1.0;
 
   @override
   void initState() {
@@ -103,6 +106,41 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     }
   }
 
+  void _zoomOut() {
+    setState(() {
+      _currentZoomLevel = (_currentZoomLevel - 0.2).clamp(0.5, 3.0);
+    });
+    _pdfViewerController.zoomLevel = _currentZoomLevel;
+  }
+
+  void _zoomIn() {
+    setState(() {
+      _currentZoomLevel = (_currentZoomLevel + 0.2).clamp(0.5, 3.0);
+    });
+    _pdfViewerController.zoomLevel = _currentZoomLevel;
+  }
+
+  void _fitToWidth() {
+    setState(() {
+      _currentZoomLevel = 1.2; // Approximate fit to width
+    });
+    _pdfViewerController.zoomLevel = _currentZoomLevel;
+  }
+
+  void _fitToPage() {
+    setState(() {
+      _currentZoomLevel = 1.0; // Fit to page
+    });
+    _pdfViewerController.zoomLevel = _currentZoomLevel;
+  }
+
+  void _resetZoom() {
+    setState(() {
+      _currentZoomLevel = 1.0;
+    });
+    _pdfViewerController.zoomLevel = _currentZoomLevel;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading || _ebook == null) {
@@ -144,6 +182,24 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
               // TODO: Implement bookmark functionality
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.zoom_out, color: Colors.black),
+            onPressed: () => _zoomOut(),
+            tooltip: 'Zoom Out',
+          ),
+          Text(
+            '${(_currentZoomLevel * 100).round()}%',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.zoom_in, color: Colors.black),
+            onPressed: () => _zoomIn(),
+            tooltip: 'Zoom In',
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.black),
             onSelected: (value) {
@@ -153,6 +209,15 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                   break;
                 case 'jump':
                   _showJumpToPageDialog();
+                  break;
+                case 'fit_width':
+                  _fitToWidth();
+                  break;
+                case 'fit_page':
+                  _fitToPage();
+                  break;
+                case 'reset_zoom':
+                  _resetZoom();
                   break;
               }
             },
@@ -175,6 +240,37 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
                         Icon(Icons.skip_next, size: 16),
                         SizedBox(width: 8),
                         Text('Loncat ke Halaman'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'fit_width',
+                    child: Row(
+                      children: [
+                        Icon(Icons.fit_screen, size: 16),
+                        SizedBox(width: 8),
+                        Text('Sesuaikan Lebar'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'fit_page',
+                    child: Row(
+                      children: [
+                        Icon(Icons.fullscreen, size: 16),
+                        SizedBox(width: 8),
+                        Text('Sesuaikan Halaman'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'reset_zoom',
+                    child: Row(
+                      children: [
+                        Icon(Icons.refresh, size: 16),
+                        SizedBox(width: 8),
+                        Text('Reset Zoom'),
                       ],
                     ),
                   ),
@@ -216,15 +312,50 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
           ),
           // PDF Viewer
           Expanded(
-            child: SfPdfViewer.file(
-              File(_ebook!.filePath),
-              controller: _pdfViewerController,
-              onPageChanged: _onPageChanged,
-              onDocumentLoaded: _onDocumentLoaded,
-              enableDoubleTapZooming: true,
-              enableTextSelection: true,
-              canShowScrollHead: true,
-              canShowScrollStatus: true,
+            child: Listener(
+              onPointerSignal: (pointerSignal) {
+                if (pointerSignal is PointerScrollEvent) {
+                  // Handle scroll wheel zoom
+                  final delta = pointerSignal.scrollDelta.dy;
+                  if (delta < 0) {
+                    // Scroll up = zoom in
+                    _zoomIn();
+                  } else if (delta > 0) {
+                    // Scroll down = zoom out
+                    _zoomOut();
+                  }
+                }
+              },
+              child: GestureDetector(
+                onScaleStart: (details) {
+                  // Store initial zoom level for pinch gesture
+                  _initialZoomLevel = _currentZoomLevel;
+                },
+                onScaleUpdate: (details) {
+                  // Handle pinch-to-zoom
+                  if (details.scale != 1.0) {
+                    final newZoomLevel = (_initialZoomLevel * details.scale)
+                        .clamp(0.5, 3.0);
+                    setState(() {
+                      _currentZoomLevel = newZoomLevel;
+                    });
+                    _pdfViewerController.zoomLevel = _currentZoomLevel;
+                  }
+                },
+                child: SfPdfViewer.file(
+                  File(_ebook!.filePath),
+                  controller: _pdfViewerController,
+                  onPageChanged: _onPageChanged,
+                  onDocumentLoaded: _onDocumentLoaded,
+                  enableDoubleTapZooming: true,
+                  enableTextSelection: true,
+                  canShowScrollHead: true,
+                  canShowScrollStatus: true,
+                  initialZoomLevel: _currentZoomLevel,
+                  pageLayoutMode: PdfPageLayoutMode.single,
+                  scrollDirection: PdfScrollDirection.vertical,
+                ),
+              ),
             ),
           ),
         ],

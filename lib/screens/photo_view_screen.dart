@@ -574,12 +574,25 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         if (photo!.description.isNotEmpty) {
           shareText += '\n\n${photo!.description}';
         }
-        shareText += '\n\nDibagikan dari Yupiwatch';
+        shareText += '\n\nDibagikan dari YupiRead';
+
+        // For Windows, use a more explicit approach
+        final xFile = XFile(
+          photo!.imagePath,
+          name: '${photo!.title}.jpg',
+          mimeType: 'image/jpeg',
+        );
 
         await Share.shareXFiles(
-          [XFile(photo!.imagePath)],
+          [xFile],
           text: shareText,
           subject: photo!.title,
+          sharePositionOrigin: Rect.fromLTWH(
+            0,
+            0,
+            MediaQuery.of(context).size.width,
+            MediaQuery.of(context).size.height / 2,
+          ),
         );
 
         // Show success message
@@ -603,10 +616,25 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
       }
     } catch (e) {
       if (mounted) {
+        // More detailed error handling for Windows
+        String errorMessage = 'Gagal membagikan foto';
+        if (e.toString().contains('No Activity found')) {
+          errorMessage = 'Tidak ada aplikasi yang dapat membagikan foto ini';
+        } else if (e.toString().contains('Permission denied')) {
+          errorMessage = 'Izin ditolak untuk membagikan foto';
+        } else {
+          errorMessage = 'Gagal membagikan foto: ${e.toString()}';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal membagikan foto: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: const Color(0xFFEF4444),
+            action: SnackBarAction(
+              label: 'Coba Lagi',
+              textColor: Colors.white,
+              onPressed: () => _sharePhoto(),
+            ),
           ),
         );
       }
