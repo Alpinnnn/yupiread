@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
 import 'photo_view_screen.dart';
+import 'photo_page_view_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -17,6 +18,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   final ImagePicker _picker = ImagePicker();
   List<String> _selectedTags = [];
   List<PhotoModel> _filteredPhotos = [];
+  List<PhotoPageModel> _filteredPhotoPages = [];
 
   @override
   void initState() {
@@ -27,6 +29,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   void _updateFilteredPhotos() {
     setState(() {
       _filteredPhotos = _dataService.getFilteredPhotos(_selectedTags);
+      _filteredPhotoPages = _dataService.getFilteredPhotoPages(_selectedTags);
     });
   }
 
@@ -53,7 +56,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${_filteredPhotos.length} foto catatan',
+                        '${_filteredPhotos.length + _filteredPhotoPages.length} foto catatan',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -122,12 +125,29 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     mainAxisSpacing: 16,
                     childAspectRatio: 0.85,
                   ),
-                  itemCount: _filteredPhotos.length + 1, // +1 for add button
+                  itemCount:
+                      _filteredPhotos.length +
+                      _filteredPhotoPages.length +
+                      1, // +1 for add button
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return _buildAddPhotoCard(context);
                     }
-                    return _buildPhotoCard(context, _filteredPhotos[index - 1]);
+
+                    final adjustedIndex = index - 1;
+                    if (adjustedIndex < _filteredPhotoPages.length) {
+                      return _buildPhotoPageCard(
+                        context,
+                        _filteredPhotoPages[adjustedIndex],
+                      );
+                    } else {
+                      final photoIndex =
+                          adjustedIndex - _filteredPhotoPages.length;
+                      return _buildPhotoCard(
+                        context,
+                        _filteredPhotos[photoIndex],
+                      );
+                    }
                   },
                 ),
               ),
@@ -322,6 +342,167 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
+  Widget _buildPhotoPageCard(BuildContext context, PhotoPageModel photoPage) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => PhotoPageViewScreen(photoPageId: photoPage.id),
+          ),
+        ).then((_) => _updateFilteredPhotos()); // Refresh when returning
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      Image.file(
+                        File(photoPage.coverImagePath),
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            color: Colors.grey[200],
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.broken_image,
+                                  size: 32,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Gagal memuat',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      if (photoPage.tags.isNotEmpty)
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              photoPage.tags.first,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.collections,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${photoPage.photoCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    photoPage.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    photoPage.timeAgo,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAddPhotoBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -381,6 +562,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: _buildBottomSheetOption(
+                    icon: Icons.collections,
+                    title: 'Halaman Foto (Multi-foto)',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _createPhotoPage();
+                    },
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -757,6 +950,168 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 child: const Text('Hapus'),
               ),
             ],
+          ),
+    );
+  }
+
+  void _createPhotoPage() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage(
+        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      );
+
+      if (images.isNotEmpty) {
+        // Save all images to app directory
+        List<String> savedPaths = [];
+        for (XFile image in images) {
+          final savedPath = await _dataService.savePhotoFile(image.path);
+          savedPaths.add(savedPath);
+        }
+
+        _showPhotoPageCreationDialog(savedPaths);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memilih foto: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPhotoPageCreationDialog(List<String> imagePaths) {
+    final TextEditingController titleController = TextEditingController(
+      text: 'Halaman Foto ${DateTime.now().day}/${DateTime.now().month}',
+    );
+    final TextEditingController descriptionController = TextEditingController();
+    List<String> selectedTags = [];
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: const Text(
+                    'Buat Halaman Foto',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${imagePaths.length} foto dipilih',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(
+                            labelText: 'Judul Halaman',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: descriptionController,
+                          decoration: const InputDecoration(
+                            labelText: 'Deskripsi (Opsional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Pilih Tag (Opsional):',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children:
+                              _dataService.availableTags.map((tag) {
+                                final isSelected = selectedTags.contains(tag);
+                                return FilterChip(
+                                  label: Text(tag),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setDialogState(() {
+                                      if (selected) {
+                                        selectedTags.add(tag);
+                                      } else {
+                                        selectedTags.remove(tag);
+                                      }
+                                    });
+                                  },
+                                  selectedColor: const Color(
+                                    0xFF2563EB,
+                                  ).withOpacity(0.2),
+                                  checkmarkColor: const Color(0xFF2563EB),
+                                );
+                              }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // Delete saved images if user cancels
+                        for (String path in imagePaths) {
+                          File(path).delete().catchError((_) {});
+                        }
+                      },
+                      child: const Text('Batal'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final pageTitle = titleController.text.trim();
+                        final pageDescription =
+                            descriptionController.text.trim();
+
+                        if (pageTitle.isNotEmpty) {
+                          _dataService.addPhotoPage(
+                            title: pageTitle,
+                            imagePaths: imagePaths,
+                            tags: selectedTags,
+                            description: pageDescription,
+                          );
+                          _updateFilteredPhotos();
+                          Navigator.pop(context);
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Halaman foto "$pageTitle" berhasil dibuat dengan ${imagePaths.length} foto',
+                              ),
+                              backgroundColor: const Color(0xFF10B981),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Buat Halaman'),
+                    ),
+                  ],
+                ),
           ),
     );
   }

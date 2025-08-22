@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/photo_model.dart';
 import '../models/ebook_model.dart';
 import '../models/activity_type.dart';
@@ -13,6 +14,7 @@ class DataService {
   DataService._internal();
 
   final List<PhotoModel> _photos = [];
+  final List<PhotoPageModel> _photoPages = [];
   final List<EbookModel> _ebooks = [];
   final List<ActivityModel> _activities = [];
   final List<String> _availableTags = [
@@ -34,6 +36,7 @@ class DataService {
   ];
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
+  List<PhotoPageModel> get photoPages => List.unmodifiable(_photoPages);
   List<EbookModel> get ebooks => List.unmodifiable(_ebooks);
   List<ActivityModel> get activities => List.unmodifiable(_activities);
   List<String> get availableTags => List.unmodifiable(_availableTags);
@@ -41,6 +44,7 @@ class DataService {
   // Initialize data when app starts
   Future<void> initializeData() async {
     await _loadPhotos();
+    await _loadPhotoPages();
     await _loadEbooks();
     await _loadActivities();
     if (_activities.isEmpty) {
@@ -420,6 +424,113 @@ class DataService {
     }
   }
 
+  // Photo Page CRUD operations
+  String addPhotoPage({
+    required String title,
+    required List<String> imagePaths,
+    required List<String> tags,
+    String description = '',
+  }) {
+    final id = _generateId();
+    final photoPage = PhotoPageModel(
+      id: id,
+      title: title,
+      imagePaths: imagePaths,
+      createdAt: DateTime.now(),
+      tags: tags,
+      description: description,
+    );
+
+    _photoPages.insert(0, photoPage); // Add to beginning for newest first
+    _savePhotoPages(); // Save to persistent storage
+
+    // Log activity with specific photo page name
+    _logActivity(
+      title: 'Halaman foto "$title" ditambahkan',
+      description:
+          'Halaman foto dengan ${imagePaths.length} foto berhasil disimpan',
+      type: ActivityType.photoPageAdded,
+    );
+
+    return id;
+  }
+
+  bool deletePhotoPage(String id) {
+    final index = _photoPages.indexWhere((photoPage) => photoPage.id == id);
+    if (index != -1) {
+      final photoPage = _photoPages[index];
+      _photoPages.removeAt(index);
+      _savePhotoPages(); // Save to persistent storage
+
+      // Log activity with specific photo page name
+      _logActivity(
+        title: 'Halaman foto "${photoPage.title}" dihapus',
+        description: 'Halaman foto catatan telah dihapus dari galeri',
+        type: ActivityType.photoPageDeleted,
+      );
+
+      return true;
+    }
+    return false;
+  }
+
+  bool updatePhotoPage({
+    required String id,
+    String? title,
+    String? description,
+    List<String>? tags,
+    List<String>? imagePaths,
+  }) {
+    final index = _photoPages.indexWhere((photoPage) => photoPage.id == id);
+    if (index != -1) {
+      final oldPhotoPage = _photoPages[index];
+      final newPhotoPage = oldPhotoPage.copyWith(
+        title: title,
+        description: description,
+        tags: tags,
+        imagePaths: imagePaths,
+      );
+
+      _photoPages[index] = newPhotoPage;
+      _savePhotoPages(); // Save to persistent storage
+
+      // Log activity based on what changed
+      if (title != null && title != oldPhotoPage.title) {
+        _logActivity(
+          title: 'Halaman foto "${oldPhotoPage.title}" diubah menjadi "$title"',
+          description: 'Nama halaman foto berhasil diperbarui',
+          type: ActivityType.photoPageEdited,
+        );
+      } else {
+        _logActivity(
+          title: 'Halaman foto "${newPhotoPage.title}" diedit',
+          description: 'Detail halaman foto berhasil diperbarui',
+          type: ActivityType.photoPageEdited,
+        );
+      }
+
+      return true;
+    }
+    return false;
+  }
+
+  PhotoPageModel? getPhotoPage(String id) {
+    try {
+      return _photoPages.firstWhere((photoPage) => photoPage.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<PhotoPageModel> getFilteredPhotoPages(List<String> selectedTags) {
+    if (selectedTags.isEmpty) {
+      return _photoPages;
+    }
+    return _photoPages.where((photoPage) {
+      return photoPage.tags.any((tag) => selectedTags.contains(tag));
+    }).toList();
+  }
+
   // Data persistence methods
   Future<void> _savePhotos() async {
     try {
@@ -469,6 +580,57 @@ class DataService {
             );
             _photos.add(photo);
           }
+        }
+      }
+    } catch (e) {
+      // Handle load error
+    }
+  }
+
+  Future<void> _savePhotoPages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final photoPagesJson =
+          _photoPages
+              .map(
+                (photoPage) => {
+                  'id': photoPage.id,
+                  'title': photoPage.title,
+                  'imagePaths': photoPage.imagePaths,
+                  'createdAt': photoPage.createdAt.millisecondsSinceEpoch,
+                  'tags': photoPage.tags,
+                  'description': photoPage.description,
+                },
+              )
+              .toList();
+
+      await prefs.setString('photoPages', jsonEncode(photoPagesJson));
+    } catch (e) {
+      // Handle save error
+    }
+  }
+
+  Future<void> _loadPhotoPages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final photoPagesString = prefs.getString('photoPages');
+
+      if (photoPagesString != null) {
+        final photoPagesJson = jsonDecode(photoPagesString) as List;
+        _photoPages.clear();
+
+        for (final photoPageData in photoPagesJson) {
+          final photoPage = PhotoPageModel(
+            id: photoPageData['id'],
+            title: photoPageData['title'],
+            imagePaths: List<String>.from(photoPageData['imagePaths']),
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              photoPageData['createdAt'],
+            ),
+            tags: List<String>.from(photoPageData['tags']),
+            description: photoPageData['description'] ?? '',
+          );
+          _photoPages.add(photoPage);
         }
       }
     } catch (e) {

@@ -7,9 +7,14 @@ import '../models/photo_model.dart';
 import '../services/data_service.dart';
 
 class PhotoViewScreen extends StatefulWidget {
-  final String photoId;
+  final String? photoId;
+  final String? photoPageId;
 
-  const PhotoViewScreen({super.key, required this.photoId});
+  const PhotoViewScreen({super.key, this.photoId, this.photoPageId})
+    : assert(
+        photoId != null || photoPageId != null,
+        'Either photoId or photoPageId must be provided',
+      );
 
   @override
   State<PhotoViewScreen> createState() => _PhotoViewScreenState();
@@ -30,7 +35,12 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
   @override
   void initState() {
     super.initState();
-    photo = _dataService.getPhoto(widget.photoId);
+    if (widget.photoId != null) {
+      photo = _dataService.getPhoto(widget.photoId!);
+    } else if (widget.photoPageId != null) {
+      // Assuming you have a method to get photo from photo page id
+      // photo = _dataService.getPhotoFromPageId(widget.photoPageId!);
+    }
     _loadImageInfo();
 
     _animationController = AnimationController(
@@ -540,7 +550,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                           );
 
                           setState(() {
-                            photo = _dataService.getPhoto(widget.photoId);
+                            photo = _dataService.getPhoto(widget.photoId!);
                           });
 
                           Navigator.pop(context);

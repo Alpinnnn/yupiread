@@ -303,6 +303,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Icons.delete;
       case ActivityType.photoEdited:
         return Icons.edit;
+      case ActivityType.photoPageAdded:
+        return Icons.collections;
+      case ActivityType.photoPageDeleted:
+        return Icons.delete_sweep;
+      case ActivityType.photoPageEdited:
+        return Icons.edit_note;
       case ActivityType.ebookAdded:
         return Icons.add_circle;
       case ActivityType.ebookRead:

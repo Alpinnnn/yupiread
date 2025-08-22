@@ -1,12 +1,15 @@
 enum ActivityType {
   photoAdded,
-  photoViewed,
   photoDeleted,
   photoEdited,
-  ebookAdded,
+  photoViewed,
+  photoPageAdded,
+  photoPageDeleted,
+  photoPageEdited,
   ebookRead,
+  ebookCreated,
+  ebookAdded,
   ebookCompleted,
   ebookDeleted,
   ebookEdited,
-  ebookCreated,
 }
