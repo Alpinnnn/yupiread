@@ -34,12 +34,22 @@ class DataService {
     'Bisnis',
     'Kesehatan',
   ];
+  List<String> _customTags = [];
+
+  // User profile data
+  String _username = 'User';
+  String? _profileImagePath;
+  int _readingStreak = 0;
+  int _totalReadingTimeMinutes = 0;
+  DateTime? _lastReadingDate;
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
   List<PhotoPageModel> get photoPages => List.unmodifiable(_photoPages);
   List<EbookModel> get ebooks => List.unmodifiable(_ebooks);
   List<ActivityModel> get activities => List.unmodifiable(_activities);
-  List<String> get availableTags => List.unmodifiable(_availableTags);
+  List<String> get availableTags =>
+      List.unmodifiable([..._availableTags, ..._customTags]);
+  List<String> get customTags => List.unmodifiable(_customTags);
 
   // Initialize data when app starts
   Future<void> initializeData() async {
@@ -47,6 +57,8 @@ class DataService {
     await _loadPhotoPages();
     await _loadEbooks();
     await _loadActivities();
+    await _loadUserProfile();
+    await _loadCustomTags();
     if (_activities.isEmpty) {
       initializeSampleData();
     }
@@ -756,6 +768,68 @@ class DataService {
     }
   }
 
+  Future<void> _saveUserProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userProfileJson = {
+        'username': _username,
+        'profileImagePath': _profileImagePath,
+        'readingStreak': _readingStreak,
+        'totalReadingTimeMinutes': _totalReadingTimeMinutes,
+        'lastReadingDate': _lastReadingDate?.millisecondsSinceEpoch,
+      };
+
+      await prefs.setString('userProfile', jsonEncode(userProfileJson));
+    } catch (e) {
+      // Handle save error
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userProfileString = prefs.getString('userProfile');
+
+      if (userProfileString != null) {
+        final userProfileJson = jsonDecode(userProfileString);
+        _username = userProfileJson['username'];
+        _profileImagePath = userProfileJson['profileImagePath'];
+        _readingStreak = userProfileJson['readingStreak'];
+        _totalReadingTimeMinutes = userProfileJson['totalReadingTimeMinutes'];
+        _lastReadingDate =
+            userProfileJson['lastReadingDate'] != null
+                ? DateTime.fromMillisecondsSinceEpoch(
+                  userProfileJson['lastReadingDate'],
+                )
+                : null;
+      }
+    } catch (e) {
+      // Handle load error
+    }
+  }
+
+  Future<void> _saveCustomTags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('customTags', jsonEncode(_customTags));
+    } catch (e) {
+      // Handle save error
+    }
+  }
+
+  Future<void> _loadCustomTags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final customTagsString = prefs.getString('customTags');
+
+      if (customTagsString != null) {
+        _customTags = jsonDecode(customTagsString).cast<String>();
+      }
+    } catch (e) {
+      // Handle load error
+    }
+  }
+
   // Initialize with some sample activities
   void initializeSampleData() {
     if (_activities.isEmpty) {
@@ -777,5 +851,81 @@ class DataService {
       ]);
       _saveActivities();
     }
+  }
+
+  // User profile getters
+  String get username => _username;
+  String? get profileImagePath => _profileImagePath;
+  int get readingStreak => _readingStreak;
+  int get totalReadingTimeMinutes => _totalReadingTimeMinutes;
+  String get formattedReadingTime {
+    if (_totalReadingTimeMinutes < 60) {
+      return '$_totalReadingTimeMinutes menit';
+    } else {
+      final hours = _totalReadingTimeMinutes ~/ 60;
+      final minutes = _totalReadingTimeMinutes % 60;
+      return '${hours}h ${minutes}m';
+    }
+  }
+
+  // User profile methods
+  Future<void> updateProfile({
+    String? username,
+    String? profileImagePath,
+  }) async {
+    if (username != null) _username = username;
+    if (profileImagePath != null) _profileImagePath = profileImagePath;
+    await _saveUserProfile();
+  }
+
+  Future<void> addReadingTime(int minutes) async {
+    _totalReadingTimeMinutes += minutes;
+
+    final today = DateTime.now();
+    final lastRead = _lastReadingDate;
+
+    if (lastRead == null || !_isSameDay(lastRead, today)) {
+      if (lastRead != null && _isConsecutiveDay(lastRead, today)) {
+        _readingStreak++;
+      } else {
+        _readingStreak = 1;
+      }
+      _lastReadingDate = today;
+    }
+
+    await _saveUserProfile();
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  bool _isConsecutiveDay(DateTime lastDate, DateTime currentDate) {
+    final difference = currentDate.difference(lastDate).inDays;
+    return difference == 1;
+  }
+
+  // Custom tag management
+  Future<bool> addCustomTag(String tag) async {
+    final trimmedTag = tag.trim();
+    if (trimmedTag.isEmpty ||
+        _customTags.contains(trimmedTag) ||
+        _availableTags.contains(trimmedTag)) {
+      return false;
+    }
+
+    _customTags.add(trimmedTag);
+    await _saveCustomTags();
+    return true;
+  }
+
+  Future<bool> removeCustomTag(String tag) async {
+    if (_customTags.remove(tag)) {
+      await _saveCustomTags();
+      return true;
+    }
+    return false;
   }
 }

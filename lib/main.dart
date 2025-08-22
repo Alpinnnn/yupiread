@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/ebook_screen.dart';
+import 'screens/profile_screen.dart';
 import 'services/data_service.dart';
 
 void main() async {
@@ -66,6 +67,7 @@ class _MainScreenState extends State<MainScreen> {
     const DashboardScreen(),
     const GalleryScreen(),
     const EbookScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -118,6 +120,11 @@ class _MainScreenState extends State<MainScreen> {
               icon: Icon(Icons.menu_book_outlined),
               activeIcon: Icon(Icons.menu_book),
               label: 'Ebook',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outlined),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
             ),
           ],
         ),
