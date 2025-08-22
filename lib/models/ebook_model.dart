@@ -25,8 +25,16 @@ class EbookModel {
     this.description = '',
   }) : lastReadAt = lastReadAt ?? DateTime.now();
 
-  double get progress =>
-      totalPages > 0 && currentPage > 0 ? currentPage / totalPages : 0.0;
+  double get progress {
+    if (totalPages <= 0 || currentPage <= 0) return 0.0;
+    
+    // Special case: single page PDF should be 100% when opened
+    if (totalPages == 1) return 1.0;
+    
+    // For multi-page PDFs: currentPage / totalPages
+    // This ensures last page (currentPage == totalPages) = 100%
+    return (currentPage / totalPages).clamp(0.0, 1.0);
+  }
 
   String get progressPercentage => '${(progress * 100).toInt()}%';
 
@@ -99,7 +107,7 @@ class EbookModel {
       filePath: json['filePath'],
       fileType: json['fileType'] ?? 'pdf',
       totalPages: json['totalPages'] ?? 1,
-      currentPage: json['currentPage'] ?? 1,
+      currentPage: json['currentPage'] ?? 0,
       createdAt: DateTime.parse(json['createdAt']),
       lastReadAt:
           json['lastReadAt'] != null

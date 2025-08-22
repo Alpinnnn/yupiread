@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:uuid/uuid.dart';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:docx_to_text/docx_to_text.dart';
 import '../models/ebook_model.dart';
 import '../services/data_service.dart';
 import 'ebook_reader_screen.dart';
+import 'word_reader_screen.dart';
 
 class EbookScreen extends StatefulWidget {
   const EbookScreen({super.key});
@@ -15,7 +17,6 @@ class EbookScreen extends StatefulWidget {
 
 class _EbookScreenState extends State<EbookScreen> {
   final DataService _dataService = DataService();
-  final Uuid _uuid = const Uuid();
   List<EbookModel> _ebooks = [];
   List<String> _selectedTags = [];
   List<EbookModel> _filteredEbooks = [];
@@ -31,6 +32,24 @@ class _EbookScreenState extends State<EbookScreen> {
       _ebooks = _dataService.ebooks;
       _filteredEbooks = _dataService.getFilteredEbooks(_selectedTags);
     });
+  }
+
+  void _openEbook(EbookModel ebook) {
+    if (ebook.fileType == 'word') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WordReaderScreen(ebookId: ebook.id),
+        ),
+      ).then((_) => _updateFilteredEbooks());
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EbookReaderScreen(ebookId: ebook.id),
+        ),
+      ).then((_) => _updateFilteredEbooks());
+    }
   }
 
   @override
@@ -224,12 +243,7 @@ class _EbookScreenState extends State<EbookScreen> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EbookReaderScreen(ebookId: ebook.id),
-          ),
-        ).then((_) => _updateFilteredEbooks());
+        _openEbook(ebook);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -354,13 +368,7 @@ class _EbookScreenState extends State<EbookScreen> {
               onSelected: (value) {
                 switch (value) {
                   case 'read':
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => EbookReaderScreen(ebookId: ebook.id),
-                      ),
-                    ).then((_) => _updateFilteredEbooks());
+                    _openEbook(ebook);
                     break;
                   case 'edit':
                     _showEditEbookDialog(ebook);
@@ -531,8 +539,11 @@ class _EbookScreenState extends State<EbookScreen> {
         // Save file to app directory
         final savedPath = await _dataService.saveEbookFile(filePath);
 
+        // Get PDF page count
+        int totalPages = await _getPdfPageCount(savedPath);
+
         // Show dialog to add metadata
-        _showAddEbookDialog(fileName.replaceAll('.pdf', ''), savedPath, 'pdf');
+        _showAddEbookDialog(fileName.replaceAll('.pdf', ''), savedPath, 'pdf', totalPages);
       }
     } catch (e) {
       if (mounted) {
@@ -550,21 +561,34 @@ class _EbookScreenState extends State<EbookScreen> {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['doc', 'docx'],
+        allowedExtensions: ['docx'], // Only support .docx for now
       );
 
       if (result != null && result.files.single.path != null) {
-        // For now, show a message that Word files need to be converted to PDF
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Saat ini hanya mendukung file PDF. Silakan konversi file Word ke PDF terlebih dahulu.',
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+
+        // Check if it's actually a .docx file
+        if (!fileName.toLowerCase().endsWith('.docx')) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Saat ini hanya mendukung file .docx. File .doc belum didukung.'),
+                backgroundColor: Color(0xFFF59E0B),
               ),
-              backgroundColor: Color(0xFFF59E0B),
-            ),
-          );
+            );
+          }
+          return;
         }
+
+        // Save file to app directory
+        final savedPath = await _dataService.saveEbookFile(filePath);
+
+        // Get Word page count (estimate based on text length)
+        int totalPages = await _getWordPageCount(savedPath);
+
+        // Show dialog to add metadata
+        _showAddEbookDialog(fileName.replaceAll('.docx', ''), savedPath, 'word', totalPages);
       }
     } catch (e) {
       if (mounted) {
@@ -578,10 +602,79 @@ class _EbookScreenState extends State<EbookScreen> {
     }
   }
 
+  // Get PDF page count using Syncfusion PDF viewer
+  Future<int> _getPdfPageCount(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        return 1; // Default fallback
+      }
+      
+      // Use Syncfusion to get page count
+      final document = PdfDocument(inputBytes: await file.readAsBytes());
+      final pageCount = document.pages.count;
+      document.dispose();
+      
+      return pageCount > 0 ? pageCount : 1;
+    } catch (e) {
+      // Fallback to 1 if unable to read PDF
+      return 1;
+    }
+  }
+
+  // Get Word page count by estimating from text length
+  Future<int> _getWordPageCount(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        print('Word file does not exist for page count: $filePath');
+        return 1; // Default fallback
+      }
+      
+      // Extract text from Word document
+      final bytes = await file.readAsBytes();
+      print('Word file size for page count: ${bytes.length} bytes');
+      
+      String text = docxToText(bytes);
+      print('Raw extracted text length: ${text.length} characters');
+      
+      // Clean up XML tags if present
+      if (text.startsWith('<?xml')) {
+        // Try to extract text content from XML
+        final RegExp textRegex = RegExp(r'<w:t[^>]*>([^<]*)</w:t>');
+        final matches = textRegex.allMatches(text);
+        if (matches.isNotEmpty) {
+          text = matches.map((match) => match.group(1) ?? '').join(' ');
+        } else {
+          // Fallback: remove all XML tags
+          text = text.replaceAll(RegExp(r'<[^>]*>'), ' ')
+                    .replaceAll(RegExp(r'\s+'), ' ')
+                    .trim();
+        }
+      }
+      
+      print('Cleaned text length for page count: ${text.length} characters');
+      
+      // Estimate pages based on text length
+      // Assuming ~500 words per page (average)
+      final words = text.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
+      final estimatedPages = (words / 500).ceil();
+      
+      print('Word count: $words, Estimated pages: $estimatedPages');
+      
+      return estimatedPages > 0 ? estimatedPages : 1;
+    } catch (e) {
+      print('Error getting Word page count: $e');
+      // Fallback to 1 if unable to read Word document
+      return 1;
+    }
+  }
+
   void _showAddEbookDialog(
     String defaultTitle,
     String filePath,
     String fileType,
+    int totalPages,
   ) {
     final TextEditingController titleController = TextEditingController(
       text: defaultTitle,
@@ -682,6 +775,7 @@ class _EbookScreenState extends State<EbookScreen> {
                             filePath: filePath,
                             tags: selectedTags,
                             description: ebookDescription,
+                            totalPages: totalPages,
                           );
                           _updateFilteredEbooks();
                           Navigator.pop(context);

@@ -89,16 +89,14 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
       }
     });
 
-    // Update progress in data service only if we've reached a new maximum
-    if (pageNumber >= _maxPageReached) {
-      _dataService.updateEbookProgress(widget.ebookId, pageNumber);
-      // Refresh ebook data to get updated progress
-      final updatedEbook = _dataService.getEbook(widget.ebookId);
-      if (updatedEbook != null) {
-        setState(() {
-          _ebook = updatedEbook;
-        });
-      }
+    // Always update progress in data service to save current position
+    _dataService.updateEbookProgress(widget.ebookId, _maxPageReached);
+    // Refresh ebook data to get updated progress
+    final updatedEbook = _dataService.getEbook(widget.ebookId);
+    if (updatedEbook != null) {
+      setState(() {
+        _ebook = updatedEbook;
+      });
     }
 
     _updateLastActiveTime();
@@ -255,7 +253,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
             child: Column(
               children: [
                 LinearProgressIndicator(
-                  value: _totalPages > 0 ? _maxPageReached / _totalPages : 0.0,
+                  value: _ebook?.progress ?? 0.0,
                   backgroundColor: Colors.grey[200],
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     Color(0xFF2563EB),
@@ -267,7 +265,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${_totalPages > 0 ? ((_maxPageReached / _totalPages) * 100).round() : 0}% selesai',
+                      '${_ebook?.progressPercentage ?? "0%"} selesai',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     Text(
@@ -483,7 +481,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Progress: ${_totalPages > 0 ? ((_maxPageReached / _totalPages) * 100).round() : 0}%',
+                                              'Progress: ${_ebook?.progressPercentage ?? "0%"}',
                                               style: TextStyle(
                                                 color: Colors.grey[300],
                                                 fontSize: 13,

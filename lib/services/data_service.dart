@@ -173,9 +173,17 @@ class DataService {
 
   List<String> getUsedTags() {
     final Set<String> usedTags = {};
+
+    // Add tags from regular photos
     for (final photo in _photos) {
       usedTags.addAll(photo.tags);
     }
+
+    // Add tags from photo pages
+    for (final photoPage in _photoPages) {
+      usedTags.addAll(photoPage.tags);
+    }
+
     return usedTags.toList()..sort();
   }
 
@@ -260,6 +268,7 @@ class DataService {
     required String filePath,
     List<String> tags = const [],
     String description = '',
+    int totalPages = 1,
   }) {
     final id = _generateId();
     final ebook = EbookModel(
@@ -269,6 +278,7 @@ class DataService {
       createdAt: DateTime.now(),
       tags: tags,
       description: description,
+      totalPages: totalPages,
     );
 
     _ebooks.insert(0, ebook); // Add to beginning for newest first
