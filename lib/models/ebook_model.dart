@@ -18,14 +18,15 @@ class EbookModel {
     required this.filePath,
     this.fileType = 'pdf',
     this.totalPages = 1,
-    this.currentPage = 1,
+    this.currentPage = 0,
     required this.createdAt,
     DateTime? lastReadAt,
     this.tags = const [],
     this.description = '',
   }) : lastReadAt = lastReadAt ?? DateTime.now();
 
-  double get progress => totalPages > 0 ? currentPage / totalPages : 0.0;
+  double get progress =>
+      totalPages > 0 && currentPage > 0 ? currentPage / totalPages : 0.0;
 
   String get progressPercentage => '${(progress * 100).toInt()}%';
 

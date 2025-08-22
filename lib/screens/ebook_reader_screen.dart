@@ -33,7 +33,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     if (ebook != null) {
       setState(() {
         _ebook = ebook;
-        _currentPage = ebook.currentPage;
+        _currentPage = ebook.currentPage > 0 ? ebook.currentPage : 1;
         _isLoading = false;
       });
 
@@ -49,29 +49,42 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
   }
 
   void _onPageChanged(PdfPageChangedDetails details) {
-    setState(() {
-      _currentPage = details.newPageNumber;
-    });
+    final newPage = details.newPageNumber;
 
-    // Update progress in the ebook model
-    if (_ebook != null) {
-      final updatedEbook = _ebook!.copyWith(
-        currentPage: _currentPage,
-        lastReadAt: DateTime.now(),
-      );
+    // Only update if the new page is greater than current progress (prevent going backwards)
+    if (_ebook != null && newPage > _ebook!.currentPage) {
+      // Use post frame callback to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _currentPage = newPage;
+        });
 
-      // Update in data service
-      _dataService.updateEbookProgress(widget.ebookId, _currentPage);
+        // Update progress in the ebook model
+        final updatedEbook = _ebook!.copyWith(
+          currentPage: newPage,
+          lastReadAt: DateTime.now(),
+        );
 
-      // Log reading activity
-      _dataService.logEbookActivity(
-        title: 'Membaca "${_ebook!.title}"',
-        description: 'Melanjutkan membaca hingga halaman $_currentPage',
-        type: ActivityType.ebookRead,
-      );
+        // Update in data service
+        _dataService.updateEbookProgress(widget.ebookId, newPage);
 
-      setState(() {
-        _ebook = updatedEbook;
+        // Log reading activity
+        _dataService.logEbookActivity(
+          title: 'Membaca "${_ebook!.title}"',
+          description: 'Melanjutkan membaca hingga halaman $newPage',
+          type: ActivityType.ebookRead,
+        );
+
+        setState(() {
+          _ebook = updatedEbook;
+        });
+      });
+    } else {
+      // Just update the current page display without affecting progress
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _currentPage = newPage;
+        });
       });
     }
   }
