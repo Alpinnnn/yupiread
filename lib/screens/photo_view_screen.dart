@@ -142,19 +142,20 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
           Center(
             child: InteractiveViewer(
               transformationController: _transformationController,
-              minScale: 0.5,
-              maxScale: 4.0,
+              minScale: 0.1,
+              maxScale: 5.0,
               panEnabled: true,
               scaleEnabled: true,
-              boundaryMargin: const EdgeInsets.all(20),
+              boundaryMargin: EdgeInsets.zero,
+              constrained: false,
               child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width,
-                  maxHeight: MediaQuery.of(context).size.height,
-                ),
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
                 child: Image.file(
                   File(photo!.imagePath),
                   fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: double.infinity,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       width: MediaQuery.of(context).size.width * 0.8,
