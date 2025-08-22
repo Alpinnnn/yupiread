@@ -24,7 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,51 +40,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 32),
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.95,
-                  children: [
-                    _buildStatCard(
-                      context,
-                      icon: Icons.photo_library,
-                      title: 'Total Foto',
-                      value: '${_dataService.totalPhotos}',
-                      subtitle: 'Catatan tersimpan',
-                      color: const Color(0xFF3B82F6),
-                      backgroundColor: const Color(0xFFEFF6FF),
-                    ),
-                    _buildStatCard(
-                      context,
-                      icon: Icons.menu_book,
-                      title: 'Total Ebook',
-                      value: '${_dataService.totalEbooks}',
-                      subtitle: 'Ebook dibuat',
-                      color: const Color(0xFF10B981),
-                      backgroundColor: const Color(0xFFECFDF5),
-                    ),
-                    _buildStatCard(
-                      context,
-                      icon: Icons.schedule,
-                      title: 'Waktu Baca',
-                      value: _dataService.totalReadingTime,
-                      subtitle: 'Total membaca',
-                      color: const Color(0xFF8B5CF6),
-                      backgroundColor: const Color(0xFFF3E8FF),
-                    ),
-                    _buildStatCard(
-                      context,
-                      icon: Icons.trending_up,
-                      title: 'Aktivitas',
-                      value: '${_dataService.activityStreak} hari',
-                      subtitle: 'Streak harian',
-                      color: const Color(0xFFF59E0B),
-                      backgroundColor: const Color(0xFFFEF3C7),
-                    ),
-                  ],
-                ),
+              // Statistics Cards with responsive layout
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = constraints.maxWidth;
+                  final cardWidth =
+                      (screenWidth - 16) / 2; // 2 columns with spacing
+
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildStatCard(
+                          context,
+                          icon: Icons.photo_library,
+                          title: 'Total Foto',
+                          value: '${_dataService.totalPhotos}',
+                          subtitle: 'Catatan tersimpan',
+                          color: const Color(0xFF3B82F6),
+                          backgroundColor: const Color(0xFFEFF6FF),
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildStatCard(
+                          context,
+                          icon: Icons.menu_book,
+                          title: 'Total Ebook',
+                          value: '${_dataService.totalEbooks}',
+                          subtitle: 'Ebook dibuat',
+                          color: const Color(0xFF10B981),
+                          backgroundColor: const Color(0xFFECFDF5),
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildStatCard(
+                          context,
+                          icon: Icons.schedule,
+                          title: 'Waktu Baca',
+                          value: _dataService.totalReadingTime,
+                          subtitle: 'Total membaca',
+                          color: const Color(0xFF8B5CF6),
+                          backgroundColor: const Color(0xFFF3E8FF),
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildStatCard(
+                          context,
+                          icon: Icons.trending_up,
+                          title: 'Aktivitas',
+                          value: '${_dataService.activityStreak} hari',
+                          subtitle: 'Streak harian',
+                          color: const Color(0xFFF59E0B),
+                          backgroundColor: const Color(0xFFFEF3C7),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 20),
               _buildRecentActivity(context),
@@ -105,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color backgroundColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -119,37 +136,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: backgroundColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF1A1A1A),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF4A4A4A),
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4A4A4A),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 1),
+          Text(
             subtitle,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
