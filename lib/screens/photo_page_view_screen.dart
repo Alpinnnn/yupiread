@@ -43,7 +43,6 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       vsync: this,
     );
 
-
     // Listen to transformation changes to detect zoom
     _transformationController.addListener(_onTransformationChanged);
   }
@@ -80,8 +79,9 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   void _onTransformationChanged() {
     final Matrix4 matrix = _transformationController.value;
     final double scale = matrix.getMaxScaleOnAxis();
-    final bool isCurrentlyZoomed = scale > 1.01; // Small threshold to avoid floating point issues
-    
+    final bool isCurrentlyZoomed =
+        scale > 1.01; // Small threshold to avoid floating point issues
+
     if (_isZoomed != isCurrentlyZoomed) {
       setState(() {
         _isZoomed = isCurrentlyZoomed;
@@ -173,15 +173,18 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               // Main photo page view
               PageView.builder(
                 controller: _pageController,
-                physics: _isZoomed ? const NeverScrollableScrollPhysics() : _CustomPageScrollPhysics(),
+                physics:
+                    _isZoomed
+                        ? const NeverScrollableScrollPhysics()
+                        : _CustomPageScrollPhysics(),
                 onPageChanged: (index) {
                   final now = DateTime.now();
-                  if (_lastSwipeTime != null && 
+                  if (_lastSwipeTime != null &&
                       now.difference(_lastSwipeTime!).inMilliseconds < 300) {
                     return; // Ignore rapid swipes
                   }
                   _lastSwipeTime = now;
-                  
+
                   setState(() {
                     _currentPhotoIndex = index;
                   });
@@ -274,7 +277,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                   top: MediaQuery.of(context).size.height / 2 - 30,
                   child: GestureDetector(
                     onTap: () {
-                      if (_currentPhotoIndex < photoPage!.photoCount - 1 && !_isZoomed) {
+                      if (_currentPhotoIndex < photoPage!.photoCount - 1 &&
+                          !_isZoomed) {
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
@@ -291,7 +295,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                       child: Icon(
                         Icons.arrow_forward_ios,
                         color:
-                            (_currentPhotoIndex < photoPage!.photoCount - 1 && !_isZoomed)
+                            (_currentPhotoIndex < photoPage!.photoCount - 1 &&
+                                    !_isZoomed)
                                 ? Colors.white
                                 : Colors.white.withOpacity(0.3),
                         size: 24,
@@ -304,11 +309,19 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               // Thumbnail navigation strip
               if (photoPage!.photoCount > 1)
                 Positioned(
-                  bottom: MediaQuery.of(context).orientation == Orientation.landscape ? 20 : 40,
+                  bottom:
+                      MediaQuery.of(context).orientation ==
+                              Orientation.landscape
+                          ? 20
+                          : 40,
                   left: 0,
                   right: 0,
                   child: Container(
-                    height: MediaQuery.of(context).orientation == Orientation.landscape ? 60 : 80,
+                    height:
+                        MediaQuery.of(context).orientation ==
+                                Orientation.landscape
+                            ? 60
+                            : 80,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: ReorderableListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -320,7 +333,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                           }
                           final item = photoPage!.imagePaths.removeAt(oldIndex);
                           photoPage!.imagePaths.insert(newIndex, item);
-                          
+
                           // Update current index if needed
                           if (oldIndex == _currentPhotoIndex) {
                             _currentPhotoIndex = newIndex;
@@ -329,12 +342,14 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                               duration: const Duration(milliseconds: 300),
                               curve: Curves.easeInOut,
                             );
-                          } else if (oldIndex < _currentPhotoIndex && newIndex >= _currentPhotoIndex) {
+                          } else if (oldIndex < _currentPhotoIndex &&
+                              newIndex >= _currentPhotoIndex) {
                             _currentPhotoIndex -= 1;
-                          } else if (oldIndex > _currentPhotoIndex && newIndex <= _currentPhotoIndex) {
+                          } else if (oldIndex > _currentPhotoIndex &&
+                              newIndex <= _currentPhotoIndex) {
                             _currentPhotoIndex += 1;
                           }
-                          
+
                           // Save the reordered photos to data service
                           _dataService.updatePhotoPage(
                             id: photoPage!.id,
@@ -346,14 +361,22 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                         final isSelected = index == _currentPhotoIndex;
                         return Container(
                           key: ValueKey(photoPage!.imagePaths[index]),
-                          width: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
-                          height: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
+                          width:
+                              MediaQuery.of(context).orientation ==
+                                      Orientation.landscape
+                                  ? 50
+                                  : 60,
+                          height:
+                              MediaQuery.of(context).orientation ==
+                                      Orientation.landscape
+                                  ? 50
+                                  : 60,
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           child: GestureDetector(
                             onTap: () {
                               _pageController.animateToPage(
                                 index,
-                                duration: const Duration(milliseconds: 300),
+                                duration: const Duration(milliseconds: 500),
                                 curve: Curves.easeInOut,
                               );
                             },
@@ -363,9 +386,10 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: isSelected 
-                                          ? Colors.white 
-                                          : Colors.transparent,
+                                      color:
+                                          isSelected
+                                              ? Colors.white
+                                              : Colors.transparent,
                                       width: 2,
                                     ),
                                   ),
@@ -373,10 +397,22 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                                     borderRadius: BorderRadius.circular(6),
                                     child: Image.file(
                                       File(photoPage!.imagePaths[index]),
-                                      width: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
-                                      height: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
+                                      width:
+                                          MediaQuery.of(context).orientation ==
+                                                  Orientation.landscape
+                                              ? 50
+                                              : 60,
+                                      height:
+                                          MediaQuery.of(context).orientation ==
+                                                  Orientation.landscape
+                                              ? 50
+                                              : 60,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
                                         return Container(
                                           width: 60,
                                           height: 60,
@@ -430,7 +466,10 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                     },
                     onPanUpdate: (details) {
                       setState(() {
-                        _dragOffset = (_dragOffset - details.delta.dy).clamp(-_bottomBarHeight, 0.0);
+                        _dragOffset = (_dragOffset - details.delta.dy).clamp(
+                          -_bottomBarHeight,
+                          0.0,
+                        );
                       });
                     },
                     onPanEnd: (details) {
@@ -447,151 +486,153 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[900],
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, -2),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[900],
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
                           ),
-                        ],
-                      ),
-                      child: SafeArea(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Handle bar
-                            Container(
-                              margin: const EdgeInsets.only(top: 12),
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[600],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-
-                            // Photo page details
-                            Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    photoPage!.title,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '${photoPage!.photoCount} foto • ${photoPage!.timeAgo}',
-                                    style: TextStyle(
-                                      color: Colors.grey[400],
-                                      fontSize: 14,
-                                    ),
-                                  ),
-
-                                  if (photoPage!.description.isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      photoPage!.description,
-                                      style: TextStyle(
-                                        color: Colors.grey[300],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-
-                                  if (photoPage!.tags.isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 4,
-                                      children:
-                                          photoPage!.tags.map((tag) {
-                                            return Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: const Color(
-                                                  0xFF2563EB,
-                                                ).withOpacity(0.2),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: const Color(
-                                                    0xFF2563EB,
-                                                  ).withOpacity(0.5),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                tag,
-                                                style: const TextStyle(
-                                                  color: Color(0xFF2563EB),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-
-                            // Action buttons
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[850],
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(20),
-                                  topRight: Radius.circular(20),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildActionButton(
-                                    icon: Icons.edit,
-                                    label: 'Edit',
-                                    onTap: _editPhotoPage,
-                                  ),
-                                  _buildActionButton(
-                                    icon: Icons.add_photo_alternate,
-                                    label: 'Tambah Foto',
-                                    onTap: _addPhotoToPage,
-                                  ),
-                                  _buildActionButton(
-                                    icon: Icons.share,
-                                    label: 'Bagikan',
-                                    onTap: _sharePhotoPage,
-                                  ),
-                                  _buildActionButton(
-                                    icon: Icons.delete,
-                                    label: 'Hapus',
-                                    color: Colors.red,
-                                    onTap: _deletePhotoPage,
-                                  ),
-                                ],
-                              ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, -2),
                             ),
                           ],
                         ),
-                      ),
+                        child: SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Handle bar
+                              Container(
+                                margin: const EdgeInsets.only(top: 12),
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[600],
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+
+                              // Photo page details
+                              Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      photoPage!.title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '${photoPage!.photoCount} foto • ${photoPage!.timeAgo}',
+                                      style: TextStyle(
+                                        color: Colors.grey[400],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+
+                                    if (photoPage!.description.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        photoPage!.description,
+                                        style: TextStyle(
+                                          color: Colors.grey[300],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+
+                                    if (photoPage!.tags.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        children:
+                                            photoPage!.tags.map((tag) {
+                                              return Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFF2563EB,
+                                                  ).withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFF2563EB,
+                                                    ).withOpacity(0.5),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  tag,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF2563EB),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+
+                              // Action buttons
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[850],
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(20),
+                                    topRight: Radius.circular(20),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    _buildActionButton(
+                                      icon: Icons.edit,
+                                      label: 'Edit',
+                                      onTap: _editPhotoPage,
+                                    ),
+                                    _buildActionButton(
+                                      icon: Icons.add_photo_alternate,
+                                      label: 'Tambah Foto',
+                                      onTap: _addPhotoToPage,
+                                    ),
+                                    _buildActionButton(
+                                      icon: Icons.share,
+                                      label: 'Bagikan',
+                                      onTap: _sharePhotoPage,
+                                    ),
+                                    _buildActionButton(
+                                      icon: Icons.delete,
+                                      label: 'Hapus',
+                                      color: Colors.red,
+                                      onTap: _deletePhotoPage,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -959,7 +1000,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
 
 // Custom PageScrollPhysics to add delay for swipe gestures
 class _CustomPageScrollPhysics extends PageScrollPhysics {
-  const _CustomPageScrollPhysics({ScrollPhysics? parent}) : super(parent: parent);
+  const _CustomPageScrollPhysics({ScrollPhysics? parent})
+    : super(parent: parent);
 
   @override
   _CustomPageScrollPhysics applyTo(ScrollPhysics? ancestor) {
