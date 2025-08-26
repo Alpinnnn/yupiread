@@ -279,17 +279,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE2E8F0),
+                  backgroundColor: const Color(0xFFF59E0B),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  elevation: 0,
+                  elevation: 2,
+                  shadowColor: const Color(0xFFF59E0B).withOpacity(0.3),
                 ),
-                child: const Text(
-                  'Ebook Setting',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.menu_book, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Ebook Setting',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
               ),
             ),
