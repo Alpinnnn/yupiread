@@ -141,11 +141,17 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          // Main photo view with proper zoom
-          Center(
-            child: InteractiveViewer(
+      body: GestureDetector(
+        onTap: () {
+          if (_showBottomBar) {
+            _toggleBottomBar();
+          }
+        },
+        child: Stack(
+          children: [
+            // Main photo view with proper zoom
+            Center(
+              child: InteractiveViewer(
               transformationController: _transformationController,
               minScale: 0.1,
               maxScale: 5.0,
@@ -198,6 +204,10 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
               left: 0,
               right: 0,
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  // Prevent tap from propagating to background
+                },
                 onPanStart: (details) {
                   _dragOffset = 0.0;
                 },
@@ -218,7 +228,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                   }
                 },
                 child: AnimatedContainer(
-                  duration: Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 200),
                   child: Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[900],
@@ -376,10 +386,11 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                     ),
                   ),
                 ),
-                ),
               ),
             ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

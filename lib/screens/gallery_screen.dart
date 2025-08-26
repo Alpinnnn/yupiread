@@ -20,10 +20,21 @@ class _GalleryScreenState extends State<GalleryScreen> {
   List<PhotoModel> _filteredPhotos = [];
   List<PhotoPageModel> _filteredPhotoPages = [];
 
-  @override
   void initState() {
     super.initState();
     _updateFilteredPhotos();
+  }
+
+
+  int _getCrossAxisCount(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth > 1200) {
+      return 4; // 4 columns for very wide screens
+    } else if (screenWidth > 800) {
+      return 3; // 3 columns for wide screens
+    } else {
+      return 2; // 2 columns for mobile/tablet
+    }
   }
 
   void _updateFilteredPhotos() {
@@ -119,8 +130,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
               const SizedBox(height: 32),
               Expanded(
                 child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: _getCrossAxisCount(context),
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                     childAspectRatio: 0.85,
@@ -557,23 +568,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         title: 'Galeri',
                         onTap: () {
                           Navigator.pop(context);
-                          _addPhotoFromGallery();
+                          _addPhotosFromGallery();
                         },
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: _buildBottomSheetOption(
-                    icon: Icons.collections,
-                    title: 'Halaman Foto (Multi-foto)',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _createPhotoPage();
-                    },
-                  ),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -645,7 +644,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               label: 'Gunakan Galeri',
               textColor: Colors.white,
               onPressed: () {
-                _addPhotoFromGallery();
+                _addPhotosFromGallery();
               },
             ),
           ),
@@ -654,17 +653,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
   }
 
-  Future<void> _addPhotoFromGallery() async {
+  Future<void> _addPhotosFromGallery() async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
+      final List<XFile> images = await _picker.pickMultiImage(
         imageQuality: 85,
         maxWidth: 1920,
         maxHeight: 1920,
       );
 
-      if (image != null) {
-        await _processSelectedImage(image.path, 'Foto dari Galeri');
+      if (images.isNotEmpty) {
+        if (images.length == 1) {
+          // Single photo - create regular photo
+          await _processSelectedImage(images.first.path, 'Foto dari Galeri');
+        } else {
+          // Multiple photos - show validation dialog
+          _showMultiPhotoValidationDialog(images);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -954,29 +958,342 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  void _createPhotoPage() async {
+  void _showMultiPhotoValidationDialog(List<XFile> images) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Pilih Cara Menambahkan Foto',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Anda memilih ${images.length} foto. Bagaimana Anda ingin menambahkannya?',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.collections, size: 16, color: Color(0xFF2563EB)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Multi-Photo Page',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Semua foto dalam satu halaman yang bisa di-swipe',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.photo, size: 16, color: Color(0xFF059669)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Foto Terpisah',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Setiap foto sebagai item terpisah di galeri',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _processMultipleImages(images);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF2563EB),
+            ),
+            child: const Text('Multi-Photo'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _processIndividualImages(images);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Foto Terpisah'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processIndividualImages(List<XFile> images) async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage(
-        imageQuality: 85,
-        maxWidth: 1920,
-        maxHeight: 1920,
+      // Save all images first without showing dialogs
+      List<String> savedPaths = [];
+      
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
       );
 
-      if (images.isNotEmpty) {
-        // Save all images to app directory
-        List<String> savedPaths = [];
-        for (XFile image in images) {
-          final savedPath = await _dataService.savePhotoFile(image.path);
-          savedPaths.add(savedPath);
-        }
-
-        _showPhotoPageCreationDialog(savedPaths);
+      // Save all images to app directory
+      for (XFile image in images) {
+        final savedPath = await _dataService.savePhotoFile(image.path);
+        savedPaths.add(savedPath);
       }
+
+      Navigator.pop(context); // Close loading dialog
+      
+      // Show batch dialog for all photos
+      _showBatchPhotoDialog(savedPaths);
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan foto: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showBatchPhotoDialog(List<String> imagePaths) {
+    final TextEditingController prefixController = TextEditingController(
+      text: 'Foto dari Galeri',
+    );
+    final TextEditingController descriptionController = TextEditingController();
+    List<String> selectedTags = [];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Tambah ${imagePaths.length} Foto',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: prefixController,
+                  decoration: const InputDecoration(
+                    labelText: 'Prefix Judul (akan ditambah nomor)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Deskripsi (opsional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Tag (opsional):',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _dataService.availableTags.map((tag) {
+                    final isSelected = selectedTags.contains(tag);
+                    return FilterChip(
+                      label: Text(tag),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setDialogState(() {
+                          if (selected) {
+                            selectedTags.add(tag);
+                          } else {
+                            selectedTags.remove(tag);
+                          }
+                        });
+                      },
+                      selectedColor: const Color(0xFF2563EB).withOpacity(0.2),
+                      checkmarkColor: const Color(0xFF2563EB),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Tag baru (pisahkan dengan koma)',
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (value) {
+                    final newTags = value
+                        .split(',')
+                        .map((tag) => tag.trim())
+                        .where((tag) => tag.isNotEmpty)
+                        .toList();
+                    setDialogState(() {
+                      for (String tag in newTags) {
+                        if (!selectedTags.contains(tag)) {
+                          selectedTags.add(tag);
+                        }
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final prefix = prefixController.text.trim();
+                final description = descriptionController.text.trim();
+
+                if (prefix.isNotEmpty) {
+                  // Show loading for batch creation
+                  Navigator.pop(context); // Close dialog first
+                  
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+
+                  try {
+                    // Add all photos with sequential titles
+                    for (int i = 0; i < imagePaths.length; i++) {
+                      _dataService.addPhoto(
+                        title: '$prefix ${i + 1}',
+                        imagePath: imagePaths[i],
+                        tags: selectedTags,
+                        description: description,
+                      );
+                    }
+
+                    _updateFilteredPhotos();
+                    Navigator.pop(context); // Close loading dialog
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${imagePaths.length} foto berhasil ditambahkan'),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  } catch (e) {
+                    Navigator.pop(context); // Close loading dialog
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal menambahkan foto: ${e.toString()}'),
+                        backgroundColor: const Color(0xFFEF4444),
+                      ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Simpan Semua'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _processMultipleImages(List<XFile> images) async {
+    try {
+      // Save all images to app directory
+      List<String> savedPaths = [];
+      for (XFile image in images) {
+        final savedPath = await _dataService.savePhotoFile(image.path);
+        savedPaths.add(savedPath);
+      }
+
+      _showPhotoPageCreationDialog(savedPaths);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal memilih foto: ${e.toString()}'),
+            content: Text('Gagal menyimpan foto: ${e.toString()}'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );

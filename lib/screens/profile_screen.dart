@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/data_service.dart';
 import 'tag_settings_screen.dart';
+import 'gallery_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -25,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: Color(0xFF1A1A1A),
+            fontSize: 18,
           ),
         ),
         backgroundColor: Colors.white,
@@ -52,34 +54,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  // Profile Photo
-                  Stack(
-                    children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.grey[200],
-                        ),
-                        child:
-                            _dataService.profileImagePath != null
-                                ? ClipOval(
-                                  child: Image.file(
-                                    File(_dataService.profileImagePath!),
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return _buildDefaultAvatar();
-                                    },
-                                  ),
-                                )
-                                : _buildDefaultAvatar(),
-                      ),
-                    ],
+                  // Profile Avatar
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFE2E8F0),
+                    ),
+                    child:
+                        _dataService.profileImagePath != null
+                            ? ClipOval(
+                              child: Image.file(
+                                File(_dataService.profileImagePath!),
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildDefaultAvatar();
+                                },
+                              ),
+                            )
+                            : _buildDefaultAvatar(),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   // Username
                   Text(
                     _dataService.username,
@@ -89,57 +87,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Color(0xFF1A1A1A),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  // Reading Stats
+                  const SizedBox(height: 32),
+                  // Stats Row
                   Row(
                     children: [
                       Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.local_fire_department,
-                          label: 'Streak',
-                          value: '${_dataService.readingStreak}',
-                          color: const Color(0xFFF59E0B),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.local_fire_department,
+                                color: Color(0xFFF59E0B),
+                                size: 32,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${_dataService.readingStreak}',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFF59E0B),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Streak',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.schedule,
-                          label: 'Waktu Baca',
-                          value: _dataService.formattedReadingTime,
-                          color: const Color(0xFF8B5CF6),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEDE9FE),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.schedule,
+                                color: Color(0xFF8B5CF6),
+                                size: 32,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _dataService.formattedReadingTime,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF8B5CF6),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Waktu Baca',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 32),
+                  // Edit Profile Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _showEditProfileDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Edit Profil',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            // Edit Profile Button
+            // Tag Setting Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _showEditProfileDialog,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Edit Profil',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Tag Settings Button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -148,16 +206,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ).then((_) => setState(() {}));
                 },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
-                  side: const BorderSide(color: Color(0xFF2563EB)),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                  elevation: 2,
+                  shadowColor: const Color(0xFF10B981).withOpacity(0.3),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.local_offer, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Tag Setting',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Gallery Setting Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GallerySettingsScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 2,
+                  shadowColor: const Color(0xFF8B5CF6).withOpacity(0.3),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.photo_library, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Gallery Setting',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Ebook Setting Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // TODO: Implement Ebook Settings
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ebook Setting akan segera hadir'),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE2E8F0),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
                 ),
                 child: const Text(
-                  'Tag Settings',
+                  'Ebook Setting',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -170,44 +301,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildDefaultAvatar() {
     return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
+      width: 120,
+      height: 120,
+      decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFF2563EB).withOpacity(0.1),
+        color: Color(0xFFE2E8F0),
       ),
-      child: const Icon(Icons.person, size: 50, color: Color(0xFF2563EB)),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 24, color: color),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-        ],
-      ),
+      child: const Icon(Icons.person, size: 60, color: Color(0xFF2563EB)),
     );
   }
 

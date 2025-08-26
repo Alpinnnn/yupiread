@@ -678,6 +678,7 @@ class DataService {
                   'currentPage': ebook.currentPage,
                   'totalPages': ebook.totalPages,
                   'lastReadAt': ebook.lastReadAt?.millisecondsSinceEpoch,
+                  'fileType': ebook.fileType,
                 },
               )
               .toList();
@@ -705,6 +706,7 @@ class DataService {
               id: ebookData['id'],
               title: ebookData['title'],
               filePath: ebookData['filePath'],
+              fileType: ebookData['fileType'] ?? 'pdf',
               createdAt: DateTime.fromMillisecondsSinceEpoch(
                 ebookData['createdAt'],
               ),

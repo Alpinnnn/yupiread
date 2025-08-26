@@ -25,10 +25,12 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   bool _showBottomBar = false;
   int _currentPhotoIndex = 0;
   late AnimationController _animationController;
-  late Animation<Offset> _slideAnimation;
   final TransformationController _transformationController =
       TransformationController();
   final PageController _pageController = PageController();
+  bool _isZoomed = false;
+  double _dragOffset = 0.0;
+  double _bottomBarHeight = 300.0;
 
   @override
   void initState() {
@@ -40,17 +42,15 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
+
+    // Listen to transformation changes to detect zoom
+    _transformationController.addListener(_onTransformationChanged);
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _transformationController.removeListener(_onTransformationChanged);
     _transformationController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -59,6 +59,10 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   void _toggleBottomBar() {
     setState(() {
       _showBottomBar = !_showBottomBar;
+      // Reset drag offset when opening bottom bar
+      if (_showBottomBar) {
+        _dragOffset = 0.0;
+      }
     });
 
     if (_showBottomBar) {
@@ -70,6 +74,22 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
 
   void _resetZoom() {
     _transformationController.value = Matrix4.identity();
+  }
+
+  void _onTransformationChanged() {
+    final Matrix4 matrix = _transformationController.value;
+    final double scale = matrix.getMaxScaleOnAxis();
+    final bool isCurrentlyZoomed = scale > 1.01; // Small threshold to avoid floating point issues
+    
+    if (_isZoomed != isCurrentlyZoomed) {
+      setState(() {
+        _isZoomed = isCurrentlyZoomed;
+      });
+    }
+  }
+
+  bool get _isDesktop {
+    return Platform.isWindows || Platform.isMacOS || Platform.isLinux;
   }
 
   @override
@@ -152,6 +172,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               // Main photo page view
               PageView.builder(
                 controller: _pageController,
+                physics: _isZoomed ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
                 onPageChanged: (index) {
                   setState(() {
                     _currentPhotoIndex = index;
@@ -209,15 +230,15 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                 },
               ),
 
-              // Navigation arrows for Windows/Desktop
-              if (photoPage!.photoCount > 1) ...[
+              // Navigation arrows for Windows/Desktop only
+              if (photoPage!.photoCount > 1 && _isDesktop) ...[
                 // Left arrow
                 Positioned(
                   left: 20,
                   top: MediaQuery.of(context).size.height / 2 - 30,
                   child: GestureDetector(
                     onTap: () {
-                      if (_currentPhotoIndex > 0) {
+                      if (_currentPhotoIndex > 0 && !_isZoomed) {
                         _pageController.previousPage(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
@@ -234,7 +255,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                       child: Icon(
                         Icons.arrow_back_ios,
                         color:
-                            _currentPhotoIndex > 0
+                            (_currentPhotoIndex > 0 && !_isZoomed)
                                 ? Colors.white
                                 : Colors.white.withOpacity(0.3),
                         size: 24,
@@ -248,7 +269,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                   top: MediaQuery.of(context).size.height / 2 - 30,
                   child: GestureDetector(
                     onTap: () {
-                      if (_currentPhotoIndex < photoPage!.photoCount - 1) {
+                      if (_currentPhotoIndex < photoPage!.photoCount - 1 && !_isZoomed) {
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
@@ -265,7 +286,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                       child: Icon(
                         Icons.arrow_forward_ios,
                         color:
-                            _currentPhotoIndex < photoPage!.photoCount - 1
+                            (_currentPhotoIndex < photoPage!.photoCount - 1 && !_isZoomed)
                                 ? Colors.white
                                 : Colors.white.withOpacity(0.3),
                         size: 24,
@@ -304,12 +325,32 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               // Bottom sheet with photo page details and actions
               if (_showBottomBar)
                 Positioned(
-                  bottom: 0,
+                  bottom: _dragOffset,
                   left: 0,
                   right: 0,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Container(
+                  child: GestureDetector(
+                    onPanStart: (details) {
+                      _dragOffset = 0.0;
+                    },
+                    onPanUpdate: (details) {
+                      setState(() {
+                        _dragOffset = (_dragOffset - details.delta.dy).clamp(-_bottomBarHeight, 0.0);
+                      });
+                    },
+                    onPanEnd: (details) {
+                      if (_dragOffset < -_bottomBarHeight * 0.5) {
+                        // Close if dragged more than 50%
+                        _toggleBottomBar();
+                      } else {
+                        // Snap back to original position
+                        setState(() {
+                          _dragOffset = 0.0;
+                        });
+                      }
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      child: Container(
                       decoration: BoxDecoration(
                         color: Colors.grey[900],
                         borderRadius: const BorderRadius.only(
@@ -454,6 +495,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                             ),
                           ],
                         ),
+                      ),
                       ),
                     ),
                   ),
