@@ -5,6 +5,7 @@ import '../models/photo_model.dart';
 import '../services/data_service.dart';
 import 'photo_view_screen.dart';
 import 'photo_page_view_screen.dart';
+import 'photo_preview_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -614,16 +615,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   Future<void> _addPhotoFromCamera() async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1920,
-        maxHeight: 1920,
-      );
-
-      if (image != null) {
-        await _processSelectedImage(image.path, 'Foto dari Kamera');
-      }
+      // Start with taking one photo, then go to preview
+      _takePhotosSequentially();
     } catch (e) {
       if (mounted) {
         String errorMessage = 'Gagal mengambil foto';
@@ -649,6 +642,87 @@ class _GalleryScreenState extends State<GalleryScreen> {
             ),
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _takePhotosSequentially() async {
+    List<XFile> capturedImages = [];
+
+    // Take first photo
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      );
+
+      if (image != null) {
+        capturedImages.add(image);
+        // Go directly to preview screen
+        _showPhotoPreview(capturedImages);
+      }
+    } catch (e) {
+      _handleCameraError(e);
+    }
+  }
+
+  void _handleCameraError(dynamic e) {
+    if (mounted) {
+      String errorMessage = 'Gagal mengambil foto';
+
+      // Handle specific Windows camera error
+      if (e.toString().contains('cameraDelegate')) {
+        errorMessage =
+            'Kamera tidak tersedia di platform ini. Silakan gunakan galeri.';
+      } else {
+        errorMessage = 'Gagal mengambil foto: ${e.toString()}';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: const Color(0xFFEF4444),
+          action: SnackBarAction(
+            label: 'Gunakan Galeri',
+            textColor: Colors.white,
+            onPressed: () {
+              _addPhotosFromGallery();
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showPhotoPreview(List<XFile> photos) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PhotoPreviewScreen(
+          capturedPhotos: photos,
+          onPhotosConfirmed: (confirmedPhotos, choice) {
+            // Process the confirmed photos based on user choice
+            _processConfirmedPhotos(confirmedPhotos, choice);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _processConfirmedPhotos(List<XFile> photos, String choice) {
+    if (photos.isEmpty) return;
+
+    if (photos.length == 1) {
+      // Single photo - process normally
+      _processSelectedImage(photos.first.path, 'Foto dari Kamera');
+    } else {
+      // Multiple photos - process based on user choice from preview
+      if (choice == 'multi') {
+        _processMultipleImages(photos);
+      } else {
+        _processIndividualImages(photos);
       }
     }
   }

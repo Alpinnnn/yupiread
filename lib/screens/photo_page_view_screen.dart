@@ -31,6 +31,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   bool _isZoomed = false;
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
+  DateTime? _lastSwipeTime;
 
   @override
   void initState() {
@@ -172,8 +173,15 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               // Main photo page view
               PageView.builder(
                 controller: _pageController,
-                physics: _isZoomed ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
+                physics: _isZoomed ? const NeverScrollableScrollPhysics() : _CustomPageScrollPhysics(),
                 onPageChanged: (index) {
+                  final now = DateTime.now();
+                  if (_lastSwipeTime != null && 
+                      now.difference(_lastSwipeTime!).inMilliseconds < 300) {
+                    return; // Ignore rapid swipes
+                  }
+                  _lastSwipeTime = now;
+                  
                   setState(() {
                     _currentPhotoIndex = index;
                   });
@@ -181,49 +189,46 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                 },
                 itemCount: photoPage!.imagePaths.length,
                 itemBuilder: (context, index) {
-                  return Center(
-                    child: InteractiveViewer(
-                      transformationController: _transformationController,
-                      minScale: 0.1,
-                      maxScale: 5.0,
-                      panEnabled: true,
-                      scaleEnabled: true,
-                      boundaryMargin: EdgeInsets.zero,
-                      constrained: false,
-                      child: Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: MediaQuery.of(context).size.height,
-                        child: Image.file(
-                          File(photoPage!.imagePaths[index]),
-                          fit: BoxFit.contain,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: MediaQuery.of(context).size.width * 0.8,
-                              height: MediaQuery.of(context).size.height * 0.6,
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.broken_image,
-                                    size: 64,
-                                    color: Colors.grey,
+                  return InteractiveViewer(
+                    transformationController: _transformationController,
+                    minScale: 0.5,
+                    maxScale: 5.0,
+                    panEnabled: true,
+                    scaleEnabled: true,
+                    boundaryMargin: EdgeInsets.zero,
+                    constrained: false,
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: MediaQuery.of(context).size.height,
+                      child: Image.file(
+                        File(photoPage!.imagePaths[index]),
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.height,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.broken_image,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Gagal memuat foto',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 16,
                                   ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Gagal memuat foto',
-                                    style: TextStyle(
-                                      color: Colors.grey[400],
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   );
@@ -296,28 +301,119 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                 ),
               ],
 
-              // Photo navigation indicators
+              // Thumbnail navigation strip
               if (photoPage!.photoCount > 1)
                 Positioned(
-                  bottom: 100,
+                  bottom: MediaQuery.of(context).orientation == Orientation.landscape ? 20 : 40,
                   left: 0,
                   right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      photoPage!.photoCount,
-                      (index) => Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color:
-                              _currentPhotoIndex == index
-                                  ? Colors.white
-                                  : Colors.white.withOpacity(0.4),
-                        ),
-                      ),
+                  child: Container(
+                    height: MediaQuery.of(context).orientation == Orientation.landscape ? 60 : 80,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ReorderableListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: photoPage!.imagePaths.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) {
+                            newIndex -= 1;
+                          }
+                          final item = photoPage!.imagePaths.removeAt(oldIndex);
+                          photoPage!.imagePaths.insert(newIndex, item);
+                          
+                          // Update current index if needed
+                          if (oldIndex == _currentPhotoIndex) {
+                            _currentPhotoIndex = newIndex;
+                            _pageController.animateToPage(
+                              _currentPhotoIndex,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          } else if (oldIndex < _currentPhotoIndex && newIndex >= _currentPhotoIndex) {
+                            _currentPhotoIndex -= 1;
+                          } else if (oldIndex > _currentPhotoIndex && newIndex <= _currentPhotoIndex) {
+                            _currentPhotoIndex += 1;
+                          }
+                          
+                          // Save the reordered photos to data service
+                          _dataService.updatePhotoPage(
+                            id: photoPage!.id,
+                            imagePaths: photoPage!.imagePaths,
+                          );
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        final isSelected = index == _currentPhotoIndex;
+                        return Container(
+                          key: ValueKey(photoPage!.imagePaths[index]),
+                          width: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
+                          height: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          child: GestureDetector(
+                            onTap: () {
+                              _pageController.animateToPage(
+                                index,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            child: Stack(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected 
+                                          ? Colors.white 
+                                          : Colors.transparent,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.file(
+                                      File(photoPage!.imagePaths[index]),
+                                      width: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
+                                      height: MediaQuery.of(context).orientation == Orientation.landscape ? 50 : 60,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          width: 60,
+                                          height: 60,
+                                          color: Colors.grey[800],
+                                          child: const Icon(
+                                            Icons.broken_image,
+                                            color: Colors.grey,
+                                            size: 24,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                // Drag handle indicator
+                                Positioned(
+                                  top: 2,
+                                  right: 2,
+                                  child: Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.6),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.drag_handle,
+                                      color: Colors.white,
+                                      size: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -859,4 +955,23 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
           ),
     );
   }
+}
+
+// Custom PageScrollPhysics to add delay for swipe gestures
+class _CustomPageScrollPhysics extends PageScrollPhysics {
+  const _CustomPageScrollPhysics({ScrollPhysics? parent}) : super(parent: parent);
+
+  @override
+  _CustomPageScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _CustomPageScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  bool shouldAcceptUserOffset(ScrollMetrics position) {
+    // Add a small delay to prevent conflicts with pinch gestures
+    return super.shouldAcceptUserOffset(position);
+  }
+
+  @override
+  double get minFlingVelocity => 100.0; // Increase minimum velocity for page changes
 }

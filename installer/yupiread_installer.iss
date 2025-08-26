@@ -1,16 +1,16 @@
 [Setup]
-AppName=YupiRead
-AppVersion=0.0.3
+AppName=Yupiread
+AppVersion=0.0.4
 AppPublisher=Euphyfve
 AppPublisherURL=https://github.com/Alpinnnn/yupiread
 AppSupportURL=https://github.com/Alpinnnn/yupiread/issues
 AppUpdatesURL=https://github.com/Alpinnnn/yupiread/releases
-DefaultDirName={autopf}\YupiRead
+DefaultDirName={autopf}\Yupiread
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
 InfoBeforeFile=..\README.md
 OutputDir=..\build\windows\installer
-OutputBaseFilename=YupiRead-Setup-{#SetupSetting("AppVersion")}
+OutputBaseFilename=Yupiread-Setup-{#SetupSetting("AppVersion")}-x64
 SetupIconFile=..\windows\runner\resources\app_icon.ico
 Compression=lzma
 SolidCompression=yes
@@ -32,12 +32,12 @@ Source: "..\build\windows\x64\runner\Release\yupiread.exe"; DestDir: "{app}"; Fl
 Source: "..\build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\YupiRead"; Filename: "{app}\yupiread.exe"
-Name: "{autodesktop}\YupiRead"; Filename: "{app}\yupiread.exe"; Tasks: desktopicon
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\YupiRead"; Filename: "{app}\yupiread.exe"; Tasks: quicklaunchicon
+Name: "{autoprograms}\Yupiread"; Filename: "{app}\yupiread.exe"
+Name: "{autodesktop}\Yupiread"; Filename: "{app}\yupiread.exe"; Tasks: desktopicon
+Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\Yupiread"; Filename: "{app}\yupiread.exe"; Tasks: quicklaunchicon
 
 [Run]
-Filename: "{app}\yupiread.exe"; Description: "{cm:LaunchProgram,YupiRead}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\yupiread.exe"; Description: "{cm:LaunchProgram,Yupiread}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
