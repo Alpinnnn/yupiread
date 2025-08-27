@@ -32,6 +32,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
   DateTime? _lastSwipeTime;
+  late AnimationController _zoomAnimationController;
+  late Animation<Matrix4> _zoomAnimation;
 
   @override
   void initState() {
@@ -43,6 +45,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       vsync: this,
     );
 
+    _zoomAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
     // Listen to transformation changes to detect zoom
     _transformationController.addListener(_onTransformationChanged);
   }
@@ -50,6 +57,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _zoomAnimationController.dispose();
     _transformationController.removeListener(_onTransformationChanged);
     _transformationController.dispose();
     _pageController.dispose();
@@ -73,7 +81,61 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   }
 
   void _resetZoom() {
-    _transformationController.value = Matrix4.identity();
+    _animateZoom(Matrix4.identity());
+  }
+
+  void _handleDoubleTap(TapDownDetails details) {
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final Offset localPosition = renderBox.globalToLocal(
+      details.globalPosition,
+    );
+
+    final Matrix4 currentMatrix = _transformationController.value;
+    final double currentScale = currentMatrix.getMaxScaleOnAxis();
+
+    Matrix4 targetMatrix;
+
+    if (currentScale > 1.01) {
+      // Currently zoomed, zoom out to fit
+      targetMatrix = Matrix4.identity();
+    } else {
+      // Currently not zoomed, zoom in to 2x at tap position
+      const double targetScale = 2.0;
+      final double screenWidth = MediaQuery.of(context).size.width;
+      final double screenHeight = MediaQuery.of(context).size.height;
+
+      // Calculate the translation needed to center the tap point
+      final double translateX =
+          (screenWidth / 2 - localPosition.dx) * targetScale;
+      final double translateY =
+          (screenHeight / 2 - localPosition.dy) * targetScale;
+
+      targetMatrix =
+          Matrix4.identity()
+            ..translate(translateX, translateY)
+            ..scale(targetScale);
+    }
+
+    _animateZoom(targetMatrix);
+  }
+
+  void _animateZoom(Matrix4 targetMatrix) {
+    _zoomAnimation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: targetMatrix,
+    ).animate(
+      CurvedAnimation(
+        parent: _zoomAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _zoomAnimation.addListener(() {
+      _transformationController.value = _zoomAnimation.value;
+    });
+
+    _zoomAnimationController.reset();
+    _zoomAnimationController.forward();
   }
 
   void _onTransformationChanged() {
@@ -168,6 +230,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               _toggleBottomBar();
             }
           },
+          onDoubleTapDown: _handleDoubleTap,
+          onDoubleTap: () {}, // Required for onDoubleTapDown to work
           child: Stack(
             children: [
               // Main photo page view
@@ -192,46 +256,50 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                 },
                 itemCount: photoPage!.imagePaths.length,
                 itemBuilder: (context, index) {
-                  return InteractiveViewer(
-                    transformationController: _transformationController,
-                    minScale: 0.5,
-                    maxScale: 5.0,
-                    panEnabled: true,
-                    scaleEnabled: true,
-                    boundaryMargin: EdgeInsets.zero,
-                    constrained: false,
-                    child: Container(
-                      width: MediaQuery.of(context).size.width,
-                      height: MediaQuery.of(context).size.height,
-                      child: Image.file(
-                        File(photoPage!.imagePaths[index]),
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                        height: double.infinity,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: MediaQuery.of(context).size.width,
-                            height: MediaQuery.of(context).size.height,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.broken_image,
-                                  size: 64,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Gagal memuat foto',
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 16,
+                  return GestureDetector(
+                    onDoubleTapDown: _handleDoubleTap,
+                    onDoubleTap: () {},
+                    child: InteractiveViewer(
+                      transformationController: _transformationController,
+                      minScale: 0.5,
+                      maxScale: 5.0,
+                      panEnabled: true,
+                      scaleEnabled: true,
+                      boundaryMargin: EdgeInsets.zero,
+                      constrained: false,
+                      child: Container(
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
+                        child: Image.file(
+                          File(photoPage!.imagePaths[index]),
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.height,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.broken_image,
+                                    size: 64,
+                                    color: Colors.grey,
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Gagal memuat foto',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   );

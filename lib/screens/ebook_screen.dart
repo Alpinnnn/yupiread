@@ -1,12 +1,18 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:docx_to_text/docx_to_text.dart';
+import 'package:archive/archive.dart';
+import 'package:xml/xml.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import '../models/ebook_model.dart';
+import '../models/word_document_data.dart';
 import '../services/data_service.dart';
 import 'ebook_reader_screen.dart';
-import 'word_reader_screen.dart';
 
 class EbookScreen extends StatefulWidget {
   const EbookScreen({super.key});
@@ -35,27 +41,18 @@ class _EbookScreenState extends State<EbookScreen> {
   }
 
   void _openEbook(EbookModel ebook) {
-    if (ebook.fileType == 'word') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => WordReaderScreen(ebookId: ebook.id),
-        ),
-      ).then((_) => _updateFilteredEbooks());
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EbookReaderScreen(ebookId: ebook.id),
-        ),
-      ).then((_) => _updateFilteredEbooks());
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EbookReaderScreen(ebookId: ebook.id),
+      ),
+    ).then((_) => _updateFilteredEbooks());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -84,11 +81,11 @@ class _EbookScreenState extends State<EbookScreen> {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardTheme.color,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -97,9 +94,9 @@ class _EbookScreenState extends State<EbookScreen> {
                         child: IconButton(
                           icon: Stack(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.filter_list,
-                                color: Color(0xFF2563EB),
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               if (_selectedTags.isNotEmpty)
                                 Positioned(
@@ -137,11 +134,11 @@ class _EbookScreenState extends State<EbookScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB),
+                            color: Theme.of(context).colorScheme.primary,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF2563EB).withOpacity(0.2),
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -188,28 +185,31 @@ class _EbookScreenState extends State<EbookScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF2563EB).withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(50),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.library_books,
               size: 48,
-              color: Color(0xFF2563EB),
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Belum ada ebook',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
+              color: Theme.of(context).textTheme.headlineMedium?.color,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Impor file PDF atau Word untuk mulai membaca',
-            style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+            style: TextStyle(
+              fontSize: 14, 
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -218,7 +218,7 @@ class _EbookScreenState extends State<EbookScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Impor Ebook'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -249,11 +249,11 @@ class _EbookScreenState extends State<EbookScreen> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -278,7 +278,7 @@ class _EbookScreenState extends State<EbookScreen> {
                     bottom: 8,
                     right: 8,
                     child: Icon(
-                      ebook.fileType == 'word' ? Icons.description : Icons.picture_as_pdf,
+                      Icons.picture_as_pdf,
                       color: Colors.white.withOpacity(0.7),
                       size: 16,
                     ),
@@ -293,10 +293,10 @@ class _EbookScreenState extends State<EbookScreen> {
                 children: [
                   Text(
                     ebook.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -304,9 +304,9 @@ class _EbookScreenState extends State<EbookScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '${ebook.totalPages} halaman',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF94A3B8),
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -335,28 +335,31 @@ class _EbookScreenState extends State<EbookScreen> {
                       Icon(
                         Icons.access_time,
                         size: 12,
-                        color: Colors.grey[500],
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         ebook.timeAgo,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: TextStyle(
+                          fontSize: 12, 
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: ebook.progress,
-                    backgroundColor: Colors.grey[200],
+                    backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
                     minHeight: 3,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${ebook.progressPercentage} selesai',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF94A3B8),
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
@@ -364,7 +367,11 @@ class _EbookScreenState extends State<EbookScreen> {
             ),
             const SizedBox(width: 8),
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.grey[400], size: 20),
+              icon: Icon(
+                Icons.more_vert, 
+                color: Theme.of(context).textTheme.bodyMedium?.color, 
+                size: 20,
+              ),
               onSelected: (value) {
                 switch (value) {
                   case 'read':
@@ -425,9 +432,9 @@ class _EbookScreenState extends State<EbookScreen> {
       builder:
           (context) => Container(
             padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
@@ -444,12 +451,12 @@ class _EbookScreenState extends State<EbookScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Impor Ebook',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
+                    color: Theme.of(context).textTheme.headlineMedium?.color,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -498,25 +505,28 @@ class _EbookScreenState extends State<EbookScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FA),
+          color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: const Color(0xFF2563EB)),
+            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              style: TextStyle(
+                fontSize: 12, 
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -581,16 +591,54 @@ class _EbookScreenState extends State<EbookScreen> {
           return;
         }
 
-        // Save file to app directory
-        final savedPath = await _dataService.saveEbookFile(filePath);
+        // Show loading dialog
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const AlertDialog(
+              content: Row(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 20),
+                  Text('Mengkonversi Word ke PDF...'),
+                ],
+              ),
+            ),
+          );
+        }
 
-        // Get Word page count (estimate based on text length)
-        int totalPages = await _getWordPageCount(savedPath);
+        // Convert Word to PDF
+        final pdfPath = await _convertWordToPdf(filePath, fileName);
+        
+        // Close loading dialog
+        if (mounted) {
+          Navigator.pop(context);
+        }
 
-        // Show dialog to add metadata
-        _showAddEbookDialog(fileName.replaceAll('.docx', ''), savedPath, 'word', totalPages);
+        if (pdfPath != null) {
+          // Get PDF page count
+          int totalPages = await _getPdfPageCount(pdfPath);
+
+          // Show dialog to add metadata
+          _showAddEbookDialog(fileName.replaceAll('.docx', ''), pdfPath, 'pdf', totalPages);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Gagal mengkonversi Word ke PDF'),
+                backgroundColor: Color(0xFFEF4444),
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
+      // Close loading dialog if still open
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -622,44 +670,474 @@ class _EbookScreenState extends State<EbookScreen> {
     }
   }
 
-  // Get Word page count by estimating from text length
-  Future<int> _getWordPageCount(String filePath) async {
+  // Convert Word document to PDF with advanced formatting and image preservation
+  Future<String?> _convertWordToPdf(String wordFilePath, String fileName) async {
     try {
-      final file = File(filePath);
+      final file = File(wordFilePath);
       if (!await file.exists()) {
-        return 1; // Default fallback
+        return null;
+      }
+
+      // Extract Word document structure
+      final bytes = await file.readAsBytes();
+      final wordData = await _extractWordData(bytes);
+      
+      // Create PDF with enhanced formatting
+      final PdfDocument document = PdfDocument();
+      
+      // Set up document properties
+      document.documentInformation.title = fileName.replaceAll('.docx', '');
+      document.documentInformation.creator = 'YupiRead';
+      
+      // Create pages with formatted content and images
+      await _createAdvancedPdfPages(document, wordData);
+      
+      // Save PDF to app directory
+      final appDir = await getApplicationDocumentsDirectory();
+      final pdfFileName = fileName.replaceAll('.docx', '.pdf');
+      final pdfPath = path.join(appDir.path, 'ebooks', pdfFileName);
+      
+      // Ensure directory exists
+      final pdfDir = Directory(path.dirname(pdfPath));
+      if (!await pdfDir.exists()) {
+        await pdfDir.create(recursive: true);
       }
       
-      // Extract text from Word document
-      final bytes = await file.readAsBytes();
-      String text = docxToText(bytes);
+      // Save the PDF
+      final List<int> pdfBytes = await document.save();
+      document.dispose();
       
-      // Clean up XML tags if present
-      if (text.startsWith('<?xml')) {
-        // Try to extract text content from XML
-        final RegExp textRegex = RegExp(r'<w:t[^>]*>([^<]*)</w:t>');
-        final matches = textRegex.allMatches(text);
-        if (matches.isNotEmpty) {
-          text = matches.map((match) => match.group(1) ?? '').join(' ');
-        } else {
-          // Fallback: remove all XML tags
-          text = text.replaceAll(RegExp(r'<[^>]*>'), ' ')
-                    .replaceAll(RegExp(r'\s+'), ' ')
-                    .trim();
+      final pdfFile = File(pdfPath);
+      await pdfFile.writeAsBytes(pdfBytes);
+      
+      return pdfPath;
+    } catch (e) {
+      print('Error converting Word to PDF: $e');
+      return null;
+    }
+  }
+
+  // Extract structured data from Word document
+  Future<WordDocumentData> _extractWordData(List<int> bytes) async {
+    try {
+      final archive = ZipDecoder().decodeBytes(Uint8List.fromList(bytes));
+      final wordData = WordDocumentData();
+      
+      // Extract document.xml for text and formatting
+      final documentXml = archive.findFile('word/document.xml');
+      if (documentXml != null) {
+        // Use UTF-8 decoding to prevent encoding issues
+        final xmlContent = utf8.decode(documentXml.content);
+        final document = XmlDocument.parse(xmlContent);
+        wordData.elements = _parseDocumentElements(document);
+      }
+      
+      // Extract images from media folder
+      final mediaFiles = archive.files.where((file) => 
+          file.name.startsWith('word/media/') && 
+          (file.name.endsWith('.png') || file.name.endsWith('.jpg') || 
+           file.name.endsWith('.jpeg') || file.name.endsWith('.gif')));
+      
+      for (final mediaFile in mediaFiles) {
+        final imageName = path.basename(mediaFile.name);
+        wordData.images[imageName] = mediaFile.content;
+      }
+      
+      // Extract relationships for image mapping
+      final relsFile = archive.findFile('word/_rels/document.xml.rels');
+      if (relsFile != null) {
+        // Use UTF-8 decoding to prevent encoding issues
+        final relsContent = utf8.decode(relsFile.content);
+        final relsDoc = XmlDocument.parse(relsContent);
+        wordData.relationships = _parseRelationships(relsDoc);
+      }
+      
+      return wordData;
+    } catch (e) {
+      print('Error extracting Word data: $e');
+      // Fallback to simple text extraction
+      final text = docxToText(Uint8List.fromList(bytes));
+      return WordDocumentData()
+        ..elements = [WordElement(type: 'paragraph', text: text, formatting: WordFormatting())];
+    }
+  }
+  
+  // Parse document elements with formatting
+  List<WordElement> _parseDocumentElements(XmlDocument document) {
+    final elements = <WordElement>[];
+    
+    final paragraphs = document.findAllElements('w:p');
+    for (final paragraph in paragraphs) {
+      final element = WordElement(type: 'paragraph', formatting: WordFormatting());
+      
+      // Parse paragraph properties for header detection
+      final paragraphProps = paragraph.findElements('w:pPr').firstOrNull;
+      if (paragraphProps != null) {
+        final styleElement = paragraphProps.findElements('w:pStyle').firstOrNull;
+        if (styleElement != null) {
+          final styleVal = styleElement.getAttribute('w:val');
+          if (styleVal != null && (styleVal.toLowerCase().contains('heading') || 
+              styleVal.toLowerCase().contains('title'))) {
+            element.isHeader = true;
+            element.headerLevel = _extractHeaderLevel(styleVal);
+          }
         }
       }
       
-      // Estimate pages based on text length
-      // Assuming ~500 words per page (average)
-      final words = text.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
-      final estimatedPages = (words / 500).ceil();
+      final textRuns = paragraph.findAllElements('w:r');
       
-      return estimatedPages > 0 ? estimatedPages : 1;
+      for (final run in textRuns) {
+        final runProps = run.findElements('w:rPr').firstOrNull;
+        final formatting = _parseRunFormatting(runProps);
+        
+        // Check for images
+        final drawings = run.findAllElements('w:drawing');
+        if (drawings.isNotEmpty) {
+          final imageId = _extractImageId(drawings.first);
+          if (imageId != null) {
+            elements.add(WordElement(
+              type: 'image',
+              imageId: imageId,
+              formatting: formatting,
+            ));
+            continue;
+          }
+        }
+        
+        // Extract text with proper space handling
+        final textElements = run.findAllElements('w:t');
+        for (final textElement in textElements) {
+          var text = textElement.innerText;
+          if (text.isNotEmpty) {
+            // Handle XML space preservation
+            final spaceAttr = textElement.getAttribute('xml:space');
+            if (spaceAttr != 'preserve') {
+              // Normalize whitespace but preserve single spaces
+              text = text.replaceAll(RegExp(r'\s+'), ' ');
+            }
+            element.text += text;
+            element.formatting = _mergeFormatting(element.formatting, formatting);
+          }
+        }
+        
+        // Handle tab elements
+        final tabElements = run.findAllElements('w:tab');
+        for (final _ in tabElements) {
+          element.text += '\t';
+        }
+        
+        // Handle break elements (line breaks)
+        final breakElements = run.findAllElements('w:br');
+        for (final _ in breakElements) {
+          element.text += '\n';
+        }
+      }
+      
+      if (element.text.isNotEmpty || element.imageId != null) {
+        elements.add(element);
+      }
+    }
+    
+    return elements;
+  }
+  
+  // Parse run formatting properties with enhanced support
+  WordFormatting _parseRunFormatting(XmlElement? runProps) {
+    final formatting = WordFormatting();
+    
+    if (runProps != null) {
+      formatting.isBold = runProps.findElements('w:b').isNotEmpty;
+      formatting.isItalic = runProps.findElements('w:i').isNotEmpty;
+      formatting.isUnderline = runProps.findElements('w:u').isNotEmpty;
+      
+      // Parse font size
+      final sizeElement = runProps.findElements('w:sz').firstOrNull;
+      if (sizeElement != null) {
+        final sizeValue = sizeElement.getAttribute('w:val');
+        if (sizeValue != null) {
+          formatting.fontSize = double.tryParse(sizeValue) ?? 22.0; // Word uses half-points
+          formatting.fontSize = formatting.fontSize / 2; // Convert to points
+        }
+      }
+      
+      // Parse text color
+      final colorElement = runProps.findElements('w:color').firstOrNull;
+      if (colorElement != null) {
+        final colorValue = colorElement.getAttribute('w:val');
+        if (colorValue != null && colorValue.length == 6) {
+          formatting.color = _parseHexColor(colorValue);
+        }
+      }
+      
+      // Parse highlight/background color
+      final highlightElement = runProps.findElements('w:highlight').firstOrNull;
+      if (highlightElement != null) {
+        final highlightValue = highlightElement.getAttribute('w:val');
+        if (highlightValue != null) {
+          formatting.backgroundColor = _parseNamedColor(highlightValue);
+        }
+      }
+      
+      // Parse shading (background color)
+      final shadingElement = runProps.findElements('w:shd').firstOrNull;
+      if (shadingElement != null) {
+        final fillValue = shadingElement.getAttribute('w:fill');
+        if (fillValue != null && fillValue.length == 6 && fillValue != 'auto') {
+          formatting.backgroundColor = _parseHexColor(fillValue);
+        }
+      }
+    }
+    
+    return formatting;
+  }
+  
+  // Parse hex color to PdfColor
+  PdfColor _parseHexColor(String hex) {
+    try {
+      final r = int.parse(hex.substring(0, 2), radix: 16);
+      final g = int.parse(hex.substring(2, 4), radix: 16);
+      final b = int.parse(hex.substring(4, 6), radix: 16);
+      return PdfColor(r, g, b);
     } catch (e) {
-      // Fallback to 1 if unable to read Word document
-      return 1;
+      return PdfColor(0, 0, 0); // Default to black
     }
   }
+  
+  // Parse named colors (Word highlight colors)
+  PdfColor _parseNamedColor(String colorName) {
+    switch (colorName.toLowerCase()) {
+      case 'yellow': return PdfColor(255, 255, 0);
+      case 'green': return PdfColor(0, 255, 0);
+      case 'cyan': return PdfColor(0, 255, 255);
+      case 'magenta': return PdfColor(255, 0, 255);
+      case 'blue': return PdfColor(0, 0, 255);
+      case 'red': return PdfColor(255, 0, 0);
+      case 'darkblue': return PdfColor(0, 0, 139);
+      case 'darkcyan': return PdfColor(0, 139, 139);
+      case 'darkgreen': return PdfColor(0, 100, 0);
+      case 'darkmagenta': return PdfColor(139, 0, 139);
+      case 'darkred': return PdfColor(139, 0, 0);
+      case 'darkyellow': return PdfColor(139, 139, 0);
+      case 'darkgray': return PdfColor(169, 169, 169);
+      case 'lightgray': return PdfColor(211, 211, 211);
+      default: return PdfColor(255, 255, 0); // Default to yellow
+    }
+  }
+  
+  // Extract header level from style name
+  int _extractHeaderLevel(String styleName) {
+    final match = RegExp(r'(\d+)').firstMatch(styleName);
+    if (match != null) {
+      return int.tryParse(match.group(1)!) ?? 1;
+    }
+    return 1; // Default to level 1
+  }
+  
+  // Extract image ID from drawing element
+  String? _extractImageId(XmlElement drawing) {
+    final blips = drawing.findAllElements('a:blip');
+    for (final blip in blips) {
+      final embed = blip.getAttribute('r:embed');
+      if (embed != null) {
+        return embed;
+      }
+    }
+    return null;
+  }
+  
+  // Parse relationships for image mapping
+  Map<String, String> _parseRelationships(XmlDocument relsDoc) {
+    final relationships = <String, String>{};
+    
+    final rels = relsDoc.findAllElements('Relationship');
+    for (final rel in rels) {
+      final id = rel.getAttribute('Id');
+      final target = rel.getAttribute('Target');
+      if (id != null && target != null) {
+        relationships[id] = target;
+      }
+    }
+    
+    return relationships;
+  }
+  
+  // Merge formatting properties
+  WordFormatting _mergeFormatting(WordFormatting base, WordFormatting overlay) {
+    return WordFormatting()
+      ..isBold = overlay.isBold || base.isBold
+      ..isItalic = overlay.isItalic || base.isItalic
+      ..isUnderline = overlay.isUnderline || base.isUnderline
+      ..fontSize = overlay.fontSize > 0 ? overlay.fontSize : base.fontSize
+      ..color = overlay.color ?? base.color
+      ..backgroundColor = overlay.backgroundColor ?? base.backgroundColor;
+  }
+
+  // Create advanced PDF pages with formatting and images
+  Future<void> _createAdvancedPdfPages(PdfDocument document, WordDocumentData wordData) async {
+    // Set up fonts and formatting
+    final Map<String, PdfFont> fonts = {
+      'normal': PdfStandardFont(PdfFontFamily.helvetica, 11),
+      'bold': PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.bold),
+      'italic': PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.italic),
+      'boldItalic': PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.bold),
+      'title': PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold),
+      'header': PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
+    };
+    
+    // Page layout settings
+    const double margin = 50;
+    const double paragraphSpacing = 12;
+    
+    // Create pages
+    PdfPage currentPage = document.pages.add();
+    double yPosition = margin;
+    final double pageWidth = currentPage.getClientSize().width - (margin * 2);
+    final double pageHeight = currentPage.getClientSize().height - margin;
+    
+    for (final element in wordData.elements) {
+      // Check if we need a new page
+      if (yPosition > pageHeight - 100) {
+        currentPage = document.pages.add();
+        yPosition = margin;
+      }
+      
+      if (element.type == 'image' && element.imageId != null) {
+        // Handle image
+        final imagePath = wordData.relationships[element.imageId];
+        if (imagePath != null) {
+          final imageName = path.basename(imagePath);
+          final imageBytes = wordData.images[imageName];
+          
+          if (imageBytes != null) {
+            try {
+              final pdfImage = PdfBitmap(imageBytes);
+              final imageWidth = pageWidth * 0.8; // 80% of page width
+              final imageHeight = (pdfImage.height * imageWidth) / pdfImage.width;
+              
+              // Check if image fits on current page
+              if (yPosition + imageHeight > pageHeight - margin) {
+                currentPage = document.pages.add();
+                yPosition = margin;
+              }
+              
+              currentPage.graphics.drawImage(
+                pdfImage,
+                Rect.fromLTWH(
+                  margin + (pageWidth - imageWidth) / 2, // Center image
+                  yPosition,
+                  imageWidth,
+                  imageHeight,
+                ),
+              );
+              
+              yPosition += imageHeight + paragraphSpacing;
+            } catch (e) {
+              print('Error adding image to PDF: $e');
+              // Add placeholder text for failed images
+              final font = fonts['normal']!;
+              final brush = PdfSolidBrush(PdfColor(100, 100, 100));
+              
+              currentPage.graphics.drawString(
+                '[Gambar tidak dapat dimuat]',
+                font,
+                brush: brush,
+                bounds: Rect.fromLTWH(margin, yPosition, pageWidth, 20),
+              );
+              
+              yPosition += 20 + paragraphSpacing;
+            }
+          }
+        }
+      } else if (element.type == 'paragraph' && element.text.isNotEmpty) {
+        // Handle text paragraph with formatting
+        final formatting = element.formatting;
+        
+        // Determine font based on formatting and header status
+        PdfFont font;
+        double fontSize = formatting.fontSize > 0 ? formatting.fontSize.clamp(8.0, 24.0) : 11.0;
+        
+        // Apply header-specific formatting
+        if (element.isHeader) {
+          switch (element.headerLevel) {
+            case 1:
+              fontSize = fontSize < 16 ? 18.0 : fontSize * 1.5;
+              break;
+            case 2:
+              fontSize = fontSize < 14 ? 16.0 : fontSize * 1.3;
+              break;
+            case 3:
+              fontSize = fontSize < 12 ? 14.0 : fontSize * 1.2;
+              break;
+            default:
+              fontSize = fontSize < 11 ? 12.0 : fontSize * 1.1;
+          }
+          // Headers are typically bold
+          formatting.isBold = true;
+        }
+        
+        // Create font with proper style
+        if (formatting.isBold && formatting.isItalic) {
+          font = PdfStandardFont(PdfFontFamily.helvetica, fontSize, style: PdfFontStyle.bold);
+        } else if (formatting.isBold) {
+          font = PdfStandardFont(PdfFontFamily.helvetica, fontSize, style: PdfFontStyle.bold);
+        } else if (formatting.isItalic) {
+          font = PdfStandardFont(PdfFontFamily.helvetica, fontSize, style: PdfFontStyle.italic);
+        } else {
+          font = PdfStandardFont(PdfFontFamily.helvetica, fontSize);
+        }
+        
+        // Determine text color
+        final textBrush = PdfSolidBrush(formatting.color ?? PdfColor(0, 0, 0));
+        
+        // Handle background color if present
+        if (formatting.backgroundColor != null) {
+          // Draw background rectangle first
+          final backgroundBrush = PdfSolidBrush(formatting.backgroundColor!);
+          
+          // Measure text to get background size
+          final textSize = font.measureString(element.text);
+          final backgroundRect = Rect.fromLTWH(
+            margin - 2, 
+            yPosition - 2, 
+            textSize.width + 4, 
+            textSize.height + 4
+          );
+          
+          currentPage.graphics.drawRectangle(
+            brush: backgroundBrush,
+            bounds: backgroundRect,
+          );
+        }
+        
+        // Create text element with formatting
+        final textElement = PdfTextElement(
+          text: element.text,
+          font: font,
+          brush: textBrush,
+        );
+        
+        // Draw text with pagination
+        final result = textElement.draw(
+          page: currentPage,
+          bounds: Rect.fromLTWH(margin, yPosition, pageWidth, 0),
+          format: PdfLayoutFormat(
+            layoutType: PdfLayoutType.paginate,
+          ),
+        )!;
+        
+        // Add extra spacing for headers
+        final extraSpacing = element.isHeader ? paragraphSpacing * 1.5 : 0;
+        yPosition = result.bounds.bottom + paragraphSpacing + extraSpacing;
+        
+        // Update current page if text flowed to next page
+        if (result.page != currentPage) {
+          currentPage = result.page;
+          yPosition = result.bounds.bottom + paragraphSpacing + extraSpacing;
+        }
+      }
+    }
+  }
+
 
   void _showAddEbookDialog(
     String defaultTitle,

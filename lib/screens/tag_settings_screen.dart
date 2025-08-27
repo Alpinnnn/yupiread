@@ -21,16 +21,16 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Tag Settings',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: Theme.of(context).appBarTheme.foregroundColor,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         centerTitle: true,
       ),
@@ -44,11 +44,11 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardTheme.color,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -57,12 +57,12 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Tambah Tag Baru',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
+                      color: Theme.of(context).textTheme.headlineMedium?.color,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -86,7 +86,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                       ElevatedButton(
                         onPressed: _addTag,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 20,
@@ -108,12 +108,12 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
             ),
             const SizedBox(height: 24),
             // Tags List Section
-            const Text(
+            Text(
               'Daftar Tag',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).textTheme.headlineMedium?.color,
               ),
             ),
             const SizedBox(height: 16),
@@ -122,11 +122,11 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardTheme.color,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -136,12 +136,12 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Default Tags Section
-                    const Text(
+                    Text(
                       'Tag Default',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -168,12 +168,12 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                     ),
                     if (_dataService.customTags.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      const Text(
+                      Text(
                         'Tag Custom',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF64748B),
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -198,14 +198,14 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                             Icon(
                               Icons.label_outline,
                               size: 48,
-                              color: Colors.grey[400],
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
                             ),
                             const SizedBox(height: 12),
                             Text(
                               'Belum ada tag custom',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.grey[600],
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -213,7 +213,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                               'Tambahkan tag custom untuk mengorganisir foto Anda',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey[500],
+                                color: Theme.of(context).textTheme.bodyMedium?.color,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -235,16 +235,16 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF64748B).withOpacity(0.1),
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF64748B).withOpacity(0.3)),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Text(
         tag,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF64748B),
+          color: Theme.of(context).textTheme.bodyMedium?.color,
         ),
       ),
     );
@@ -254,21 +254,21 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2563EB).withOpacity(0.1),
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.3)),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          Icon(Icons.label, size: 20, color: const Color(0xFF2563EB)),
+          Icon(Icons.label, size: 20, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               tag,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF2563EB),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ),

@@ -5,7 +5,7 @@ import '../models/photo_model.dart';
 import '../services/data_service.dart';
 import 'photo_view_screen.dart';
 import 'photo_page_view_screen.dart';
-import 'photo_preview_screen.dart';
+import 'document_scanner_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -16,7 +16,6 @@ class GalleryScreen extends StatefulWidget {
 
 class _GalleryScreenState extends State<GalleryScreen> {
   final DataService _dataService = DataService();
-  final ImagePicker _picker = ImagePicker();
   List<String> _selectedTags = [];
   List<PhotoModel> _filteredPhotos = [];
   List<PhotoPageModel> _filteredPhotoPages = [];
@@ -48,7 +47,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -77,11 +76,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardTheme.color,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -90,9 +89,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         child: IconButton(
                           icon: Stack(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.filter_list,
-                                color: Color(0xFF2563EB),
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               if (_selectedTags.isNotEmpty)
                                 Positioned(
@@ -177,16 +176,16 @@ class _GalleryScreenState extends State<GalleryScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFF2563EB).withOpacity(0.2),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
             width: 2,
             style: BorderStyle.solid,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -198,28 +197,31 @@ class _GalleryScreenState extends State<GalleryScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(50),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.add_a_photo,
                 size: 32,
-                color: Color(0xFF2563EB),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Tambah Foto',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF2563EB),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Catatan baru',
-              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              style: TextStyle(
+                fontSize: 12, 
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
             ),
           ],
         ),
@@ -239,11 +241,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -329,10 +331,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 children: [
                   Text(
                     photo.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -340,9 +342,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   const SizedBox(height: 4),
                   Text(
                     photo.timeAgo,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF94A3B8),
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
@@ -367,11 +369,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -490,10 +492,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 children: [
                   Text(
                     photoPage.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -501,9 +503,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   const SizedBox(height: 4),
                   Text(
                     photoPage.timeAgo,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF94A3B8),
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
@@ -522,9 +524,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
       builder:
           (context) => Container(
             padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
@@ -541,12 +543,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Tambah Foto Catatan',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
+                    color: Theme.of(context).textTheme.headlineMedium?.color,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -555,10 +557,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     Expanded(
                       child: _buildBottomSheetOption(
                         icon: Icons.camera_alt,
-                        title: 'Kamera',
+                        title: 'Scan dari Kamera',
                         onTap: () {
                           Navigator.pop(context);
-                          _addPhotoFromCamera();
+                          _scanFromCamera();
                         },
                       ),
                     ),
@@ -566,10 +568,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     Expanded(
                       child: _buildBottomSheetOption(
                         icon: Icons.photo_library,
-                        title: 'Galeri',
+                        title: 'Scan dari Galeri',
                         onTap: () {
                           Navigator.pop(context);
-                          _addPhotosFromGallery();
+                          _scanFromGallery();
                         },
                       ),
                     ),
@@ -592,19 +594,19 @@ class _GalleryScreenState extends State<GalleryScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FA),
+          color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: const Color(0xFF2563EB)),
+            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
           ],
@@ -613,148 +615,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  Future<void> _addPhotoFromCamera() async {
-    try {
-      // Start with taking one photo, then go to preview
-      _takePhotosSequentially();
-    } catch (e) {
-      if (mounted) {
-        String errorMessage = 'Gagal mengambil foto';
 
-        // Handle specific Windows camera error
-        if (e.toString().contains('cameraDelegate')) {
-          errorMessage =
-              'Kamera tidak tersedia di platform ini. Silakan gunakan galeri.';
-        } else {
-          errorMessage = 'Gagal mengambil foto: ${e.toString()}';
-        }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: const Color(0xFFEF4444),
-            action: SnackBarAction(
-              label: 'Gunakan Galeri',
-              textColor: Colors.white,
-              onPressed: () {
-                _addPhotosFromGallery();
-              },
-            ),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _takePhotosSequentially() async {
-    List<XFile> capturedImages = [];
-
-    // Take first photo
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1920,
-        maxHeight: 1920,
-      );
-
-      if (image != null) {
-        capturedImages.add(image);
-        // Go directly to preview screen
-        _showPhotoPreview(capturedImages);
-      }
-    } catch (e) {
-      _handleCameraError(e);
-    }
-  }
-
-  void _handleCameraError(dynamic e) {
-    if (mounted) {
-      String errorMessage = 'Gagal mengambil foto';
-
-      // Handle specific Windows camera error
-      if (e.toString().contains('cameraDelegate')) {
-        errorMessage =
-            'Kamera tidak tersedia di platform ini. Silakan gunakan galeri.';
-      } else {
-        errorMessage = 'Gagal mengambil foto: ${e.toString()}';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: const Color(0xFFEF4444),
-          action: SnackBarAction(
-            label: 'Gunakan Galeri',
-            textColor: Colors.white,
-            onPressed: () {
-              _addPhotosFromGallery();
-            },
-          ),
-        ),
-      );
-    }
-  }
-
-  void _showPhotoPreview(List<XFile> photos) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PhotoPreviewScreen(
-          capturedPhotos: photos,
-          onPhotosConfirmed: (confirmedPhotos, choice) {
-            // Process the confirmed photos based on user choice
-            _processConfirmedPhotos(confirmedPhotos, choice);
-          },
-        ),
-      ),
-    );
-  }
-
-  void _processConfirmedPhotos(List<XFile> photos, String choice) {
-    if (photos.isEmpty) return;
-
-    if (photos.length == 1) {
-      // Single photo - process normally
-      _processSelectedImage(photos.first.path, 'Foto dari Kamera');
-    } else {
-      // Multiple photos - process based on user choice from preview
-      if (choice == 'multi') {
-        _processMultipleImages(photos);
-      } else {
-        _processIndividualImages(photos);
-      }
-    }
-  }
-
-  Future<void> _addPhotosFromGallery() async {
-    try {
-      final List<XFile> images = await _picker.pickMultiImage(
-        imageQuality: 85,
-        maxWidth: 1920,
-        maxHeight: 1920,
-      );
-
-      if (images.isNotEmpty) {
-        if (images.length == 1) {
-          // Single photo - create regular photo
-          await _processSelectedImage(images.first.path, 'Foto dari Galeri');
-        } else {
-          // Multiple photos - show validation dialog
-          _showMultiPhotoValidationDialog(images);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memilih foto: ${e.toString()}'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    }
-  }
 
   Future<void> _processSelectedImage(
     String imagePath,
@@ -896,6 +758,180 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 ),
           ),
     );
+  }
+
+  // Scan document from camera
+  void _scanFromCamera() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DocumentScannerScreen(
+          useGallery: false,
+          onDocumentsScanned: (List<String> scannedImagePaths) {
+            _handleScannedDocuments(scannedImagePaths, 'Dokumen Scan dari Kamera');
+          },
+        ),
+      ),
+    );
+  }
+
+  // Scan document from gallery
+  void _scanFromGallery() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DocumentScannerScreen(
+          useGallery: true,
+          onDocumentsScanned: (List<String> scannedImagePaths) {
+            _handleScannedDocuments(scannedImagePaths, 'Dokumen Scan dari Galeri');
+          },
+        ),
+      ),
+    );
+  }
+
+  // Handle scanned documents - show validation dialog for multiple images
+  void _handleScannedDocuments(List<String> imagePaths, String defaultTitle) {
+    if (imagePaths.isEmpty) return;
+    
+    if (imagePaths.length == 1) {
+      // Single document - process directly
+      _processSelectedImage(imagePaths.first, defaultTitle);
+    } else {
+      // Multiple documents - show validation dialog
+      _showScannedDocumentsValidationDialog(imagePaths, defaultTitle);
+    }
+  }
+
+  // Show validation dialog for multiple scanned documents
+  void _showScannedDocumentsValidationDialog(List<String> imagePaths, String defaultTitle) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Pilih Cara Menyimpan',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${imagePaths.length} dokumen berhasil di-scan.',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              // Multi-Photo option
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  _processMultipleScannedImages(imagePaths, defaultTitle);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFF2563EB)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.collections, color: Color(0xFF2563EB)),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Halaman Multi-Dokumen',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2563EB),
+                              ),
+                            ),
+                            Text(
+                              'Semua dokumen dalam satu halaman yang bisa di-swipe',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Individual photos option
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  _processIndividualScannedImages(imagePaths, defaultTitle);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFF10B981)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.photo, color: Color(0xFF10B981)),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Dokumen Terpisah',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                            Text(
+                              'Setiap dokumen sebagai item terpisah di galeri',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Process multiple scanned images as photo page
+  void _processMultipleScannedImages(List<String> imagePaths, String defaultTitle) {
+    // Convert paths to XFile-like objects for existing method
+    List<XFile> xFiles = imagePaths.map((path) => XFile(path)).toList();
+    _processMultipleImages(xFiles);
+  }
+
+  // Process individual scanned images
+  void _processIndividualScannedImages(List<String> imagePaths, String defaultTitle) {
+    // Convert paths to XFile-like objects for existing method
+    List<XFile> xFiles = imagePaths.map((path) => XFile(path)).toList();
+    _processIndividualImages(xFiles);
   }
 
   void _showFilterDialog() {

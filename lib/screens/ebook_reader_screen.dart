@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
 import '../models/ebook_model.dart';
@@ -28,6 +29,8 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   bool _showBottomBar = false;
   bool _showEbookInfo = false;
   late AnimationController _animationController;
+  late AnimationController _zoomAnimationController;
+  late Animation<double> _zoomAnimation;
   double _dragOffset = 0.0;
   double _bottomBarHeight = 400.0;
 
@@ -38,6 +41,10 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   // Pan/drag tracking for zoomed content
   Offset _panOffset = Offset.zero;
   Offset _initialPanOffset = Offset.zero;
+  
+  // Double tap zoom tracking
+  bool _isZoomed = false;
+  Offset? _lastTapPosition;
 
   @override
   void initState() {
@@ -49,6 +56,26 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    
+    _zoomAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _zoomAnimation = Tween<double>(
+      begin: 1.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(
+      parent: _zoomAnimationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _zoomAnimation.addListener(() {
+      setState(() {
+        _currentZoomLevel = _zoomAnimation.value;
+      });
+      _pdfViewerController.zoomLevel = _currentZoomLevel;
+    });
 
   }
 
@@ -111,17 +138,69 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   }
 
   void _zoomOut() {
-    setState(() {
-      _currentZoomLevel = (_currentZoomLevel - 0.2).clamp(0.5, 3.0);
-    });
-    _pdfViewerController.zoomLevel = _currentZoomLevel;
+    final newZoomLevel = (_currentZoomLevel - 0.2).clamp(0.5, 3.0);
+    _animateZoomTo(newZoomLevel);
   }
 
   void _zoomIn() {
-    setState(() {
-      _currentZoomLevel = (_currentZoomLevel + 0.2).clamp(0.5, 3.0);
-    });
-    _pdfViewerController.zoomLevel = _currentZoomLevel;
+    final newZoomLevel = (_currentZoomLevel + 0.2).clamp(0.5, 3.0);
+    _animateZoomTo(newZoomLevel);
+  }
+  
+  void _animateZoomTo(double targetZoom) {
+    _zoomAnimation = Tween<double>(
+      begin: _currentZoomLevel,
+      end: targetZoom,
+    ).animate(CurvedAnimation(
+      parent: _zoomAnimationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _zoomAnimationController.reset();
+    _zoomAnimationController.forward();
+  }
+  
+  void _handleDoubleTap(TapDownDetails details) {
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final localPosition = renderBox.globalToLocal(details.globalPosition);
+    
+    if (_isZoomed) {
+      // Zoom out to fit page
+      _animateZoomTo(1.0);
+      _isZoomed = false;
+      _panOffset = Offset.zero;
+    } else {
+      // Zoom in to 2x at tap position
+      _lastTapPosition = localPosition;
+      _animateZoomTo(2.0);
+      _isZoomed = true;
+      
+      // Calculate pan offset to center the tap position
+      final screenCenter = Offset(
+        renderBox.size.width / 2,
+        renderBox.size.height / 2,
+      );
+      _panOffset = (screenCenter - (_lastTapPosition ?? localPosition)) * 0.5;
+    }
+  }
+  
+  void _handleScrollZoom(PointerScrollEvent event) {
+    if (HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.controlLeft) ||
+        HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.controlRight)) {
+      
+      final delta = event.scrollDelta.dy;
+      final zoomDelta = delta > 0 ? -0.1 : 0.1;
+      final newZoomLevel = (_currentZoomLevel + zoomDelta).clamp(0.5, 3.0);
+      
+      _animateZoomTo(newZoomLevel);
+      
+      if (newZoomLevel <= 1.0) {
+        _isZoomed = false;
+        _panOffset = Offset.zero;
+      } else {
+        _isZoomed = true;
+      }
+    }
   }
 
   void _fitToWidth() {
@@ -172,12 +251,12 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -185,8 +264,8 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
           children: [
             Text(
               _ebook!.title,
-              style: const TextStyle(
-                color: Colors.black,
+              style: TextStyle(
+                color: Theme.of(context).appBarTheme.foregroundColor,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -195,37 +274,40 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
             ),
             Text(
               'Halaman $_currentPage dari $_totalPages',
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color, 
+                fontSize: 12,
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.bookmark_border, color: Colors.black),
+            icon: Icon(Icons.bookmark_border, color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () {
               // TODO: Implement bookmark functionality
             },
           ),
           IconButton(
-            icon: const Icon(Icons.zoom_out, color: Colors.black),
+            icon: Icon(Icons.zoom_out, color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () => _zoomOut(),
             tooltip: 'Zoom Out',
           ),
           Text(
             '${(_currentZoomLevel * 100).round()}%',
-            style: const TextStyle(
-              color: Colors.black,
+            style: TextStyle(
+              color: Theme.of(context).appBarTheme.foregroundColor,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.zoom_in, color: Colors.black),
+            icon: Icon(Icons.zoom_in, color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () => _zoomIn(),
             tooltip: 'Zoom In',
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
+            icon: Icon(Icons.more_vert, color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () {
               setState(() {
                 if (_showBottomBar) {
@@ -250,9 +332,9 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
               children: [
                 LinearProgressIndicator(
                   value: _ebook?.progress ?? 0.0,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF2563EB),
+                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.primary,
                   ),
                   minHeight: 4,
                 ),
@@ -262,11 +344,17 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                   children: [
                     Text(
                       '${_ebook?.progressPercentage ?? "0%"} selesai',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12, 
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
                     ),
                     Text(
                       'Terakhir dibaca: ${_ebook!.timeAgo}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12, 
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -277,76 +365,94 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
           Expanded(
             child: Stack(
               children: [
-                GestureDetector(
-                  onTap: () {
-                    if (_showBottomBar) {
-                      setState(() {
-                        _showBottomBar = false;
-                      });
-                      _animationController.reverse();
+                Listener(
+                  onPointerSignal: (event) {
+                    if (event is PointerScrollEvent) {
+                      _handleScrollZoom(event);
                     }
                   },
-                  child: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    child: GestureDetector(
-                      onScaleStart: (details) {
-                        // Store initial zoom level and pan position for gestures
-                        _initialZoomLevel = _currentZoomLevel;
-                        _initialPanOffset = _panOffset;
-                      },
-                      onScaleUpdate: (details) {
-                        // Handle pinch-to-zoom
-                        if (details.scale != 1.0) {
-                          final newZoomLevel = (_initialZoomLevel *
-                                  details.scale)
-                              .clamp(0.5, 3.0);
-                          setState(() {
-                            _currentZoomLevel = newZoomLevel;
-                          });
-                          _pdfViewerController.zoomLevel = _currentZoomLevel;
-                        }
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_showBottomBar) {
+                        setState(() {
+                          _showBottomBar = false;
+                        });
+                        _animationController.reverse();
+                      }
+                    },
+                    onTapDown: (details) {
+                      // Store tap position for double tap zoom calculation
+                      _lastTapPosition = details.localPosition;
+                    },
+                    onDoubleTapDown: _handleDoubleTap,
+                    child: Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: GestureDetector(
+                        onScaleStart: (details) {
+                          // Store initial zoom level and pan position for gestures
+                          _initialZoomLevel = _currentZoomLevel;
+                          _initialPanOffset = _panOffset;
+                        },
+                        onScaleUpdate: (details) {
+                          // Handle pinch-to-zoom
+                          if (details.scale != 1.0) {
+                            final newZoomLevel = (_initialZoomLevel *
+                                    details.scale)
+                                .clamp(0.5, 3.0);
+                            setState(() {
+                              _currentZoomLevel = newZoomLevel;
+                            });
+                            _pdfViewerController.zoomLevel = _currentZoomLevel;
+                            
+                            // Update zoom state
+                            _isZoomed = _currentZoomLevel > 1.0;
+                          }
 
-                        // Handle drag/pan when zoomed in (using focalPointDelta)
-                        if (_currentZoomLevel > 1.0 &&
-                            details.focalPointDelta != Offset.zero) {
-                          setState(() {
-                            _panOffset =
-                                _initialPanOffset + details.focalPointDelta;
-                          });
-                        }
-                      },
-                      child: Transform.translate(
-                        offset:
-                            _currentZoomLevel > 1.0 ? _panOffset : Offset.zero,
-                        child: SfPdfViewer.file(
-                          File(_ebook!.filePath),
-                          controller: _pdfViewerController,
-                          onPageChanged: (PdfPageChangedDetails details) {
-                            _updateProgress(details.newPageNumber);
-                          },
-                          onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                          // Handle drag/pan when zoomed in (using focalPointDelta)
+                          if (_currentZoomLevel > 1.0 &&
+                              details.focalPointDelta != Offset.zero) {
                             setState(() {
-                              _totalPages = details.document.pages.count;
+                              _panOffset =
+                                  _initialPanOffset + details.focalPointDelta;
                             });
-                          },
-                          onZoomLevelChanged: (PdfZoomDetails details) {
-                            setState(() {
-                              _currentZoomLevel = details.newZoomLevel;
-                            });
-                            // Reset pan offset when zoom level changes
-                            if (_currentZoomLevel <= 1.0) {
-                              _panOffset = Offset.zero;
-                            }
-                            _updateLastActiveTime();
-                          },
-                          enableDoubleTapZooming: true,
-                          enableTextSelection: true,
-                          canShowScrollHead: false, // Hide scroll indicator
-                          canShowScrollStatus: false, // Hide scroll status
-                          initialZoomLevel: _currentZoomLevel,
-                          pageLayoutMode: PdfPageLayoutMode.single,
-                          scrollDirection: PdfScrollDirection.vertical,
+                          }
+                        },
+                        child: Transform.translate(
+                          offset:
+                              _currentZoomLevel > 1.0 ? _panOffset : Offset.zero,
+                          child: SfPdfViewer.file(
+                            File(_ebook!.filePath),
+                            controller: _pdfViewerController,
+                            onPageChanged: (PdfPageChangedDetails details) {
+                              _updateProgress(details.newPageNumber);
+                            },
+                            onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                              setState(() {
+                                _totalPages = details.document.pages.count;
+                              });
+                            },
+                            onZoomLevelChanged: (PdfZoomDetails details) {
+                              setState(() {
+                                _currentZoomLevel = details.newZoomLevel;
+                              });
+                              // Reset pan offset when zoom level changes
+                              if (_currentZoomLevel <= 1.0) {
+                                _panOffset = Offset.zero;
+                                _isZoomed = false;
+                              } else {
+                                _isZoomed = true;
+                              }
+                              _updateLastActiveTime();
+                            },
+                            enableDoubleTapZooming: false, // Disable default double tap
+                            enableTextSelection: true,
+                            canShowScrollHead: false, // Hide scroll indicator
+                            canShowScrollStatus: false, // Hide scroll status
+                            initialZoomLevel: _currentZoomLevel,
+                            pageLayoutMode: PdfPageLayoutMode.single,
+                            scrollDirection: PdfScrollDirection.vertical,
+                          ),
                         ),
                       ),
                     ),
@@ -634,10 +740,10 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
               ? Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Theme.of(context).shadowColor.withOpacity(0.1),
                       blurRadius: 4,
                       offset: const Offset(0, -2),
                     ),
@@ -651,7 +757,10 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                           _currentPage > 1
                               ? () => _pdfViewerController.previousPage()
                               : null,
-                      icon: const Icon(Icons.chevron_left),
+                      icon: Icon(
+                        Icons.chevron_left,
+                        color: Theme.of(context).iconTheme.color,
+                      ),
                       iconSize: 32,
                     ),
                     Container(
@@ -660,14 +769,14 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '$_currentPage / $_totalPages',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF2563EB),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -676,7 +785,10 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                           _currentPage < _totalPages
                               ? () => _pdfViewerController.nextPage()
                               : null,
-                      icon: const Icon(Icons.chevron_right),
+                      icon: Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context).iconTheme.color,
+                      ),
                       iconSize: 32,
                     ),
                   ],
@@ -775,6 +887,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
     _endReadingSession();
     _pdfViewerController.dispose();
     _animationController.dispose();
+    _zoomAnimationController.dispose();
     super.dispose();
   }
 }

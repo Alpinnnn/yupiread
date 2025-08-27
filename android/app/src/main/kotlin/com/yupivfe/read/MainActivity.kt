@@ -1,4 +1,4 @@
-package com.example.yupiread
+package com.yupivfe.read
 
 import io.flutter.embedding.android.FlutterActivity
 

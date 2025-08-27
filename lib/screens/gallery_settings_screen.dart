@@ -66,7 +66,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
   void _showPhotoOptions(PhotoModel photo) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardTheme.color,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -86,10 +86,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             const SizedBox(height: 20),
             Text(
               photo.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).textTheme.headlineMedium?.color,
               ),
             ),
             const SizedBox(height: 20),
@@ -134,7 +134,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
   void _showPhotoPageOptions(PhotoPageModel photoPage) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardTheme.color,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -154,10 +154,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             const SizedBox(height: 20),
             Text(
               photoPage.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).textTheme.headlineMedium?.color,
               ),
             ),
             const SizedBox(height: 20),
@@ -207,20 +207,20 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: color ?? const Color(0xFF2563EB)),
+      leading: Icon(icon, color: color ?? Theme.of(context).colorScheme.primary),
       title: Text(
         title,
         style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: color ?? const Color(0xFF1A1A1A),
+          color: color ?? Theme.of(context).textTheme.bodyLarge?.color,
         ),
       ),
       subtitle: subtitle != null
           ? Text(
               subtitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF94A3B8),
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             )
           : null,
@@ -380,17 +380,17 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
     final selectedCount = _selectedPhotoIds.length + _selectedPhotoPageIds.length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           _isSelectMode ? '$selectedCount dipilih' : 'Gallery Setting',
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: Theme.of(context).appBarTheme.foregroundColor,
             fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         centerTitle: true,
         actions: _isSelectMode
@@ -428,9 +428,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             children: [
               Text(
                 '$totalItems foto tersimpan',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF94A3B8),
-                    ),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
               Expanded(
@@ -498,14 +496,14 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(16),
           border: isSelected
-              ? Border.all(color: const Color(0xFF2563EB), width: 3)
+              ? Border.all(color: Theme.of(context).colorScheme.primary, width: 3)
               : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -593,10 +591,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                     children: [
                       Text(
                         photo.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A1A),
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -604,9 +602,9 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         photo.timeAgo,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF94A3B8),
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
                     ],
@@ -622,10 +620,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+                    color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).cardTheme.color,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF2563EB) : Colors.grey,
+                      color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
                       width: 2,
                     ),
                   ),
@@ -663,14 +661,14 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(16),
           border: isSelected
-              ? Border.all(color: const Color(0xFF2563EB), width: 3)
+              ? Border.all(color: Theme.of(context).colorScheme.primary, width: 3)
               : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -792,10 +790,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                     children: [
                       Text(
                         photoPage.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A1A),
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -803,9 +801,9 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         photoPage.timeAgo,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF94A3B8),
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
                     ],
@@ -821,10 +819,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+                    color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).cardTheme.color,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF2563EB) : Colors.grey,
+                      color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
                       width: 2,
                     ),
                   ),

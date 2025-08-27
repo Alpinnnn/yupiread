@@ -14,15 +14,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final DataService _dataService = DataService();
 
   @override
-  void initState() {
-    super.initState();
-    _dataService.initializeSampleData();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
@@ -60,7 +55,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           value: '${_dataService.totalPhotos}',
                           subtitle: 'Catatan tersimpan',
                           color: const Color(0xFF3B82F6),
-                          backgroundColor: const Color(0xFFEFF6FF),
+                          backgroundColor: const Color(
+                            0xFF3B82F6,
+                          ).withOpacity(0.1),
                         ),
                       ),
                       SizedBox(
@@ -72,7 +69,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           value: '${_dataService.totalEbooks}',
                           subtitle: 'Ebook dibuat',
                           color: const Color(0xFF10B981),
-                          backgroundColor: const Color(0xFFECFDF5),
+                          backgroundColor: const Color(
+                            0xFF10B981,
+                          ).withOpacity(0.1),
                         ),
                       ),
                       SizedBox(
@@ -84,7 +83,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           value: _dataService.formattedReadingTime,
                           subtitle: 'Total membaca',
                           color: const Color(0xFF8B5CF6),
-                          backgroundColor: const Color(0xFFF3E8FF),
+                          backgroundColor: const Color(
+                            0xFF8B5CF6,
+                          ).withOpacity(0.1),
                         ),
                       ),
                       SizedBox(
@@ -96,7 +97,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           value: '${_dataService.readingStreak} hari',
                           subtitle: 'Berturut-turut',
                           color: const Color(0xFFF59E0B),
-                          backgroundColor: const Color(0xFFFEF3C7),
+                          backgroundColor: const Color(
+                            0xFFF59E0B,
+                          ).withOpacity(0.1),
                         ),
                       ),
                     ],
@@ -124,11 +127,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color:
+                Theme.of(context).cardTheme.shadowColor ??
+                Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -149,10 +154,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
+              color: Theme.of(context).textTheme.headlineMedium?.color,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -160,10 +165,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 2),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF4A4A4A),
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -171,7 +176,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 1),
           Text(
             subtitle,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -186,11 +194,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color:
+                Theme.of(context).cardTheme.shadowColor ??
+                Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -202,33 +212,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Aktivitas Terbaru',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A),
+                  color: Theme.of(context).textTheme.headlineMedium?.color,
                 ),
               ),
               TextButton(
                 onPressed: () {
                   _showAllActivities(context);
                 },
-                child: const Text(
+                child: Text(
                   'Lihat Semua',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF2563EB)),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           if (activities.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Text(
                   'Belum ada aktivitas',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             )
@@ -276,15 +292,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF1A1A1A),
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               ),
               Text(
                 time,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
               ),
             ],
           ),
@@ -333,9 +352,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           (context) => Container(
             height: MediaQuery.of(context).size.height * 0.7,
             padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
@@ -351,12 +370,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Semua Aktivitas',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A),
+                    color: Theme.of(context).textTheme.headlineMedium?.color,
                   ),
                 ),
                 const SizedBox(height: 20),

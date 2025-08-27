@@ -4,49 +4,65 @@ import 'screens/gallery_screen.dart';
 import 'screens/ebook_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/data_service.dart';
+import 'services/theme_service.dart' as theme_service;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize data service
+  // Initialize services
   final dataService = DataService();
   await dataService.initializeData();
+  
+  final themeService = theme_service.ThemeService.instance;
+  await themeService.initialize();
 
-  runApp(const YupiwatchApp());
+  runApp(YupiwatchApp(themeService: themeService));
 }
 
-class YupiwatchApp extends StatelessWidget {
-  const YupiwatchApp({super.key});
+class YupiwatchApp extends StatefulWidget {
+  final theme_service.ThemeService themeService;
+  
+  const YupiwatchApp({super.key, required this.themeService});
+
+  @override
+  State<YupiwatchApp> createState() => _YupiwatchAppState();
+}
+
+class _YupiwatchAppState extends State<YupiwatchApp> {
+  @override
+  void initState() {
+    super.initState();
+    widget.themeService.addListener(_onThemeChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.themeService.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    setState(() {});
+  }
+
+  ThemeMode _getFlutterThemeMode(theme_service.ThemeMode customThemeMode) {
+    switch (customThemeMode) {
+      case theme_service.ThemeMode.light:
+        return ThemeMode.light;
+      case theme_service.ThemeMode.dark:
+        return ThemeMode.dark;
+      case theme_service.ThemeMode.system:
+        return ThemeMode.system;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Yupiwatch',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        fontFamily: 'SF Pro Display',
-        textTheme: const TextTheme(
-          headlineLarge: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A1A),
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
-          ),
-          bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF4A4A4A)),
-          bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF6B6B6B)),
-        ),
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFF2563EB),
-          secondary: Color(0xFF64748B),
-          surface: Colors.white,
-          background: Color(0xFFF8F9FA),
-        ),
-      ),
+      title: 'YupiRead',
+      theme: theme_service.ThemeService.lightTheme,
+      darkTheme: theme_service.ThemeService.darkTheme,
+      themeMode: _getFlutterThemeMode(widget.themeService.themeMode),
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -76,10 +92,10 @@ class _MainScreenState extends State<MainScreen> {
       body: _screens[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Theme.of(context).shadowColor.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -93,9 +109,9 @@ class _MainScreenState extends State<MainScreen> {
             });
           },
           type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF2563EB),
-          unselectedItemColor: const Color(0xFF94A3B8),
+          backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+          selectedItemColor: Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
+          unselectedItemColor: Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
           selectedLabelStyle: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,

@@ -59,9 +59,6 @@ class DataService {
     await _loadActivities();
     await _loadUserProfile();
     await _loadCustomTags();
-    if (_activities.isEmpty) {
-      initializeSampleData();
-    }
   }
 
   String addPhoto({
@@ -844,26 +841,40 @@ class DataService {
     }
   }
 
-  // Initialize with some sample activities
-  void initializeSampleData() {
-    if (_activities.isEmpty) {
-      _activities.addAll([
-        ActivityModel(
-          id: _generateId(),
-          title: 'Ebook "Catatan Kuliah" dibaca',
-          description: 'Melanjutkan membaca hingga halaman 45',
-          timestamp: DateTime.now().subtract(const Duration(hours: 5)),
-          type: ActivityType.ebookRead,
-        ),
-        ActivityModel(
-          id: _generateId(),
-          title: 'Ebook baru dibuat',
-          description: '"Panduan Belajar" berhasil dibuat',
-          timestamp: DateTime.now().subtract(const Duration(days: 1)),
-          type: ActivityType.ebookCreated,
-        ),
-      ]);
-      _saveActivities();
+  // Remove all data method
+  Future<void> removeAllData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Clear all SharedPreferences data
+      await prefs.clear();
+      
+      // Reset all in-memory data to defaults
+      _photos.clear();
+      _photoPages.clear();
+      _ebooks.clear();
+      _activities.clear();
+      _customTags.clear();
+      
+      // Reset user profile data
+      _username = 'User';
+      _profileImagePath = null;
+      _readingStreak = 0;
+      _totalReadingTimeMinutes = 0;
+      
+      // Clear app directory files (photos, ebooks, etc.)
+      final appDir = await getApplicationDocumentsDirectory();
+      final yupireadDir = Directory('${appDir.path}/yupiread');
+      
+      if (await yupireadDir.exists()) {
+        await yupireadDir.delete(recursive: true);
+      }
+      
+      // Reinitialize directory
+      await yupireadDir.create(recursive: true);
+      
+    } catch (e) {
+      throw Exception('Failed to remove all data: $e');
     }
   }
 
