@@ -20,7 +20,7 @@ class PhotoPageViewScreen extends StatefulWidget {
 
 class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
     with TickerProviderStateMixin {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
   PhotoPageModel? photoPage;
   bool _showBottomBar = false;
   int _currentPhotoIndex = 0;

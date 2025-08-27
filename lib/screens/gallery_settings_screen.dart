@@ -13,7 +13,7 @@ class GallerySettingsScreen extends StatefulWidget {
 }
 
 class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
   List<PhotoModel> _photos = [];
   List<PhotoPageModel> _photoPages = [];
   Set<String> _selectedPhotoIds = {};

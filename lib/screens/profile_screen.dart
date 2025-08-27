@@ -15,7 +15,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
   final ImagePicker _picker = ImagePicker();
   late theme_service.ThemeService _themeService;
   bool _isManagementExpanded = false;

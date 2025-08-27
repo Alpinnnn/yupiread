@@ -373,9 +373,13 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
         Navigator.pop(context);
         widget.onDocumentsScanned(savedPaths);
       } else {
-        _showErrorSnackBar('Tidak ada dokumen yang di-scan');
+        // User cancelled or no documents scanned - return to gallery
+        Navigator.pop(context);
+        _showErrorSnackBar('Scan dibatalkan atau tidak ada dokumen yang di-scan');
       }
     } catch (e) {
+      // Error occurred - return to gallery
+      Navigator.pop(context);
       _showErrorSnackBar('Error: ${e.toString()}');
     } finally {
       setState(() {
@@ -417,9 +421,13 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
         Navigator.pop(context);
         widget.onDocumentsScanned(savedPaths);
       } else {
-        _showErrorSnackBar('Tidak ada dokumen yang di-scan dari galeri');
+        // User cancelled or no documents scanned - return to gallery
+        Navigator.pop(context);
+        _showErrorSnackBar('Scan dibatalkan atau tidak ada dokumen yang di-scan dari galeri');
       }
     } catch (e) {
+      // Error occurred - return to gallery
+      Navigator.pop(context);
       _showErrorSnackBar('Error: ${e.toString()}');
     } finally {
       setState(() {

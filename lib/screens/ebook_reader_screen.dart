@@ -17,7 +17,7 @@ class EbookReaderScreen extends StatefulWidget {
 
 class _EbookReaderScreenState extends State<EbookReaderScreen>
     with TickerProviderStateMixin {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
   final PdfViewerController _pdfViewerController = PdfViewerController();
   EbookModel? _ebook;
   bool _isLoading = true;
@@ -41,10 +41,9 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   // Pan/drag tracking for zoomed content
   Offset _panOffset = Offset.zero;
   Offset _initialPanOffset = Offset.zero;
-  
+
   // Double tap zoom tracking
   bool _isZoomed = false;
-  Offset? _lastTapPosition;
 
   @override
   void initState() {
@@ -56,27 +55,26 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _zoomAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
-    _zoomAnimation = Tween<double>(
-      begin: 1.0,
-      end: 2.0,
-    ).animate(CurvedAnimation(
-      parent: _zoomAnimationController,
-      curve: Curves.easeInOut,
-    ));
-    
+
+    _zoomAnimation = Tween<double>(begin: 1.0, end: 2.0).animate(
+      CurvedAnimation(
+        parent: _zoomAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
     _zoomAnimation.addListener(() {
       setState(() {
         _currentZoomLevel = _zoomAnimation.value;
       });
-      _pdfViewerController.zoomLevel = _currentZoomLevel;
+      // Don't update PDF viewer zoom level here to prevent position reset
+      // _pdfViewerController.zoomLevel = _currentZoomLevel;
     });
-
   }
 
   void _loadEbook() {
@@ -139,64 +137,76 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
 
   void _zoomOut() {
     final newZoomLevel = (_currentZoomLevel - 0.2).clamp(0.5, 3.0);
-    _animateZoomTo(newZoomLevel);
+    setState(() {
+      _currentZoomLevel = newZoomLevel;
+    });
+    // Use direct zoom level update to preserve position
+    _pdfViewerController.zoomLevel = newZoomLevel;
   }
 
   void _zoomIn() {
     final newZoomLevel = (_currentZoomLevel + 0.2).clamp(0.5, 3.0);
-    _animateZoomTo(newZoomLevel);
+    setState(() {
+      _currentZoomLevel = newZoomLevel;
+    });
+    // Use direct zoom level update to preserve position
+    _pdfViewerController.zoomLevel = newZoomLevel;
   }
-  
+
   void _animateZoomTo(double targetZoom) {
     _zoomAnimation = Tween<double>(
       begin: _currentZoomLevel,
       end: targetZoom,
-    ).animate(CurvedAnimation(
-      parent: _zoomAnimationController,
-      curve: Curves.easeInOut,
-    ));
-    
+    ).animate(
+      CurvedAnimation(
+        parent: _zoomAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
     _zoomAnimationController.reset();
     _zoomAnimationController.forward();
   }
-  
+
   void _handleDoubleTap(TapDownDetails details) {
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final localPosition = renderBox.globalToLocal(details.globalPosition);
-    
     if (_isZoomed) {
       // Zoom out to fit page
-      _animateZoomTo(1.0);
-      _isZoomed = false;
-      _panOffset = Offset.zero;
+      setState(() {
+        _currentZoomLevel = 1.0;
+        _isZoomed = false;
+        _panOffset = Offset.zero;
+      });
+      _pdfViewerController.zoomLevel = 1.0;
     } else {
-      // Zoom in to 2x at tap position
-      _lastTapPosition = localPosition;
-      _animateZoomTo(2.0);
-      _isZoomed = true;
-      
-      // Calculate pan offset to center the tap position
-      final screenCenter = Offset(
-        renderBox.size.width / 2,
-        renderBox.size.height / 2,
-      );
-      _panOffset = (screenCenter - (_lastTapPosition ?? localPosition)) * 0.5;
+      // Zoom in to 2x - let PDF viewer handle positioning
+      setState(() {
+        _currentZoomLevel = 2.0;
+        _isZoomed = true;
+        _panOffset = Offset.zero;
+      });
+      _pdfViewerController.zoomLevel = 2.0;
     }
   }
-  
+
   void _handleScrollZoom(PointerScrollEvent event) {
-    if (HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.controlLeft) ||
-        HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.controlRight)) {
-      
+    if (HardwareKeyboard.instance.isLogicalKeyPressed(
+          LogicalKeyboardKey.controlLeft,
+        ) ||
+        HardwareKeyboard.instance.isLogicalKeyPressed(
+          LogicalKeyboardKey.controlRight,
+        )) {
       final delta = event.scrollDelta.dy;
       final zoomDelta = delta > 0 ? -0.1 : 0.1;
       final newZoomLevel = (_currentZoomLevel + zoomDelta).clamp(0.5, 3.0);
-      
-      _animateZoomTo(newZoomLevel);
-      
+
+      setState(() {
+        _currentZoomLevel = newZoomLevel;
+      });
+      // Use direct zoom level update to preserve position
+      _pdfViewerController.zoomLevel = newZoomLevel;
+
       if (newZoomLevel <= 1.0) {
         _isZoomed = false;
-        _panOffset = Offset.zero;
       } else {
         _isZoomed = true;
       }
@@ -256,7 +266,10 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).appBarTheme.foregroundColor),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).appBarTheme.foregroundColor,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -275,7 +288,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
             Text(
               'Halaman $_currentPage dari $_totalPages',
               style: TextStyle(
-                color: Theme.of(context).textTheme.bodyMedium?.color, 
+                color: Theme.of(context).textTheme.bodyMedium?.color,
                 fontSize: 12,
               ),
             ),
@@ -283,13 +296,19 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.bookmark_border, color: Theme.of(context).appBarTheme.foregroundColor),
+            icon: Icon(
+              Icons.bookmark_border,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
             onPressed: () {
               // TODO: Implement bookmark functionality
             },
           ),
           IconButton(
-            icon: Icon(Icons.zoom_out, color: Theme.of(context).appBarTheme.foregroundColor),
+            icon: Icon(
+              Icons.zoom_out,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
             onPressed: () => _zoomOut(),
             tooltip: 'Zoom Out',
           ),
@@ -302,12 +321,18 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
             ),
           ),
           IconButton(
-            icon: Icon(Icons.zoom_in, color: Theme.of(context).appBarTheme.foregroundColor),
+            icon: Icon(
+              Icons.zoom_in,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
             onPressed: () => _zoomIn(),
             tooltip: 'Zoom In',
           ),
           IconButton(
-            icon: Icon(Icons.more_vert, color: Theme.of(context).appBarTheme.foregroundColor),
+            icon: Icon(
+              Icons.more_vert,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
             onPressed: () {
               setState(() {
                 if (_showBottomBar) {
@@ -345,14 +370,14 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                     Text(
                       '${_ebook?.progressPercentage ?? "0%"} selesai',
                       style: TextStyle(
-                        fontSize: 12, 
+                        fontSize: 12,
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
                     Text(
                       'Terakhir dibaca: ${_ebook!.timeAgo}',
                       style: TextStyle(
-                        fontSize: 12, 
+                        fontSize: 12,
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
@@ -381,8 +406,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                       }
                     },
                     onTapDown: (details) {
-                      // Store tap position for double tap zoom calculation
-                      _lastTapPosition = details.localPosition;
+                      // Tap position handling for future use
                     },
                     onDoubleTapDown: _handleDoubleTap,
                     child: Container(
@@ -404,7 +428,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                               _currentZoomLevel = newZoomLevel;
                             });
                             _pdfViewerController.zoomLevel = _currentZoomLevel;
-                            
+
                             // Update zoom state
                             _isZoomed = _currentZoomLevel > 1.0;
                           }
@@ -420,14 +444,27 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                         },
                         child: Transform.translate(
                           offset:
-                              _currentZoomLevel > 1.0 ? _panOffset : Offset.zero,
+                              _currentZoomLevel > 1.0
+                                  ? _panOffset
+                                  : Offset.zero,
                           child: SfPdfViewer.file(
                             File(_ebook!.filePath),
                             controller: _pdfViewerController,
                             onPageChanged: (PdfPageChangedDetails details) {
                               _updateProgress(details.newPageNumber);
+                              // Reset zoom to 100% when page changes
+                              if (_isZoomed || _currentZoomLevel != 1.0) {
+                                setState(() {
+                                  _currentZoomLevel = 1.0;
+                                  _isZoomed = false;
+                                  _panOffset = Offset.zero;
+                                });
+                                _pdfViewerController.zoomLevel = 1.0;
+                              }
                             },
-                            onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                            onDocumentLoaded: (
+                              PdfDocumentLoadedDetails details,
+                            ) {
                               setState(() {
                                 _totalPages = details.document.pages.count;
                               });
@@ -436,16 +473,16 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                               setState(() {
                                 _currentZoomLevel = details.newZoomLevel;
                               });
-                              // Reset pan offset when zoom level changes
+                              // Update zoom state without resetting position
                               if (_currentZoomLevel <= 1.0) {
-                                _panOffset = Offset.zero;
                                 _isZoomed = false;
                               } else {
                                 _isZoomed = true;
                               }
                               _updateLastActiveTime();
                             },
-                            enableDoubleTapZooming: false, // Disable default double tap
+                            enableDoubleTapZooming:
+                                false, // Disable default double tap
                             enableTextSelection: true,
                             canShowScrollHead: false, // Hide scroll indicator
                             canShowScrollStatus: false, // Hide scroll status
@@ -471,7 +508,10 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                       },
                       onPanUpdate: (details) {
                         setState(() {
-                          _dragOffset = (_dragOffset - details.delta.dy).clamp(-_bottomBarHeight, 0.0);
+                          _dragOffset = (_dragOffset - details.delta.dy).clamp(
+                            -_bottomBarHeight,
+                            0.0,
+                          );
                         });
                       },
                       onPanEnd: (details) {
@@ -491,241 +531,245 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                       child: AnimatedContainer(
                         duration: Duration(milliseconds: 200),
                         child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[900],
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, -2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[900],
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
                             ),
-                          ],
-                        ),
-                        child: SafeArea(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Handle bar
-                              Container(
-                                margin: const EdgeInsets.only(top: 12),
-                                width: 40,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[600],
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-
-                              // Ebook details
-                              Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _ebook!.title,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Halaman $_currentPage dari $_totalPages • ${_ebook!.timeAgo}',
-                                      style: TextStyle(
-                                        color: Colors.grey[400],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-
-                                    // Expandable info section
-                                    const SizedBox(height: 16),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _showEbookInfo = !_showEbookInfo;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[800],
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.info_outline,
-                                              color: Colors.white,
-                                              size: 16,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            const Text(
-                                              'Info Detail Ebook',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const Spacer(),
-                                            Icon(
-                                              _showEbookInfo
-                                                  ? Icons.keyboard_arrow_up
-                                                  : Icons.keyboard_arrow_down,
-                                              color: Colors.white,
-                                              size: 16,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-
-                                    if (_showEbookInfo) ...[
-                                      const SizedBox(height: 12),
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[800],
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Progress: ${_ebook?.progressPercentage ?? "0%"}',
-                                              style: TextStyle(
-                                                color: Colors.grey[300],
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                            if (_ebook!
-                                                .description
-                                                .isNotEmpty) ...[
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'Deskripsi: ${_ebook!.description}',
-                                                style: TextStyle(
-                                                  color: Colors.grey[300],
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                            ],
-                                            if (_ebook!.tags.isNotEmpty) ...[
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'Tags:',
-                                                style: TextStyle(
-                                                  color: Colors.grey[300],
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Wrap(
-                                                spacing: 6,
-                                                runSpacing: 4,
-                                                children:
-                                                    _ebook!.tags.map((tag) {
-                                                      return Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 8,
-                                                              vertical: 4,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: const Color(
-                                                            0xFF2563EB,
-                                                          ).withOpacity(0.2),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                12,
-                                                              ),
-                                                          border: Border.all(
-                                                            color: const Color(
-                                                              0xFF2563EB,
-                                                            ).withOpacity(0.5),
-                                                          ),
-                                                        ),
-                                                        child: Text(
-                                                          tag,
-                                                          style:
-                                                              const TextStyle(
-                                                                color: Color(
-                                                                  0xFF2563EB,
-                                                                ),
-                                                                fontSize: 11,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500,
-                                                              ),
-                                                        ),
-                                                      );
-                                                    }).toList(),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-
-                              // Action buttons
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[850],
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(20),
-                                    topRight: Radius.circular(20),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    _buildActionButton(
-                                      icon: Icons.skip_next,
-                                      label: 'Loncat Halaman',
-                                      onTap: _showJumpToPageDialog,
-                                    ),
-                                    _buildActionButton(
-                                      icon: Icons.fit_screen,
-                                      label: 'Sesuaikan Lebar',
-                                      onTap: _fitToWidth,
-                                    ),
-                                    _buildActionButton(
-                                      icon: Icons.fullscreen,
-                                      label: 'Sesuaikan Halaman',
-                                      onTap: _fitToPage,
-                                    ),
-                                    _buildActionButton(
-                                      icon: Icons.refresh,
-                                      label: 'Reset Zoom',
-                                      onTap: _resetZoom,
-                                    ),
-                                  ],
-                                ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, -2),
                               ),
                             ],
                           ),
-                        ),
+                          child: SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Handle bar
+                                Container(
+                                  margin: const EdgeInsets.only(top: 12),
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[600],
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+
+                                // Ebook details
+                                Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _ebook!.title,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Halaman $_currentPage dari $_totalPages • ${_ebook!.timeAgo}',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+
+                                      // Expandable info section
+                                      const SizedBox(height: 16),
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _showEbookInfo = !_showEbookInfo;
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[800],
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.info_outline,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Text(
+                                                'Info Detail Ebook',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              Icon(
+                                                _showEbookInfo
+                                                    ? Icons.keyboard_arrow_up
+                                                    : Icons.keyboard_arrow_down,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+
+                                      if (_showEbookInfo) ...[
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[800],
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Progress: ${_ebook?.progressPercentage ?? "0%"}',
+                                                style: TextStyle(
+                                                  color: Colors.grey[300],
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              if (_ebook!
+                                                  .description
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Deskripsi: ${_ebook!.description}',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[300],
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ],
+                                              if (_ebook!.tags.isNotEmpty) ...[
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Tags:',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[300],
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Wrap(
+                                                  spacing: 6,
+                                                  runSpacing: 4,
+                                                  children:
+                                                      _ebook!.tags.map((tag) {
+                                                        return Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 4,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: const Color(
+                                                              0xFF2563EB,
+                                                            ).withOpacity(0.2),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  12,
+                                                                ),
+                                                            border: Border.all(
+                                                              color:
+                                                                  const Color(
+                                                                    0xFF2563EB,
+                                                                  ).withOpacity(
+                                                                    0.5,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                          child: Text(
+                                                            tag,
+                                                            style:
+                                                                const TextStyle(
+                                                                  color: Color(
+                                                                    0xFF2563EB,
+                                                                  ),
+                                                                  fontSize: 11,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                ),
+                                                          ),
+                                                        );
+                                                      }).toList(),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+
+                                // Action buttons
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[850],
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(20),
+                                      topRight: Radius.circular(20),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      _buildActionButton(
+                                        icon: Icons.skip_next,
+                                        label: 'Loncat Halaman',
+                                        onTap: _showJumpToPageDialog,
+                                      ),
+                                      _buildActionButton(
+                                        icon: Icons.fit_screen,
+                                        label: 'Sesuaikan Lebar',
+                                        onTap: _fitToWidth,
+                                      ),
+                                      _buildActionButton(
+                                        icon: Icons.fullscreen,
+                                        label: 'Sesuaikan Halaman',
+                                        onTap: _fitToPage,
+                                      ),
+                                      _buildActionButton(
+                                        icon: Icons.refresh,
+                                        label: 'Reset Zoom',
+                                        onTap: _resetZoom,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -740,7 +784,10 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
               ? Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+                  color:
+                      Theme.of(
+                        context,
+                      ).bottomNavigationBarTheme.backgroundColor,
                   boxShadow: [
                     BoxShadow(
                       color: Theme.of(context).shadowColor.withOpacity(0.1),
@@ -769,7 +816,9 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(

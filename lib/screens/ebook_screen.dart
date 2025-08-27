@@ -22,7 +22,7 @@ class EbookScreen extends StatefulWidget {
 }
 
 class _EbookScreenState extends State<EbookScreen> {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
   List<EbookModel> _ebooks = [];
   List<String> _selectedTags = [];
   List<EbookModel> _filteredEbooks = [];

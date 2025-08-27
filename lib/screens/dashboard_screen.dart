@@ -11,7 +11,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
 
   @override
   @override

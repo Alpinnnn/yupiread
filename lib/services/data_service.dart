@@ -7,10 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/photo_model.dart';
 import '../models/ebook_model.dart';
 import '../models/activity_type.dart';
+import 'database_service.dart';
 
 class DataService {
   static final DataService _instance = DataService._internal();
   factory DataService() => _instance;
+  static DataService get instance => _instance;
   DataService._internal();
 
   final List<PhotoModel> _photos = [];

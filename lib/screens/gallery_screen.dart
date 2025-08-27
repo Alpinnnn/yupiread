@@ -15,7 +15,7 @@ class GalleryScreen extends StatefulWidget {
 }
 
 class _GalleryScreenState extends State<GalleryScreen> {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
   List<String> _selectedTags = [];
   List<PhotoModel> _filteredPhotos = [];
   List<PhotoPageModel> _filteredPhotoPages = [];

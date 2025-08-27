@@ -5,6 +5,7 @@ import 'screens/ebook_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/data_service.dart';
 import 'services/theme_service.dart' as theme_service;
+import 'services/image_cache_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,9 @@ void main() async {
   
   final themeService = theme_service.ThemeService.instance;
   await themeService.initialize();
+  
+  final imageCacheService = ImageCacheService.instance;
+  await imageCacheService.initialize();
 
   runApp(YupiwatchApp(themeService: themeService));
 }

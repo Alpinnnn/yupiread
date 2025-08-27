@@ -9,7 +9,7 @@ class TagSettingsScreen extends StatefulWidget {
 }
 
 class _TagSettingsScreenState extends State<TagSettingsScreen> {
-  final DataService _dataService = DataService();
+  final DataService _dataService = DataService.instance;
   final TextEditingController _tagController = TextEditingController();
 
   @override
