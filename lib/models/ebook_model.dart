@@ -26,10 +26,13 @@ class EbookModel {
   }) : lastReadAt = lastReadAt ?? DateTime.now();
 
   double get progress {
-    if (totalPages <= 0 || currentPage <= 0) return 0.0;
+    if (totalPages <= 0) return 0.0;
     
-    // Special case: single page PDF should be 100% when opened
+    // Special case: single page PDF should be 100% when opened (even if currentPage is 0)
     if (totalPages == 1) return 1.0;
+    
+    // For multi-page PDFs: handle currentPage = 0 as no progress
+    if (currentPage <= 0) return 0.0;
     
     // For multi-page PDFs: currentPage / totalPages
     // This ensures last page (currentPage == totalPages) = 100%

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
 import '../models/ebook_model.dart';
+import '../models/activity_type.dart';
 import '../services/data_service.dart';
 
 class EbookReaderScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   int _maxPageReached = 1; // Track maximum page reached
   bool _showBottomBar = false;
   bool _showEbookInfo = false;
+  bool _hasLoggedCompletion = false; // Track if completion has been logged
   late AnimationController _animationController;
   late AnimationController _zoomAnimationController;
   late Animation<double> _zoomAnimation;
@@ -108,6 +110,9 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
       }
     });
 
+    // Get old progress before updating
+    final oldProgress = _ebook?.progress ?? 0.0;
+    
     // Always update progress in data service to save current position
     _dataService.updateEbookProgress(widget.ebookId, _maxPageReached);
     // Refresh ebook data to get updated progress
@@ -116,6 +121,44 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
       setState(() {
         _ebook = updatedEbook;
       });
+      
+      // Check if ebook just reached 100% completion
+      final newProgress = updatedEbook.progress;
+      print('DEBUG: Progress check - oldProgress: $oldProgress, newProgress: $newProgress, totalPages: ${updatedEbook.totalPages}, currentPage: ${updatedEbook.currentPage}');
+      
+      // Log completion for single-page ebooks when first opened, or multi-page when reaching 100%
+      bool shouldLogCompletion = false;
+      
+      if (updatedEbook.totalPages == 1 && !_hasLoggedCompletion) {
+        // Single-page ebook: log completion when first opened
+        shouldLogCompletion = true;
+        _hasLoggedCompletion = true;
+      } else if (updatedEbook.totalPages > 1 && oldProgress < 1.0 && newProgress >= 1.0) {
+        // Multi-page ebook: log completion when reaching 100%
+        shouldLogCompletion = true;
+        _hasLoggedCompletion = true;
+      }
+      
+      if (shouldLogCompletion) {
+        print('DEBUG: Ebook completion detected! Logging activity...');
+        // Log completion activity
+        _dataService.logEbookActivity(
+          title: 'Ebook "${updatedEbook.title}" Telah Dibaca',
+          description: 'Ebook telah selesai dibaca hingga 100%',
+          type: ActivityType.ebookCompleted,
+        );
+        
+        print('DEBUG: Activity logged successfully');
+        
+        // Show completion message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎉 Selamat! Ebook "${updatedEbook.title}" telah selesai dibaca!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
 
     _updateLastActiveTime();
@@ -132,6 +175,12 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
       setState(() {
         _ebook = _ebook!.copyWith(totalPages: _totalPages);
       });
+    }
+    
+    // For single-page ebooks, ensure progress is updated immediately
+    if (_totalPages == 1 && _ebook != null && _ebook!.currentPage == 0) {
+      // Update progress to page 1 for single-page ebooks
+      _updateProgress(1);
     }
   }
 

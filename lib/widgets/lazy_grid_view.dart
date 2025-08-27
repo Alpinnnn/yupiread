@@ -16,7 +16,7 @@ class LazyGridView<T> extends StatefulWidget {
     super.key,
     required this.loadItems,
     required this.itemBuilder,
-    this.itemsPerPage = 20,
+    this.itemsPerPage = 15, // Optimized for Android performance
     this.crossAxisCount = 2,
     this.mainAxisSpacing = 8.0,
     this.crossAxisSpacing = 8.0,
@@ -199,7 +199,7 @@ class LazyListView<T> extends StatefulWidget {
     super.key,
     required this.loadItems,
     required this.itemBuilder,
-    this.itemsPerPage = 20,
+    this.itemsPerPage = 15, // Optimized for Android performance
     this.padding = const EdgeInsets.all(16.0),
     this.emptyWidget,
     this.loadingWidget,

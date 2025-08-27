@@ -25,6 +25,9 @@ dependencies:
   cunning_document_scanner: ^1.3.0
   permission_handler: ^12.0.0+1
   sqflite: ^2.3.0
+  image_cropper: ^9.1.0
+  extended_image: ^8.2.0
+  google_mlkit_text_recognition: ^0.13.0
 
 dev_dependencies:
   flutter_test:
@@ -33,3 +36,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+# Platform support - Android only
+platforms:
+  android:
+    minSdkVersion: 21
+    targetSdkVersion: 34
+    compileSdkVersion: 34

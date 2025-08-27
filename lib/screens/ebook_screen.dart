@@ -13,6 +13,7 @@ import '../models/ebook_model.dart';
 import '../models/word_document_data.dart';
 import '../services/data_service.dart';
 import 'ebook_reader_screen.dart';
+import 'text_extraction_screen.dart';
 
 class EbookScreen extends StatefulWidget {
   const EbookScreen({super.key});
@@ -125,7 +126,7 @@ class _EbookScreenState extends State<EbookScreen> {
                                 ),
                             ],
                           ),
-                          onPressed: _showFilterDialog,
+                          onPressed: _showTagFilterDialog,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -350,7 +351,9 @@ class _EbookScreenState extends State<EbookScreen> {
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: ebook.progress,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                        ? Theme.of(context).cardTheme.color?.withOpacity(0.3) ?? Colors.grey[800]
+                        : Theme.of(context).colorScheme.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
                     minHeight: 3,
                   ),
@@ -486,6 +489,16 @@ class _EbookScreenState extends State<EbookScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                _buildImportOption(
+                  icon: Icons.text_fields,
+                  title: 'Ekstrak Teks',
+                  subtitle: 'Ekstrak teks dari gambar',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToTextExtraction();
+                  },
                 ),
                 const SizedBox(height: 20),
               ],
@@ -1392,7 +1405,16 @@ class _EbookScreenState extends State<EbookScreen> {
     );
   }
 
-  void _showFilterDialog() {
+  void _navigateToTextExtraction() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TextExtractionScreen(),
+      ),
+    ).then((_) => _updateFilteredEbooks());
+  }
+
+  void _showTagFilterDialog() {
     final usedTags = _dataService.getUsedEbookTags();
     if (usedTags.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

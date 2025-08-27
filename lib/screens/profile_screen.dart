@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'dart:io';
 import '../services/data_service.dart';
 import '../services/theme_service.dart' as theme_service;
 import '../widgets/theme_selection_dialog.dart';
 import 'tag_settings_screen.dart';
 import 'gallery_settings_screen.dart';
+import 'ebook_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -112,14 +114,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             : _buildDefaultAvatar(),
                   ),
                   const SizedBox(height: 24),
-                  // Username
-                  Text(
-                    _dataService.username,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.headlineMedium?.color,
-                    ),
+                  // Username with Edit Icon
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _dataService.username,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium?.color,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _showEditProfileDialog,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 32),
                   // Stats Row
@@ -207,29 +238,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  // Edit Profile Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _showEditProfileDialog,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Edit Profil',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -239,7 +247,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Management Setting',
               icon: Icons.settings,
               isExpanded: _isManagementExpanded,
-              onToggle: () => setState(() => _isManagementExpanded = !_isManagementExpanded),
+              onToggle:
+                  () => setState(
+                    () => _isManagementExpanded = !_isManagementExpanded,
+                  ),
               children: [
                 _buildSettingItem(
                   icon: Icons.local_offer,
@@ -274,9 +285,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Ebook Setting',
                   color: const Color(0xFFF59E0B),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Ebook Setting akan segera hadir'),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EbookSettingsScreen(),
                       ),
                     );
                   },
@@ -289,7 +301,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'App Setting',
               icon: Icons.tune,
               isExpanded: _isAppSettingExpanded,
-              onToggle: () => setState(() => _isAppSettingExpanded = !_isAppSettingExpanded),
+              onToggle:
+                  () => setState(
+                    () => _isAppSettingExpanded = !_isAppSettingExpanded,
+                  ),
               children: [
                 _buildSettingItem(
                   icon: _themeService.themeModeIcon,
@@ -345,7 +360,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -366,7 +383,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   Icon(
-                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ],
@@ -376,9 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (isExpanded)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Column(
-                children: children,
-              ),
+              child: Column(children: children),
             ),
         ],
       ),
@@ -462,9 +479,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 TextField(
                   controller: usernameController,
+                  maxLength: 10,
                   decoration: const InputDecoration(
                     labelText: 'Username',
                     border: OutlineInputBorder(),
+                    counterText: '',
+                    helperText: 'Maksimal 10 karakter',
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -499,7 +519,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ElevatedButton(
                 onPressed: () async {
                   final newUsername = usernameController.text.trim();
-                  if (newUsername.isNotEmpty) {
+                  if (newUsername.isNotEmpty && newUsername.length <= 100) {
                     await _dataService.updateProfile(username: newUsername);
                     setState(() {});
                     Navigator.pop(context);
@@ -508,6 +528,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SnackBar(
                         content: Text('Profil berhasil diperbarui'),
                         backgroundColor: Color(0xFF10B981),
+                      ),
+                    );
+                  } else if (newUsername.length > 10) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Username tidak boleh lebih dari 10 karakter',
+                        ),
+                        backgroundColor: Color(0xFFEF4444),
                       ),
                     );
                   }
@@ -528,22 +557,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final XFile? image = await _picker.pickImage(
         source: source,
         imageQuality: 85,
-        maxWidth: 512,
-        maxHeight: 512,
       );
 
       if (image != null) {
-        final savedPath = await _dataService.savePhotoFile(image.path);
-        await _dataService.updateProfile(profileImagePath: savedPath);
-        setState(() {});
-        Navigator.pop(context);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Foto profil berhasil diperbarui'),
-            backgroundColor: Color(0xFF10B981),
-          ),
+        // Crop the image before saving
+        final croppedFile = await ImageCropper().cropImage(
+          sourcePath: image.path,
+          compressFormat: ImageCompressFormat.jpg,
+          compressQuality: 85,
+          maxWidth: 512,
+          maxHeight: 512,
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Crop Foto Profil',
+              toolbarColor: Theme.of(context).colorScheme.primary,
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.square,
+              lockAspectRatio: true,
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+              ],
+            ),
+          ],
         );
+
+        if (croppedFile != null) {
+          final savedPath = await _dataService.savePhotoFile(croppedFile.path);
+          await _dataService.updateProfile(profileImagePath: savedPath);
+          setState(() {});
+          Navigator.pop(context);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto profil berhasil diperbarui'),
+              backgroundColor: Color(0xFF10B981),
+            ),
+          );
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -588,11 +638,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             title: Row(
               children: [
-                Icon(
-                  Icons.warning,
-                  color: const Color(0xFFEF4444),
-                  size: 24,
-                ),
+                Icon(Icons.warning, color: const Color(0xFFEF4444), size: 24),
                 const SizedBox(width: 12),
                 const Text(
                   'Hapus Semua Data',
@@ -637,20 +683,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Menghapus data...'),
-            ],
-          ),
-        ),
+        builder:
+            (context) => const AlertDialog(
+              content: Row(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 16),
+                  Text('Menghapus data...'),
+                ],
+              ),
+            ),
       );
 
       // Clear all data
       await _dataService.removeAllData();
-      
+
       // Close loading dialog
       Navigator.pop(context);
 
@@ -667,7 +714,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       // Close loading dialog if still open
       Navigator.pop(context);
-      
+
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -4,10 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:extended_image/extended_image.dart';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
+import 'text_to_ebook_editor_screen.dart';
 import 'package:path/path.dart' as path;
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PhotoPageViewScreen extends StatefulWidget {
   final String photoPageId;
@@ -25,15 +26,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   bool _showBottomBar = false;
   int _currentPhotoIndex = 0;
   late AnimationController _animationController;
-  final TransformationController _transformationController =
-      TransformationController();
   final PageController _pageController = PageController();
-  bool _isZoomed = false;
+  final List<GlobalKey<ExtendedImageGestureState>> _gestureKeys = [];
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
   DateTime? _lastSwipeTime;
-  late AnimationController _zoomAnimationController;
-  late Animation<Matrix4> _zoomAnimation;
 
   @override
   void initState() {
@@ -45,21 +42,16 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       vsync: this,
     );
 
-    _zoomAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    // Listen to transformation changes to detect zoom
-    _transformationController.addListener(_onTransformationChanged);
+    // Initialize gesture keys for each photo
+    _gestureKeys.clear();
+    for (int i = 0; i < (photoPage?.imagePaths.length ?? 0); i++) {
+      _gestureKeys.add(GlobalKey<ExtendedImageGestureState>());
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _zoomAnimationController.dispose();
-    _transformationController.removeListener(_onTransformationChanged);
-    _transformationController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -81,79 +73,35 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   }
 
   void _resetZoom() {
-    _animateZoom(Matrix4.identity());
-  }
-
-  void _handleDoubleTap(TapDownDetails details) {
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final Offset localPosition = renderBox.globalToLocal(
-      details.globalPosition,
-    );
-
-    final Matrix4 currentMatrix = _transformationController.value;
-    final double currentScale = currentMatrix.getMaxScaleOnAxis();
-
-    Matrix4 targetMatrix;
-
-    if (currentScale > 1.01) {
-      // Currently zoomed, zoom out to fit
-      targetMatrix = Matrix4.identity();
-    } else {
-      // Currently not zoomed, zoom in to 2x at tap position
-      const double targetScale = 2.0;
-      final double screenWidth = MediaQuery.of(context).size.width;
-      final double screenHeight = MediaQuery.of(context).size.height;
-
-      // Calculate the translation needed to center the tap point
-      final double translateX =
-          (screenWidth / 2 - localPosition.dx) * targetScale;
-      final double translateY =
-          (screenHeight / 2 - localPosition.dy) * targetScale;
-
-      targetMatrix =
-          Matrix4.identity()
-            ..translate(translateX, translateY)
-            ..scale(targetScale);
-    }
-
-    _animateZoom(targetMatrix);
-  }
-
-  void _animateZoom(Matrix4 targetMatrix) {
-    _zoomAnimation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: targetMatrix,
-    ).animate(
-      CurvedAnimation(
-        parent: _zoomAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _zoomAnimation.addListener(() {
-      _transformationController.value = _zoomAnimation.value;
-    });
-
-    _zoomAnimationController.reset();
-    _zoomAnimationController.forward();
-  }
-
-  void _onTransformationChanged() {
-    final Matrix4 matrix = _transformationController.value;
-    final double scale = matrix.getMaxScaleOnAxis();
-    final bool isCurrentlyZoomed =
-        scale > 1.01; // Small threshold to avoid floating point issues
-
-    if (_isZoomed != isCurrentlyZoomed) {
-      setState(() {
-        _isZoomed = isCurrentlyZoomed;
-      });
+    if (_currentPhotoIndex < _gestureKeys.length) {
+      _gestureKeys[_currentPhotoIndex].currentState?.reset();
     }
   }
 
-  bool get _isDesktop {
-    return Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+  void _handleDoubleTap() {
+    if (_currentPhotoIndex < _gestureKeys.length) {
+      final ExtendedImageGestureState? gestureState = 
+          _gestureKeys[_currentPhotoIndex].currentState;
+      if (gestureState != null) {
+        final double scale = gestureState.gestureDetails?.totalScale ?? 1.0;
+        
+        if (scale > 1.01) {
+          // Currently zoomed, zoom out to fit
+          gestureState.handleDoubleTap(
+            scale: 1.0,
+            doubleTapPosition: gestureState.pointerDownPosition,
+          );
+        } else {
+          // Currently not zoomed, zoom in to 2x
+          gestureState.handleDoubleTap(
+            scale: 2.0,
+            doubleTapPosition: gestureState.pointerDownPosition,
+          );
+        }
+      }
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -230,17 +178,13 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               _toggleBottomBar();
             }
           },
-          onDoubleTapDown: _handleDoubleTap,
-          onDoubleTap: () {}, // Required for onDoubleTapDown to work
+          onDoubleTap: _handleDoubleTap,
           child: Stack(
             children: [
               // Main photo page view
               PageView.builder(
                 controller: _pageController,
-                physics:
-                    _isZoomed
-                        ? const NeverScrollableScrollPhysics()
-                        : _CustomPageScrollPhysics(),
+                physics: _CustomPageScrollPhysics(),
                 onPageChanged: (index) {
                   final now = DateTime.now();
                   if (_lastSwipeTime != null &&
@@ -256,123 +200,88 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                 },
                 itemCount: photoPage!.imagePaths.length,
                 itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onDoubleTapDown: _handleDoubleTap,
-                    onDoubleTap: () {},
-                    child: InteractiveViewer(
-                      transformationController: _transformationController,
-                      minScale: 0.5,
-                      maxScale: 5.0,
-                      panEnabled: true,
-                      scaleEnabled: true,
-                      boundaryMargin: EdgeInsets.zero,
-                      constrained: false,
-                      child: Container(
-                        width: MediaQuery.of(context).size.width,
-                        height: MediaQuery.of(context).size.height,
-                        child: Image.file(
-                          File(photoPage!.imagePaths[index]),
-                          fit: BoxFit.contain,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: MediaQuery.of(context).size.width,
-                              height: MediaQuery.of(context).size.height,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.broken_image,
-                                    size: 64,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Gagal memuat foto',
-                                    style: TextStyle(
-                                      color: Colors.grey[400],
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
+                  // Ensure we have enough gesture keys
+                  while (_gestureKeys.length <= index) {
+                    _gestureKeys.add(GlobalKey<ExtendedImageGestureState>());
+                  }
+                  
+                  return ExtendedImage.file(
+                    File(photoPage!.imagePaths[index]),
+                    key: _gestureKeys[index],
+                    fit: BoxFit.contain,
+                    mode: ExtendedImageMode.gesture,
+                    initGestureConfigHandler: (state) {
+                      return GestureConfig(
+                        minScale: 0.1,
+                        maxScale: 5.0,
+                        animationMinScale: 0.1,
+                        animationMaxScale: 5.0,
+                        speed: 1.0,
+                        inertialSpeed: 100.0,
+                        initialScale: 1.0,
+                        inPageView: true,
+                        initialAlignment: InitialAlignment.center,
+                      );
+                    },
+                    onDoubleTap: (ExtendedImageGestureState state) {
+                      final Offset? pointerDownPosition = state.pointerDownPosition;
+                      final double? begin = state.gestureDetails?.totalScale;
+                      double end;
+                      
+                      if (begin == 1.0) {
+                        end = 2.0;
+                      } else {
+                        end = 1.0;
+                      }
+                      
+                      state.handleDoubleTap(
+                        scale: end,
+                        doubleTapPosition: pointerDownPosition,
+                      );
+                    },
+                    loadStateChanged: (ExtendedImageState state) {
+                      switch (state.extendedImageLoadState) {
+                        case LoadState.loading:
+                          return Container(
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.height,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
+                            ),
+                          );
+                        case LoadState.completed:
+                          return null;
+                        case LoadState.failed:
+                          return Container(
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.height,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.broken_image,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Gagal memuat foto',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                      }
+                    },
                   );
                 },
               ),
 
-              // Navigation arrows for Windows/Desktop only
-              if (photoPage!.photoCount > 1 && _isDesktop) ...[
-                // Left arrow
-                Positioned(
-                  left: 20,
-                  top: MediaQuery.of(context).size.height / 2 - 30,
-                  child: GestureDetector(
-                    onTap: () {
-                      if (_currentPhotoIndex > 0 && !_isZoomed) {
-                        _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.arrow_back_ios,
-                        color:
-                            (_currentPhotoIndex > 0 && !_isZoomed)
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.3),
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-                // Right arrow
-                Positioned(
-                  right: 20,
-                  top: MediaQuery.of(context).size.height / 2 - 30,
-                  child: GestureDetector(
-                    onTap: () {
-                      if (_currentPhotoIndex < photoPage!.photoCount - 1 &&
-                          !_isZoomed) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.arrow_forward_ios,
-                        color:
-                            (_currentPhotoIndex < photoPage!.photoCount - 1 &&
-                                    !_isZoomed)
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.3),
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
 
               // Thumbnail navigation strip
               if (photoPage!.photoCount > 1)
@@ -690,6 +599,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                                       onTap: _sharePhotoPage,
                                     ),
                                     _buildActionButton(
+                                      icon: Icons.text_fields,
+                                      label: 'Ekstrak Teks',
+                                      onTap: _extractTextFromPage,
+                                    ),
+                                    _buildActionButton(
                                       icon: Icons.delete,
                                       label: 'Hapus',
                                       color: Colors.red,
@@ -739,6 +653,44 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
         ),
       ),
     );
+  }
+
+  void _extractTextFromPage() async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Mengekstrak teks dari semua foto...'),
+            ],
+          ),
+        ),
+      );
+
+      // Navigate to text editor with all photos from the page
+      Navigator.pop(context); // Close loading dialog
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TextToEbookEditorScreen(
+            imagePaths: photoPage!.imagePaths,
+          ),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog if still open
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengekstrak teks: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    }
   }
 
   void _editPhotoPage() {
@@ -1009,12 +961,6 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
         files,
         text: shareText,
         subject: photoPage!.title,
-        sharePositionOrigin: Rect.fromLTWH(
-          0,
-          0,
-          MediaQuery.of(context).size.width,
-          MediaQuery.of(context).size.height / 2,
-        ),
       );
 
       if (mounted) {

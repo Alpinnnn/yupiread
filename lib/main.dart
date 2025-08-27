@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
@@ -10,7 +11,13 @@ import 'services/image_cache_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize services
+  // Check if running on Android
+  if (!Platform.isAndroid) {
+    runApp(const NonAndroidApp());
+    return;
+  }
+
+  // Initialize services for Android
   final dataService = DataService();
   await dataService.initializeData();
   
@@ -68,6 +75,34 @@ class _YupiwatchAppState extends State<YupiwatchApp> {
       darkTheme: theme_service.ThemeService.darkTheme,
       themeMode: _getFlutterThemeMode(widget.themeService.themeMode),
       home: const MainScreen(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+// Non-Android platform app
+class NonAndroidApp extends StatelessWidget {
+  const NonAndroidApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'YupiRead',
+      home: const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            'Where as reality comes into eternity',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w300,
+              letterSpacing: 1.2,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
       debugShowCheckedModeBanner: false,
     );
   }

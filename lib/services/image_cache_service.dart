@@ -11,12 +11,15 @@ class ImageCacheService {
 
   final Map<String, Uint8List> _memoryCache = {};
   final Map<String, DateTime> _cacheTimestamps = {};
-  static const int maxMemoryCacheSize = 50; // Maximum items in memory cache
+  static const int maxMemoryCacheSize = 30; // Maximum items in memory cache (optimized for Android)
   static const Duration cacheExpiry = Duration(hours: 24); // Cache expiry time
   
   Directory? _cacheDirectory;
 
   Future<void> initialize() async {
+    // Only initialize on Android
+    if (!Platform.isAndroid) return;
+    
     final appDir = await getApplicationDocumentsDirectory();
     _cacheDirectory = Directory('${appDir.path}/image_cache');
     if (!await _cacheDirectory!.exists()) {

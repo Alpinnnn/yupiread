@@ -2,8 +2,10 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:extended_image/extended_image.dart';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
+import 'text_to_ebook_editor_screen.dart';
 
 class PhotoViewScreen extends StatefulWidget {
   final String? photoId;
@@ -29,11 +31,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
   late AnimationController _animationController;
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
-  final TransformationController _transformationController =
-      TransformationController();
-  bool _isZoomed = false;
-  late AnimationController _zoomAnimationController;
-  late Animation<Matrix4> _zoomAnimation;
+  final GlobalKey<ExtendedImageGestureState> _gestureKey = GlobalKey<ExtendedImageGestureState>();
 
   @override
   void initState() {
@@ -51,22 +49,12 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
       vsync: this,
     );
 
-    _zoomAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    // Listen to transformation changes to detect zoom
-    _transformationController.addListener(_onTransformationChanged);
 
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _zoomAnimationController.dispose();
-    _transformationController.removeListener(_onTransformationChanged);
-    _transformationController.dispose();
     super.dispose();
   }
 
@@ -121,66 +109,28 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
   }
 
   void _resetZoom() {
-    _animateZoom(Matrix4.identity());
+    _gestureKey.currentState?.reset();
   }
 
-  void _onTransformationChanged() {
-    final Matrix4 matrix = _transformationController.value;
-    final double scale = matrix.getMaxScaleOnAxis();
-    final bool isCurrentlyZoomed = scale > 1.01;
-
-    if (_isZoomed != isCurrentlyZoomed) {
-      setState(() {
-        _isZoomed = isCurrentlyZoomed;
-      });
-    }
-  }
-
-  void _handleDoubleTap(TapDownDetails details) {
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-    
-    final Matrix4 currentMatrix = _transformationController.value;
-    final double currentScale = currentMatrix.getMaxScaleOnAxis();
-    
-    Matrix4 targetMatrix;
-    
-    if (currentScale > 1.01) {
-      // Currently zoomed, zoom out to fit
-      targetMatrix = Matrix4.identity();
-    } else {
-      // Currently not zoomed, zoom in to 2x at tap position
-      const double targetScale = 2.0;
-      final double screenWidth = MediaQuery.of(context).size.width;
-      final double screenHeight = MediaQuery.of(context).size.height;
+  void _handleDoubleTap() {
+    final ExtendedImageGestureState? gestureState = _gestureKey.currentState;
+    if (gestureState != null) {
+      final double scale = gestureState.gestureDetails?.totalScale ?? 1.0;
       
-      // Calculate the translation needed to center the tap point
-      final double translateX = (screenWidth / 2 - localPosition.dx) * targetScale;
-      final double translateY = (screenHeight / 2 - localPosition.dy) * targetScale;
-      
-      targetMatrix = Matrix4.identity()
-        ..translate(translateX, translateY)
-        ..scale(targetScale);
+      if (scale > 1.01) {
+        // Currently zoomed, zoom out to fit
+        gestureState.handleDoubleTap(
+          scale: 1.0,
+          doubleTapPosition: gestureState.pointerDownPosition,
+        );
+      } else {
+        // Currently not zoomed, zoom in to 2x
+        gestureState.handleDoubleTap(
+          scale: 2.0,
+          doubleTapPosition: gestureState.pointerDownPosition,
+        );
+      }
     }
-    
-    _animateZoom(targetMatrix);
-  }
-
-  void _animateZoom(Matrix4 targetMatrix) {
-    _zoomAnimation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: targetMatrix,
-    ).animate(CurvedAnimation(
-      parent: _zoomAnimationController,
-      curve: Curves.easeInOut,
-    ));
-
-    _zoomAnimation.addListener(() {
-      _transformationController.value = _zoomAnimation.value;
-    });
-
-    _zoomAnimationController.reset();
-    _zoomAnimationController.forward();
   }
 
   @override
@@ -219,57 +169,87 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
             _toggleBottomBar();
           }
         },
-        onDoubleTapDown: _handleDoubleTap,
-        onDoubleTap: () {}, // Required for onDoubleTapDown to work
+onDoubleTap: _handleDoubleTap,
         child: Stack(
           children: [
-            // Main photo view with proper zoom
+            // Main photo view with extended_image
             Center(
-              child: InteractiveViewer(
-              transformationController: _transformationController,
-              minScale: 0.1,
-              maxScale: 5.0,
-              panEnabled: true,
-              scaleEnabled: true,
-              boundaryMargin: EdgeInsets.zero,
-              constrained: false,
-              child: Container(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                child: Image.file(
-                  File(photo!.imagePath),
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  height: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: MediaQuery.of(context).size.width * 0.8,
-                      height: MediaQuery.of(context).size.height * 0.6,
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.broken_image,
-                            size: 64,
-                            color: Colors.grey,
+              child: ExtendedImage.file(
+                File(photo!.imagePath),
+                key: _gestureKey,
+                fit: BoxFit.contain,
+                mode: ExtendedImageMode.gesture,
+                initGestureConfigHandler: (state) {
+                  return GestureConfig(
+                    minScale: 0.1,
+                    maxScale: 5.0,
+                    animationMinScale: 0.1,
+                    animationMaxScale: 5.0,
+                    speed: 1.0,
+                    inertialSpeed: 100.0,
+                    initialScale: 1.0,
+                    inPageView: false,
+                    initialAlignment: InitialAlignment.center,
+                  );
+                },
+                onDoubleTap: (ExtendedImageGestureState state) {
+                  final Offset? pointerDownPosition = state.pointerDownPosition;
+                  final double? begin = state.gestureDetails?.totalScale;
+                  double end;
+                  
+                  if (begin == 1.0) {
+                    end = 2.0;
+                  } else {
+                    end = 1.0;
+                  }
+                  
+                  state.handleDoubleTap(
+                    scale: end,
+                    doubleTapPosition: pointerDownPosition,
+                  );
+                },
+                loadStateChanged: (ExtendedImageState state) {
+                  switch (state.extendedImageLoadState) {
+                    case LoadState.loading:
+                      return Container(
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Gagal memuat foto',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 16,
+                        ),
+                      );
+                    case LoadState.completed:
+                      return null;
+                    case LoadState.failed:
+                      return Container(
+                        width: MediaQuery.of(context).size.width * 0.8,
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.broken_image,
+                              size: 64,
+                              color: Colors.grey,
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Gagal memuat foto',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                  }
+                },
               ),
             ),
-          ),
 
           // Bottom sheet with photo details and actions
           if (_showBottomBar)
@@ -442,6 +422,14 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                                 onTap: () {
                                   _toggleBottomBar();
                                   _sharePhoto();
+                                },
+                              ),
+                              _buildActionButton(
+                                icon: Icons.text_fields,
+                                label: 'Ekstrak Teks',
+                                onTap: () {
+                                  _toggleBottomBar();
+                                  _extractText();
                                 },
                               ),
                               _buildActionButton(
@@ -688,7 +676,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         }
         shareText += '\n\nDibagikan dari YupiRead';
 
-        // For Windows, use a more explicit approach
+        // Create XFile for sharing
         final xFile = XFile(
           photo!.imagePath,
           name: '${photo!.title}.jpg',
@@ -699,12 +687,6 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
           [xFile],
           text: shareText,
           subject: photo!.title,
-          sharePositionOrigin: Rect.fromLTWH(
-            0,
-            0,
-            MediaQuery.of(context).size.width,
-            MediaQuery.of(context).size.height / 2,
-          ),
         );
 
         // Show success message
@@ -728,7 +710,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
       }
     } catch (e) {
       if (mounted) {
-        // More detailed error handling for Windows
+        // Detailed error handling
         String errorMessage = 'Gagal membagikan foto';
         if (e.toString().contains('No Activity found')) {
           errorMessage = 'Tidak ada aplikasi yang dapat membagikan foto ini';
@@ -750,6 +732,44 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
           ),
         );
       }
+    }
+  }
+
+  void _extractText() async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Mengekstrak teks dari foto...'),
+            ],
+          ),
+        ),
+      );
+
+      // Navigate to text editor with current photo
+      Navigator.pop(context); // Close loading dialog
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TextToEbookEditorScreen(
+            imagePaths: [photo!.imagePath],
+          ),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog if still open
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengekstrak teks: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
     }
   }
 
