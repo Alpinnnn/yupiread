@@ -3,9 +3,10 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
+import '../widgets/lazy_grid_view.dart';
 import 'photo_view_screen.dart';
-import 'photo_page_view_screen.dart';
 import 'document_scanner_screen.dart';
+import 'photo_page_view_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});

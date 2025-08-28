@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import '../services/text_recognition_service.dart';
 import '../services/data_service.dart';
 
@@ -162,8 +163,12 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
         'Dokumen berhasil diperbarui' : 
         'Dokumen berhasil disimpan');
       
-      // Simpan ke data service jika dokumen baru
-      if (!_isEditingExisting) {
+      // Update data service
+      if (_isEditingExisting) {
+        // Update existing ebook title in data service
+        await _dataService.updateEbookTitle(filePath, _titleController.text.trim());
+      } else {
+        // Add new ebook to data service
         _dataService.addEbook(
           title: _titleController.text.trim(),
           filePath: filePath,
@@ -263,9 +268,11 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
       _insertedImages.add(savedPath);
       
       final index = _quillController.selection.baseOffset;
-      _quillController.document.insert(index, '\n[GAMBAR: $fileName]\n');
+      
+      // Insert actual image embed instead of text placeholder
+      _quillController.document.insert(index, BlockEmbed.image(savedPath));
       _quillController.updateSelection(
-        TextSelection.collapsed(offset: index + fileName.length + 12),
+        TextSelection.collapsed(offset: index + 1),
         ChangeSource.local,
       );
       
@@ -275,30 +282,172 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
     }
   }
 
-  Future<void> _scanTextFromImage() async {
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Pilih Sumber Gambar',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white 
+                  : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildBottomSheetOption(
+                  icon: Icons.camera_alt,
+                  label: 'Kamera',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _insertImageFromCamera();
+                  },
+                ),
+                _buildBottomSheetOption(
+                  icon: Icons.photo_library,
+                  label: 'Galeri',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _insertImageFromGallery();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTextScanDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Sumber Pindai Teks',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white 
+                  : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildBottomSheetOption(
+                  icon: Icons.camera_alt,
+                  label: 'Ambil Foto & Pindai',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _scanTextFromCamera();
+                  },
+                ),
+                _buildBottomSheetOption(
+                  icon: Icons.photo_library,
+                  label: 'Galeri & Pindai',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _scanTextFromGallery();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _scanTextFromCamera() async {
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.camera);
+      
       if (image != null) {
-        _showLoadingDialog('Memindai teks...');
+        final extractedText = await _textRecognitionService.extractTextFromImage(image.path);
         
-        final recognizedText = await _textRecognitionService.extractTextFromImage(image.path);
-        
-        Navigator.pop(context); // Close loading dialog
-        
-        if (recognizedText.isNotEmpty) {
+        if (extractedText.isNotEmpty) {
           final index = _quillController.selection.baseOffset;
-          _quillController.document.insert(index, recognizedText);
+          _quillController.document.insert(index, extractedText);
           _quillController.updateSelection(
-            TextSelection.collapsed(offset: index + recognizedText.length),
+            TextSelection.collapsed(offset: index + extractedText.length),
             ChangeSource.local,
           );
+          
           _showSuccessSnackBar('Teks berhasil dipindai dan ditambahkan');
         } else {
           _showErrorSnackBar('Tidak ada teks yang terdeteksi');
         }
       }
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog if still open
+      _showErrorSnackBar('Gagal memindai teks: $e');
+    }
+  }
+
+  Future<void> _scanTextFromGallery() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.gallery);
+      
+      if (image != null) {
+        final extractedText = await _textRecognitionService.extractTextFromImage(image.path);
+        
+        if (extractedText.isNotEmpty) {
+          final index = _quillController.selection.baseOffset;
+          _quillController.document.insert(index, extractedText);
+          _quillController.updateSelection(
+            TextSelection.collapsed(offset: index + extractedText.length),
+            ChangeSource.local,
+          );
+          
+          _showSuccessSnackBar('Teks berhasil dipindai dan ditambahkan');
+        } else {
+          _showErrorSnackBar('Tidak ada teks yang terdeteksi');
+        }
+      }
+    } catch (e) {
       _showErrorSnackBar('Gagal memindai teks: $e');
     }
   }
@@ -323,19 +472,11 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildBottomSheetItem(
-                  icon: Icons.camera_alt,
-                  label: 'Kamera',
+                  icon: Icons.photo,
+                  label: 'Tambah Foto',
                   onTap: () {
                     Navigator.pop(context);
-                    _insertImageFromCamera();
-                  },
-                ),
-                _buildBottomSheetItem(
-                  icon: Icons.photo_library,
-                  label: 'Galeri',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _insertImageFromGallery();
+                    _showImageSourceDialog();
                   },
                 ),
                 _buildBottomSheetItem(
@@ -343,7 +484,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
                   label: 'Pindai Teks',
                   onTap: () {
                     Navigator.pop(context);
-                    _scanTextFromImage();
+                    _showTextScanDialog();
                   },
                 ),
               ],
@@ -384,6 +525,92 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDialogOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                icon,
+                size: 36,
+                color: const Color(0xFF2563EB),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white 
+                  : Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomSheetOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 120,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                icon,
+                size: 40,
+                color: const Color(0xFF2563EB),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white 
+                  : Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -489,6 +716,9 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
               ),
               child: QuillSimpleToolbar(
                 controller: _quillController,
+                config: QuillSimpleToolbarConfig(
+                  embedButtons: FlutterQuillEmbeds.toolbarButtons(),
+                ),
               ),
             ),
           
@@ -499,9 +729,15 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
               decoration: BoxDecoration(
                 color: isDark ? Colors.grey[850] : Colors.white,
               ),
-              child: QuillEditor.basic(
+              child: QuillEditor(
                 controller: _quillController,
                 focusNode: _focusNode,
+                scrollController: ScrollController(),
+                config: QuillEditorConfig(
+                  embedBuilders: [
+                    ...FlutterQuillEmbeds.editorBuilders(),
+                  ],
+                ),
               ),
             ),
           ),

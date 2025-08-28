@@ -411,6 +411,27 @@ class DataService {
     return false;
   }
 
+  // Update ebook title by file path
+  Future<bool> updateEbookTitle(String filePath, String newTitle) async {
+    final index = _ebooks.indexWhere((ebook) => ebook.filePath == filePath);
+    if (index != -1) {
+      final oldEbook = _ebooks[index];
+      final newEbook = oldEbook.copyWith(title: newTitle);
+      
+      _ebooks[index] = newEbook;
+      await _saveEbooks(); // Save to persistent storage
+      
+      _logActivity(
+        title: 'Ebook "${oldEbook.title}" diubah menjadi "$newTitle"',
+        description: 'Judul ebook berhasil diperbarui',
+        type: ActivityType.ebookEdited,
+      );
+      
+      return true;
+    }
+    return false;
+  }
+
   // Update ebook total pages
   bool updateEbookTotalPages(String id, int totalPages) {
     final index = _ebooks.indexWhere((ebook) => ebook.id == id);

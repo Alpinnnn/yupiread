@@ -31,8 +31,19 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   bool _showEbookInfo = false;
   bool _hasLoggedCompletion = false; // Track if completion has been logged
   late AnimationController _animationController;
-  late AnimationController _zoomAnimationController;
   late Animation<double> _zoomAnimation;
+  late AnimationController _zoomAnimationController;
+  
+  // Throttling variables
+  DateTime _lastGestureUpdate = DateTime.now();
+  DateTime _lastZoomUpdate = DateTime.now();
+  DateTime _lastPanUpdate = DateTime.now();
+  static const Duration _gestureThrottle = Duration(milliseconds: 16); // 60fps
+  static const Duration _zoomThrottle = Duration(milliseconds: 50);
+  static const Duration _panThrottle = Duration(milliseconds: 33); // 30fps for pan
+  
+  // Viewport tracking to prevent unnecessary rendering
+  double _lastViewportZoom = 1.0;
   double _dragOffset = 0.0;
   double _bottomBarHeight = 400.0;
 
@@ -71,11 +82,12 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
     );
 
     _zoomAnimation.addListener(() {
-      setState(() {
-        _currentZoomLevel = _zoomAnimation.value;
-      });
-      // Don't update PDF viewer zoom level here to prevent position reset
-      // _pdfViewerController.zoomLevel = _currentZoomLevel;
+      // Remove setState to prevent excessive rebuilds during animation
+      _currentZoomLevel = _zoomAnimation.value;
+      // Only update PDF viewer zoom level without rebuilding entire widget
+      if (_pdfViewerController.zoomLevel != _currentZoomLevel) {
+        _pdfViewerController.zoomLevel = _currentZoomLevel;
+      }
     });
   }
 
@@ -101,23 +113,24 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
   }
 
   void _updateProgress(int pageNumber) {
-    // Update current page
-    setState(() {
-      _currentPage = pageNumber;
-      // Only update max page if we've progressed further
-      if (pageNumber > _maxPageReached) {
-        _maxPageReached = pageNumber;
-      }
-    });
+    // Batch state updates to reduce rebuilds
+    if (_currentPage != pageNumber || pageNumber > _maxPageReached) {
+      setState(() {
+        _currentPage = pageNumber;
+        if (pageNumber > _maxPageReached) {
+          _maxPageReached = pageNumber;
+        }
+      });
+    }
 
     // Get old progress before updating
     final oldProgress = _ebook?.progress ?? 0.0;
     
     // Always update progress in data service to save current position
     _dataService.updateEbookProgress(widget.ebookId, _maxPageReached);
-    // Refresh ebook data to get updated progress
+    // Refresh ebook data to get updated progress - avoid unnecessary setState
     final updatedEbook = _dataService.getEbook(widget.ebookId);
-    if (updatedEbook != null) {
+    if (updatedEbook != null && updatedEbook.progress != _ebook?.progress) {
       setState(() {
         _ebook = updatedEbook;
       });
@@ -468,27 +481,52 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                           _initialPanOffset = _panOffset;
                         },
                         onScaleUpdate: (details) {
-                          // Handle pinch-to-zoom
+                          final now = DateTime.now();
+                          
+                          // Throttle gesture updates to reduce JNI calls
+                          if (now.difference(_lastGestureUpdate) < _gestureThrottle) {
+                            return;
+                          }
+                          _lastGestureUpdate = now;
+                          
+                          // Handle pinch-to-zoom with throttling
                           if (details.scale != 1.0) {
                             final newZoomLevel = (_initialZoomLevel *
                                     details.scale)
                                 .clamp(0.5, 3.0);
-                            setState(() {
-                              _currentZoomLevel = newZoomLevel;
-                            });
-                            _pdfViewerController.zoomLevel = _currentZoomLevel;
-
-                            // Update zoom state
-                            _isZoomed = _currentZoomLevel > 1.0;
+                            
+                            // Only update if zoom changed significantly
+                            if ((newZoomLevel - _currentZoomLevel).abs() > 0.05) {
+                              setState(() {
+                                _currentZoomLevel = newZoomLevel;
+                                _isZoomed = _currentZoomLevel > 1.0;
+                              });
+                              
+                              // Debounce PDF controller updates
+                              Future.microtask(() {
+                                _pdfViewerController.zoomLevel = _currentZoomLevel;
+                              });
+                            }
                           }
 
-                          // Handle drag/pan when zoomed in (using focalPointDelta)
+                          // Handle drag/pan when zoomed in with throttling
                           if (_currentZoomLevel > 1.0 &&
                               details.focalPointDelta != Offset.zero) {
-                            setState(() {
-                              _panOffset =
-                                  _initialPanOffset + details.focalPointDelta;
-                            });
+                            final panNow = DateTime.now();
+                            
+                            // Throttle pan updates to reduce rendering calls
+                            if (panNow.difference(_lastPanUpdate) >= _panThrottle) {
+                              _lastPanUpdate = panNow;
+                              
+                              final newPanOffset = _initialPanOffset + details.focalPointDelta;
+                              
+                              // Only update if pan distance is significant
+                              if ((newPanOffset - _panOffset).distance > 5.0) {
+                                setState(() {
+                                  _panOffset = newPanOffset;
+                                });
+                              }
+                            }
                           }
                         },
                         child: Transform.translate(
@@ -500,16 +538,19 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                             File(_ebook!.filePath),
                             controller: _pdfViewerController,
                             onPageChanged: (PdfPageChangedDetails details) {
-                              _updateProgress(details.newPageNumber);
-                              // Reset zoom to 100% when page changes
-                              if (_isZoomed || _currentZoomLevel != 1.0) {
-                                setState(() {
-                                  _currentZoomLevel = 1.0;
-                                  _isZoomed = false;
-                                  _panOffset = Offset.zero;
-                                });
-                                _pdfViewerController.zoomLevel = 1.0;
-                              }
+                              // Debounce page changes to reduce excessive calls
+                              Future.microtask(() {
+                                _updateProgress(details.newPageNumber);
+                                // Reset zoom to 100% when page changes
+                                if (_isZoomed || _currentZoomLevel != 1.0) {
+                                  setState(() {
+                                    _currentZoomLevel = 1.0;
+                                    _isZoomed = false;
+                                    _panOffset = Offset.zero;
+                                  });
+                                  _pdfViewerController.zoomLevel = 1.0;
+                                }
+                              });
                             },
                             onDocumentLoaded: (
                               PdfDocumentLoadedDetails details,
@@ -519,25 +560,45 @@ class _EbookReaderScreenState extends State<EbookReaderScreen>
                               });
                             },
                             onZoomLevelChanged: (PdfZoomDetails details) {
-                              setState(() {
-                                _currentZoomLevel = details.newZoomLevel;
-                              });
-                              // Update zoom state without resetting position
-                              if (_currentZoomLevel <= 1.0) {
-                                _isZoomed = false;
-                              } else {
-                                _isZoomed = true;
+                              final now = DateTime.now();
+                              
+                              // Throttle zoom level changes
+                              if (now.difference(_lastZoomUpdate) < _zoomThrottle) {
+                                return;
                               }
-                              _updateLastActiveTime();
+                              _lastZoomUpdate = now;
+                              
+                              // Debounce zoom changes to prevent excessive rebuilds
+                              Future.microtask(() {
+                                // Only update if zoom changed significantly
+                                if ((details.newZoomLevel - _currentZoomLevel).abs() > 0.05) {
+                                  // Check if viewport changed significantly to prevent unnecessary text re-rendering
+                                  final viewportChanged = (details.newZoomLevel - _lastViewportZoom).abs() > 0.1;
+                                  
+                                  if (viewportChanged) {
+                                    _lastViewportZoom = details.newZoomLevel;
+                                    
+                                    setState(() {
+                                      _currentZoomLevel = details.newZoomLevel;
+                                      _isZoomed = details.newZoomLevel > 1.0;
+                                    });
+                                  }
+                                }
+                                _updateLastActiveTime();
+                              });
                             },
                             enableDoubleTapZooming:
                                 false, // Disable default double tap
-                            enableTextSelection: true,
+                            enableTextSelection: false, // Disable text selection to reduce rendering
                             canShowScrollHead: false, // Hide scroll indicator
                             canShowScrollStatus: false, // Hide scroll status
+                            canShowPaginationDialog: false, // Disable pagination dialog
+                            enableDocumentLinkAnnotation: false, // Disable link annotations
                             initialZoomLevel: _currentZoomLevel,
                             pageLayoutMode: PdfPageLayoutMode.single,
                             scrollDirection: PdfScrollDirection.vertical,
+                            // Optimize rendering performance
+                            interactionMode: PdfInteractionMode.pan,
                           ),
                         ),
                       ),
