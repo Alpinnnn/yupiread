@@ -164,21 +164,26 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         ],
       ),
       body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           if (_showBottomBar) {
             _toggleBottomBar();
           }
         },
-onDoubleTap: _handleDoubleTap,
+        onDoubleTap: _handleDoubleTap,
         child: Stack(
           children: [
             // Main photo view with extended_image
-            Center(
+            Container(
+              width: double.infinity,
+              height: double.infinity,
               child: ExtendedImage.file(
                 File(photo!.imagePath),
                 key: _gestureKey,
                 fit: BoxFit.contain,
                 mode: ExtendedImageMode.gesture,
+                enableMemoryCache: true,
+                clearMemoryCacheIfFailed: false,
                 initGestureConfigHandler: (state) {
                   return GestureConfig(
                     minScale: 0.1,
@@ -190,6 +195,8 @@ onDoubleTap: _handleDoubleTap,
                     initialScale: 1.0,
                     inPageView: false,
                     initialAlignment: InitialAlignment.center,
+                    cacheGesture: false, // Disable gesture caching for better responsiveness
+                    hitTestBehavior: HitTestBehavior.opaque, // Ensure all touch areas are responsive
                   );
                 },
                 onDoubleTap: (ExtendedImageGestureState state) {
@@ -197,7 +204,7 @@ onDoubleTap: _handleDoubleTap,
                   final double? begin = state.gestureDetails?.totalScale;
                   double end;
                   
-                  if (begin == 1.0) {
+                  if (begin == null || begin <= 1.01) {
                     end = 2.0;
                   } else {
                     end = 1.0;

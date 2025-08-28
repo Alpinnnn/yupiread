@@ -27,7 +27,9 @@ dependencies:
   sqflite: ^2.3.0
   image_cropper: ^9.1.0
   extended_image: ^8.2.0
-  google_mlkit_text_recognition: ^0.13.0
+  google_mlkit_text_recognition: ^0.15.0
+  flutter_quill: ^11.4.2
+  flutter_quill_extensions: ^11.0.0-dev.0
 
 dev_dependencies:
   flutter_test:

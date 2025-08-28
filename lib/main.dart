@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/ebook_screen.dart';
@@ -76,6 +78,16 @@ class _YupiwatchAppState extends State<YupiwatchApp> {
       themeMode: _getFlutterThemeMode(widget.themeService.themeMode),
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', 'US'),
+        Locale('id', 'ID'),
+      ],
     );
   }
 }

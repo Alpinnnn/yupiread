@@ -31,6 +31,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
   DateTime? _lastSwipeTime;
+  bool _isZoomed = false;
+  final List<bool> _zoomStates = [];
 
   @override
   void initState() {
@@ -42,10 +44,12 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       vsync: this,
     );
 
-    // Initialize gesture keys for each photo
+    // Initialize gesture keys and zoom states for each photo
     _gestureKeys.clear();
+    _zoomStates.clear();
     for (int i = 0; i < (photoPage?.imagePaths.length ?? 0); i++) {
       _gestureKeys.add(GlobalKey<ExtendedImageGestureState>());
+      _zoomStates.add(false);
     }
   }
 
@@ -75,6 +79,12 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   void _resetZoom() {
     if (_currentPhotoIndex < _gestureKeys.length) {
       _gestureKeys[_currentPhotoIndex].currentState?.reset();
+      setState(() {
+        _isZoomed = false;
+        if (_currentPhotoIndex < _zoomStates.length) {
+          _zoomStates[_currentPhotoIndex] = false;
+        }
+      });
     }
   }
 
@@ -184,7 +194,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               // Main photo page view
               PageView.builder(
                 controller: _pageController,
-                physics: _CustomPageScrollPhysics(),
+                physics: _isZoomed ? const NeverScrollableScrollPhysics() : _CustomPageScrollPhysics(),
                 onPageChanged: (index) {
                   final now = DateTime.now();
                   if (_lastSwipeTime != null &&
@@ -195,14 +205,16 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
 
                   setState(() {
                     _currentPhotoIndex = index;
+                    _isZoomed = false; // Reset zoom state when changing pages
                   });
                   _resetZoom();
                 },
                 itemCount: photoPage!.imagePaths.length,
                 itemBuilder: (context, index) {
-                  // Ensure we have enough gesture keys
+                  // Ensure we have enough gesture keys and zoom states
                   while (_gestureKeys.length <= index) {
                     _gestureKeys.add(GlobalKey<ExtendedImageGestureState>());
+                    _zoomStates.add(false);
                   }
                   
                   return ExtendedImage.file(
@@ -219,8 +231,25 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                         speed: 1.0,
                         inertialSpeed: 100.0,
                         initialScale: 1.0,
-                        inPageView: true,
+                        inPageView: false, // Changed to false to prevent gesture conflicts
                         initialAlignment: InitialAlignment.center,
+                        cacheGesture: false, // Disable gesture caching for better responsiveness
+                        gestureDetailsIsChanged: (GestureDetails? details) {
+                          // Track zoom state changes with improved detection
+                          if (details != null && details.totalScale != null) {
+                            final bool wasZoomed = _isZoomed;
+                            final bool nowZoomed = details.totalScale! > 1.01;
+                            
+                            if (wasZoomed != nowZoomed) {
+                              setState(() {
+                                _isZoomed = nowZoomed;
+                                if (index < _zoomStates.length) {
+                                  _zoomStates[index] = nowZoomed;
+                                }
+                              });
+                            }
+                          }
+                        },
                       );
                     },
                     onDoubleTap: (ExtendedImageGestureState state) {
@@ -281,7 +310,6 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                   );
                 },
               ),
-
 
               // Thumbnail navigation strip
               if (photoPage!.photoCount > 1)
@@ -1012,7 +1040,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   }
 }
 
-// Custom PageScrollPhysics to add delay for swipe gestures
+// Custom PageScrollPhysics with improved gesture handling
 class _CustomPageScrollPhysics extends PageScrollPhysics {
   const _CustomPageScrollPhysics({ScrollPhysics? parent})
     : super(parent: parent);
@@ -1024,10 +1052,15 @@ class _CustomPageScrollPhysics extends PageScrollPhysics {
 
   @override
   bool shouldAcceptUserOffset(ScrollMetrics position) {
-    // Add a small delay to prevent conflicts with pinch gestures
+    // Only accept swipe gestures when not zoomed
     return super.shouldAcceptUserOffset(position);
   }
 
   @override
-  double get minFlingVelocity => 100.0; // Increase minimum velocity for page changes
+  double get minFlingVelocity => 200.0; // Higher threshold for more deliberate swipes
+  
+  @override
+  double get dragStartDistanceMotionThreshold => 15.0; // Require more movement to start drag
+  
+  // Removed touchSlop override as it doesn't exist in PageScrollPhysics
 }

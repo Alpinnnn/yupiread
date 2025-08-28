@@ -10,10 +10,69 @@ import 'package:xml/xml.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../models/ebook_model.dart';
-import '../models/word_document_data.dart';
 import '../services/data_service.dart';
 import 'ebook_reader_screen.dart';
-import 'text_extraction_screen.dart';
+import 'json_ebook_reader_screen.dart';
+import 'text_ebook_editor_screen.dart';
+
+// Word document data classes
+class WordFormatting {
+  bool bold;
+  bool italic;
+  bool underline;
+  double fontSize;
+  String fontFamily;
+  bool isBold;
+  bool isItalic;
+  bool isUnderline;
+  PdfColor? color;
+  PdfColor? backgroundColor;
+  
+  WordFormatting({
+    this.bold = false,
+    this.italic = false,
+    this.underline = false,
+    this.fontSize = 12.0,
+    this.fontFamily = 'Arial',
+    this.isBold = false,
+    this.isItalic = false,
+    this.isUnderline = false,
+    this.color,
+    this.backgroundColor,
+  });
+}
+
+class WordElement {
+  String type;
+  String text;
+  WordFormatting formatting;
+  bool isHeader;
+  int headerLevel;
+  String? imageId;
+  
+  WordElement({
+    required this.type,
+    this.text = '',
+    required this.formatting,
+    this.isHeader = false,
+    this.headerLevel = 0,
+    this.imageId,
+  });
+}
+
+class WordDocumentData {
+  List<WordElement> elements;
+  Map<String, String> relationships;
+  Map<String, Uint8List> images;
+  
+  WordDocumentData({
+    List<WordElement>? elements,
+    Map<String, String>? relationships,
+    Map<String, Uint8List>? images,
+  }) : elements = elements ?? [],
+       relationships = relationships ?? {},
+       images = images ?? {};
+}
 
 class EbookScreen extends StatefulWidget {
   const EbookScreen({super.key});
@@ -42,11 +101,17 @@ class _EbookScreenState extends State<EbookScreen> {
   }
 
   void _openEbook(EbookModel ebook) {
+    Widget readerScreen;
+    
+    if (ebook.fileType == 'json_delta') {
+      readerScreen = JsonEbookReaderScreen(ebook: ebook);
+    } else {
+      readerScreen = EbookReaderScreen(ebookId: ebook.id);
+    }
+    
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => EbookReaderScreen(ebookId: ebook.id),
-      ),
+      MaterialPageRoute(builder: (context) => readerScreen),
     ).then((_) => _updateFilteredEbooks());
   }
 
@@ -492,12 +557,12 @@ class _EbookScreenState extends State<EbookScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildImportOption(
-                  icon: Icons.text_fields,
-                  title: 'Ekstrak Teks',
-                  subtitle: 'Ekstrak teks dari gambar',
+                  icon: Icons.edit_note,
+                  title: 'Buat Ebook',
+                  subtitle: 'Tulis ebook dari teks',
                   onTap: () {
                     Navigator.pop(context);
-                    _navigateToTextExtraction();
+                    _navigateToTextEditor();
                   },
                 ),
                 const SizedBox(height: 20),
@@ -1405,11 +1470,12 @@ class _EbookScreenState extends State<EbookScreen> {
     );
   }
 
-  void _navigateToTextExtraction() {
+
+  void _navigateToTextEditor() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const TextExtractionScreen(),
+        builder: (context) => const TextEbookEditorScreen(),
       ),
     ).then((_) => _updateFilteredEbooks());
   }

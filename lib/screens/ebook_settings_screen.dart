@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/ebook_model.dart';
 import '../services/data_service.dart';
 import 'ebook_reader_screen.dart';
+import 'json_ebook_reader_screen.dart';
 
 class EbookSettingsScreen extends StatefulWidget {
   const EbookSettingsScreen({super.key});
@@ -91,12 +92,17 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
               icon: Icons.play_arrow,
               title: 'Baca',
               onTap: () {
-                Navigator.pop(context);
+                Widget readerScreen;
+                
+                if (ebook.fileType == 'json_delta') {
+                  readerScreen = JsonEbookReaderScreen(ebook: ebook);
+                } else {
+                  readerScreen = EbookReaderScreen(ebookId: ebook.id);
+                }
+                
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => EbookReaderScreen(ebookId: ebook.id),
-                  ),
+                  MaterialPageRoute(builder: (context) => readerScreen),
                 ).then((_) => _loadEbooks());
               },
             ),
