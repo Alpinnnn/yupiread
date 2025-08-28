@@ -183,7 +183,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
-Project Link: [https://github.com/username/yupiread](https://github.com/username/yupiread)
+Project Link: [https://github.com/Alpinnnn/yupiread](https://github.com/Alpinnnn/yupiread)
 
 ---
 
