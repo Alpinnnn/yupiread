@@ -1,13 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'services/theme_service.dart' as theme_service;
+import 'services/data_service.dart';
+import 'services/shared_file_handler.dart';
+import 'services/language_service.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
 import 'screens/ebook_screen.dart';
 import 'screens/profile_screen.dart';
-import 'services/data_service.dart';
-import 'services/theme_service.dart' as theme_service;
+import 'screens/tools_screen.dart';
 import 'services/image_cache_service.dart';
 
 void main() async {
@@ -26,16 +29,23 @@ void main() async {
   final themeService = theme_service.ThemeService.instance;
   await themeService.initialize();
   
+  final languageService = LanguageService.instance;
+  await languageService.initialize();
+  
   final imageCacheService = ImageCacheService.instance;
   await imageCacheService.initialize();
 
-  runApp(YupiwatchApp(themeService: themeService));
+  // Initialize shared file handler
+  SharedFileHandler.initialize();
+
+  runApp(YupiwatchApp(themeService: themeService, languageService: languageService));
 }
 
 class YupiwatchApp extends StatefulWidget {
   final theme_service.ThemeService themeService;
+  final LanguageService languageService;
   
-  const YupiwatchApp({super.key, required this.themeService});
+  const YupiwatchApp({super.key, required this.themeService, required this.languageService});
 
   @override
   State<YupiwatchApp> createState() => _YupiwatchAppState();
@@ -46,15 +56,21 @@ class _YupiwatchAppState extends State<YupiwatchApp> {
   void initState() {
     super.initState();
     widget.themeService.addListener(_onThemeChanged);
+    widget.languageService.addListener(_onLanguageChanged);
   }
 
   @override
   void dispose() {
     widget.themeService.removeListener(_onThemeChanged);
+    widget.languageService.removeListener(_onLanguageChanged);
     super.dispose();
   }
 
   void _onThemeChanged() {
+    setState(() {});
+  }
+
+  void _onLanguageChanged() {
     setState(() {});
   }
 
@@ -72,22 +88,18 @@ class _YupiwatchAppState extends State<YupiwatchApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'YupiRead',
+      title: 'Yupiread',
       theme: theme_service.ThemeService.lightTheme,
       darkTheme: theme_service.ThemeService.darkTheme,
       themeMode: _getFlutterThemeMode(widget.themeService.themeMode),
+      locale: widget.languageService.currentLocale,
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
+      localizationsDelegates: [
+        ...AppLocalizations.localizationsDelegates,
         FlutterQuillLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en', 'US'),
-        Locale('id', 'ID'),
-      ],
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }
@@ -99,7 +111,7 @@ class NonAndroidApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'YupiRead',
+      title: 'Yupiread',
       home: const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
@@ -129,13 +141,91 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  final DataService _dataService = DataService.instance;
+  
+  void _onDataServiceChanged() {
+    setState(() {
+      // Reset current index if it's out of bounds after Tools tab is toggled
+      if (_currentIndex >= _screens.length) {
+        _currentIndex = _screens.length - 1;
+      }
+    });
+  }
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const GalleryScreen(),
-    const EbookScreen(),
-    const ProfileScreen(),
-  ];
+  List<Widget> get _screens {
+    final screens = [
+      const DashboardScreen(),
+      const GalleryScreen(),
+      const EbookScreen(),
+    ];
+    
+    if (_dataService.showToolsSection) {
+      screens.add(const ToolsScreen());
+    }
+    
+    screens.add(const ProfileScreen());
+    return screens;
+  }
+
+  List<BottomNavigationBarItem> _buildBottomNavItems(BuildContext context) {
+    final items = <BottomNavigationBarItem>[
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.dashboard_outlined),
+        activeIcon: const Icon(Icons.dashboard),
+        label: AppLocalizations.of(context).dashboard,
+      ),
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.photo_library_outlined),
+        activeIcon: const Icon(Icons.photo_library),
+        label: AppLocalizations.of(context).gallery,
+      ),
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.menu_book_outlined),
+        activeIcon: const Icon(Icons.menu_book),
+        label: AppLocalizations.of(context).ebooks,
+      ),
+    ];
+
+    // Add Tools tab if enabled
+    if (_dataService.showToolsSection) {
+      items.add(
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.build_outlined),
+          activeIcon: const Icon(Icons.build),
+          label: AppLocalizations.of(context).pdfTools,
+        ),
+      );
+    }
+
+    // Always add Profile at the end
+    items.add(
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.person_outlined),
+        activeIcon: const Icon(Icons.person),
+        label: AppLocalizations.of(context).profile,
+      ),
+    );
+
+    return items;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Add listener for DataService changes
+    _dataService.addListener(_onDataServiceChanged);
+    // Set context for shared file handler after widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('MainScreen: Setting context for SharedFileHandler');
+      SharedFileHandler.setContext(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    _dataService.removeListener(_onDataServiceChanged);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -172,28 +262,7 @@ class _MainScreenState extends State<MainScreen> {
             fontWeight: FontWeight.w500,
           ),
           elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Dashboard',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.photo_library_outlined),
-              activeIcon: Icon(Icons.photo_library),
-              label: 'Gallery',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.menu_book_outlined),
-              activeIcon: Icon(Icons.menu_book),
-              label: 'Ebook',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outlined),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
+          items: _buildBottomNavItems(context),
         ),
       ),
     );

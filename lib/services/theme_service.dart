@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../l10n/app_localizations.dart';
 
 enum ThemeMode { light, dark, system }
 
@@ -158,14 +159,14 @@ class ThemeService extends ChangeNotifier {
   }
 
   // Get current theme mode as string for display
-  String get themeModeString {
+  String getThemeModeString(BuildContext context) {
     switch (_themeMode) {
       case ThemeMode.light:
-        return 'Terang';
+        return AppLocalizations.of(context).light;
       case ThemeMode.dark:
-        return 'Gelap';
+        return AppLocalizations.of(context).dark;
       case ThemeMode.system:
-        return 'Mengikuti Sistem';
+        return AppLocalizations.of(context).system;
     }
   }
 

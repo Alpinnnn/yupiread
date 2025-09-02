@@ -8,6 +8,9 @@ import '../widgets/theme_selection_dialog.dart';
 import 'tag_settings_screen.dart';
 import 'gallery_settings_screen.dart';
 import 'ebook_settings_screen.dart';
+import '../screens/activity_settings_screen.dart';
+import '../screens/language_settings_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -48,13 +51,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {});
   }
 
+  Widget _buildStatCard({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color backgroundColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: backgroundColor, size: 24),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: backgroundColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: backgroundColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'Profil',
+          l10n.myProfile,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: Theme.of(context).textTheme.headlineMedium?.color,
@@ -153,87 +197,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  // Stats Row
-                  Row(
+                  // Stats Grid (2x2)
+                  Column(
                     children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF59E0B).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
+                      // First Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.local_fire_department,
+                              value: '${_dataService.readingStreak}',
+                              label: l10n.streakLabel,
+                              backgroundColor: const Color(0xFFF59E0B),
+                            ),
                           ),
-                          child: Column(
-                            children: [
-                              const Icon(
-                                Icons.local_fire_department,
-                                color: Color(0xFFF59E0B),
-                                size: 32,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${_dataService.readingStreak}',
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFF59E0B),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Streak',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium?.color,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.schedule,
+                              value: _dataService.formattedReadingTime,
+                              label: l10n.readingTimeLabel,
+                              backgroundColor: const Color(0xFF8B5CF6),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B5CF6).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
+                      const SizedBox(height: 12),
+                      // Second Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.photo_library,
+                              value:
+                                  '${_dataService.totalPhotos + _dataService.photoPages.length}',
+                              label: l10n.totalPhotos,
+                              backgroundColor: const Color(0xFF3B82F6),
+                            ),
                           ),
-                          child: Column(
-                            children: [
-                              const Icon(
-                                Icons.schedule,
-                                color: Color(0xFF8B5CF6),
-                                size: 32,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _dataService.formattedReadingTime,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF8B5CF6),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Waktu Baca',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium?.color,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.menu_book,
+                              value: '${_dataService.totalEbooks}',
+                              label: l10n.totalEbooks,
+                              backgroundColor: const Color(0xFF10B981),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -307,10 +318,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
               children: [
                 _buildSettingItem(
+                  icon: Icons.language,
+                  title: 'Language Settings',
+                  color: const Color(0xFF10B981),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LanguageSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _buildSettingItem(
                   icon: _themeService.themeModeIcon,
                   title: 'Theme Setting',
                   color: const Color(0xFF6366F1),
                   onTap: _showThemeSelectionDialog,
+                ),
+                const SizedBox(height: 12),
+                _buildSettingItem(
+                  icon: Icons.history,
+                  title: 'Activity Settings',
+                  color: const Color(0xFFF59E0B),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ActivitySettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _buildSettingItem(
+                  icon: Icons.build,
+                  title: l10n.toolsSettings,
+                  color: const Color(0xFF8B5CF6),
+                  onTap: _showToolsSettingDialog,
                 ),
                 const SizedBox(height: 12),
                 _buildSettingItem(
@@ -470,8 +516,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            title: const Text(
-              'Edit Profil',
+            title: Text(
+              AppLocalizations.of(context).editProfile,
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             content: Column(
@@ -480,11 +526,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextField(
                   controller: usernameController,
                   maxLength: 10,
-                  decoration: const InputDecoration(
-                    labelText: 'Username',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).username,
+                    border: const OutlineInputBorder(),
                     counterText: '',
-                    helperText: 'Maksimal 10 karakter',
+                    helperText: AppLocalizations.of(context).maxCharacters,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -495,7 +541,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed:
                             () => _changeProfilePhoto(ImageSource.camera),
                         icon: const Icon(Icons.camera_alt),
-                        label: const Text('Kamera'),
+                        label: Text(AppLocalizations.of(context).cameraOption),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -504,7 +550,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed:
                             () => _changeProfilePhoto(ImageSource.gallery),
                         icon: const Icon(Icons.photo_library),
-                        label: const Text('Galeri'),
+                        label: Text(AppLocalizations.of(context).galleryOption),
                       ),
                     ),
                   ],
@@ -525,16 +571,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.pop(context);
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Profil berhasil diperbarui'),
+                      SnackBar(
+                        content: Text(AppLocalizations.of(context).profileUpdated),
                         backgroundColor: Color(0xFF10B981),
                       ),
                     );
                   } else if (newUsername.length > 10) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(
-                          'Username tidak boleh lebih dari 10 karakter',
+                          AppLocalizations.of(context).usernameMaxError,
                         ),
                         backgroundColor: Color(0xFFEF4444),
                       ),
@@ -545,7 +591,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Simpan'),
+                child: Text(AppLocalizations.of(context).save),
               ),
             ],
           ),
@@ -574,9 +620,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               toolbarWidgetColor: Colors.white,
               initAspectRatio: CropAspectRatioPreset.square,
               lockAspectRatio: true,
-              aspectRatioPresets: [
-                CropAspectRatioPreset.square,
-              ],
+              aspectRatioPresets: [CropAspectRatioPreset.square],
             ),
           ],
         );
@@ -618,13 +662,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Tema berhasil diubah ke ${_themeService.themeModeString}',
+                    'Tema berhasil diubah ke ${_themeService.getThemeModeString(context)}',
                   ),
                   backgroundColor: const Color(0xFF10B981),
                 ),
               );
             },
           ),
+    );
+  }
+
+  void _showToolsSettingDialog() {
+    final l10n = AppLocalizations.of(context);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          l10n.toolsSettings,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: Text(l10n.alwaysShowToolSection),
+              subtitle: Text(l10n.toolsSectionDesc),
+              value: _dataService.showToolsSection,
+              onChanged: (bool value) async {
+                await _dataService.setShowToolsSection(value);
+                setState(() {});
+                Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      value 
+                        ? 'Tools section enabled' 
+                        : 'Tools section disabled',
+                    ),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                );
+              },
+              activeColor: Theme.of(context).colorScheme.primary,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
     );
   }
 

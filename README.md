@@ -1,8 +1,8 @@
-# YupiRead
+# Yupiread
 
 **Modern Education Gallery & Ebook App for Android**
 
-YupiRead adalah aplikasi Android modern yang menggabungkan manajemen galeri foto dengan sistem ebook yang canggih. Dirancang khusus untuk kebutuhan edukasi dengan antarmuka yang bersih dan fitur-fitur produktif.
+Yupiread adalah aplikasi Android modern yang menggabungkan manajemen galeri foto dengan sistem ebook yang canggih. Dirancang khusus untuk kebutuhan edukasi dengan antarmuka yang bersih dan fitur-fitur produktif.
 
 ## Fitur Utama
 
@@ -187,4 +187,4 @@ Project Link: [https://github.com/Alpinnnn/yupiread](https://github.com/Alpinnnn
 
 ---
 
-**YupiRead** - *Where Reality Comes Into Eternity* 
+**Yupiread** - *Where Reality Comes Into Eternity* 

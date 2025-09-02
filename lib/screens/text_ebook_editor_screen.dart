@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import '../services/text_recognition_service.dart';
 import '../services/data_service.dart';
+import '../l10n/app_localizations.dart';
+import 'document_scanner_screen.dart';
 
 class TextEbookEditorScreen extends StatefulWidget {
   final String? initialText;
@@ -30,7 +31,6 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
   late QuillController _quillController;
   final FocusNode _focusNode = FocusNode();
   
-  final ImagePicker _picker = ImagePicker();
   final TextRecognitionService _textRecognitionService = TextRecognitionService.instance;
   final DataService _dataService = DataService.instance;
 
@@ -236,53 +236,81 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
     );
   }
 
-  Future<void> _insertImageFromCamera() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-      if (image != null) {
-        await _processSelectedImage(image);
-      }
-    } catch (e) {
-      _showErrorSnackBar('Gagal mengambil gambar: $e');
-    }
-  }
 
-  Future<void> _insertImageFromGallery() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        await _processSelectedImage(image);
-      }
-    } catch (e) {
-      _showErrorSnackBar('Gagal memilih gambar: $e');
-    }
-  }
 
-  Future<void> _processSelectedImage(XFile image) async {
+
+
+
+  Future<void> _scanDocumentFromCamera() async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'img_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedPath = '${directory.path}/$fileName';
-      
-      await File(image.path).copy(savedPath);
-      _insertedImages.add(savedPath);
-      
-      final index = _quillController.selection.baseOffset;
-      
-      // Insert actual image embed instead of text placeholder
-      _quillController.document.insert(index, BlockEmbed.image(savedPath));
-      _quillController.updateSelection(
-        TextSelection.collapsed(offset: index + 1),
-        ChangeSource.local,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DocumentScannerScreen(
+            useGallery: false,
+            onDocumentsScanned: _processScannedDocuments,
+          ),
+        ),
       );
-      
-      _showSuccessSnackBar('Gambar berhasil ditambahkan');
     } catch (e) {
-      _showErrorSnackBar('Gagal memproses gambar: $e');
+      _showErrorSnackBar('Gagal membuka scanner: $e');
     }
   }
 
-  void _showImageSourceDialog() {
+  Future<void> _scanDocumentFromGallery() async {
+    try {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DocumentScannerScreen(
+            useGallery: true,
+            onDocumentsScanned: _processScannedDocuments,
+          ),
+        ),
+      );
+    } catch (e) {
+      _showErrorSnackBar('Gagal membuka scanner: $e');
+    }
+  }
+
+  Future<void> _processScannedDocuments(List<String> scannedPaths) async {
+    try {
+      for (String imagePath in scannedPaths) {
+        // Insert scanned document as image in the editor
+        final index = _quillController.selection.baseOffset;
+        _quillController.document.insert(index, BlockEmbed.image(imagePath));
+        _quillController.updateSelection(
+          TextSelection.collapsed(offset: index + 1),
+          ChangeSource.local,
+        );
+        
+        // Add to inserted images list
+        _insertedImages.add(imagePath);
+        
+        // Optionally extract text from scanned document
+        try {
+          final extractedText = await _textRecognitionService.extractTextFromImage(imagePath);
+          if (extractedText.isNotEmpty) {
+            // Insert extracted text after the image
+            final textIndex = _quillController.selection.baseOffset;
+            _quillController.document.insert(textIndex, '\n$extractedText\n');
+            _quillController.updateSelection(
+              TextSelection.collapsed(offset: textIndex + extractedText.length + 2),
+              ChangeSource.local,
+            );
+          }
+        } catch (textError) {
+          // Continue even if text extraction fails
+        }
+      }
+      
+      _showSuccessSnackBar('${scannedPaths.length} dokumen berhasil di-scan dan ditambahkan');
+    } catch (e) {
+      _showErrorSnackBar('Gagal memproses dokumen yang di-scan: $e');
+    }
+  }
+
+  void _showDocumentScanDialog() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -303,7 +331,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Pilih Sumber Gambar',
+              AppLocalizations.of(context).scanDocument,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -318,18 +346,18 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
               children: [
                 _buildBottomSheetOption(
                   icon: Icons.camera_alt,
-                  label: 'Kamera',
+                  label: AppLocalizations.of(context).scanFromCamera,
                   onTap: () {
                     Navigator.pop(context);
-                    _insertImageFromCamera();
+                    _scanDocumentFromCamera();
                   },
                 ),
                 _buildBottomSheetOption(
                   icon: Icons.photo_library,
-                  label: 'Galeri',
+                  label: AppLocalizations.of(context).scanFromGallery,
                   onTap: () {
                     Navigator.pop(context);
-                    _insertImageFromGallery();
+                    _scanDocumentFromGallery();
                   },
                 ),
               ],
@@ -341,193 +369,6 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
     );
   }
 
-  void _showTextScanDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Sumber Pindai Teks',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.white 
-                  : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildBottomSheetOption(
-                  icon: Icons.camera_alt,
-                  label: 'Ambil Foto & Pindai',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _scanTextFromCamera();
-                  },
-                ),
-                _buildBottomSheetOption(
-                  icon: Icons.photo_library,
-                  label: 'Galeri & Pindai',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _scanTextFromGallery();
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _scanTextFromCamera() async {
-    try {
-      final picker = ImagePicker();
-      final image = await picker.pickImage(source: ImageSource.camera);
-      
-      if (image != null) {
-        final extractedText = await _textRecognitionService.extractTextFromImage(image.path);
-        
-        if (extractedText.isNotEmpty) {
-          final index = _quillController.selection.baseOffset;
-          _quillController.document.insert(index, extractedText);
-          _quillController.updateSelection(
-            TextSelection.collapsed(offset: index + extractedText.length),
-            ChangeSource.local,
-          );
-          
-          _showSuccessSnackBar('Teks berhasil dipindai dan ditambahkan');
-        } else {
-          _showErrorSnackBar('Tidak ada teks yang terdeteksi');
-        }
-      }
-    } catch (e) {
-      _showErrorSnackBar('Gagal memindai teks: $e');
-    }
-  }
-
-  Future<void> _scanTextFromGallery() async {
-    try {
-      final picker = ImagePicker();
-      final image = await picker.pickImage(source: ImageSource.gallery);
-      
-      if (image != null) {
-        final extractedText = await _textRecognitionService.extractTextFromImage(image.path);
-        
-        if (extractedText.isNotEmpty) {
-          final index = _quillController.selection.baseOffset;
-          _quillController.document.insert(index, extractedText);
-          _quillController.updateSelection(
-            TextSelection.collapsed(offset: index + extractedText.length),
-            ChangeSource.local,
-          );
-          
-          _showSuccessSnackBar('Teks berhasil dipindai dan ditambahkan');
-        } else {
-          _showErrorSnackBar('Tidak ada teks yang terdeteksi');
-        }
-      }
-    } catch (e) {
-      _showErrorSnackBar('Gagal memindai teks: $e');
-    }
-  }
-
-  void _showBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Tambah Konten',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildBottomSheetItem(
-                  icon: Icons.photo,
-                  label: 'Tambah Foto',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showImageSourceDialog();
-                  },
-                ),
-                _buildBottomSheetItem(
-                  icon: Icons.text_fields,
-                  label: 'Pindai Teks',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showTextScanDialog();
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomSheetItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2563EB).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              size: 32,
-              color: const Color(0xFF2563EB),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildDialogOption({
     required IconData icon,
@@ -744,9 +585,10 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showBottomSheet,
+        onPressed: _showDocumentScanDialog,
         backgroundColor: const Color(0xFF2563EB),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.document_scanner, color: Colors.white),
+        tooltip: AppLocalizations.of(context).scanDocument,
       ),
     );
   }

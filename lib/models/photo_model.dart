@@ -116,10 +116,11 @@ class PhotoModel {
 
 class ActivityModel {
   final String id;
-  final String title;
-  final String description;
+  final String title; // Keep for backward compatibility
+  final String description; // Keep for backward compatibility
   final DateTime timestamp;
   final ActivityType type;
+  final Map<String, dynamic>? parameters; // New field for dynamic localization
 
   ActivityModel({
     required this.id,
@@ -127,6 +128,7 @@ class ActivityModel {
     required this.description,
     required this.timestamp,
     required this.type,
+    this.parameters,
   });
 
   String get timeAgo {
@@ -141,6 +143,80 @@ class ActivityModel {
       return '${difference.inMinutes} menit lalu';
     } else {
       return 'Baru saja';
+    }
+  }
+
+  // Get localized title based on type and parameters
+  String getLocalizedTitle(dynamic l10n) {
+    if (parameters == null) return title; // Fallback to static title
+    
+    switch (type) {
+      case ActivityType.photoAdded:
+        return l10n.photoAdded(parameters!['itemTitle'] ?? '');
+      case ActivityType.photoDeleted:
+        return l10n.photoDeleted(parameters!['itemTitle'] ?? '');
+      case ActivityType.photoEdited:
+        if (parameters!['oldTitle'] != null && parameters!['newTitle'] != null) {
+          return l10n.photoRenamed(parameters!['oldTitle'], parameters!['newTitle']);
+        }
+        return l10n.photoEdited(parameters!['itemTitle'] ?? '');
+      case ActivityType.ebookAdded:
+        return l10n.ebookAdded(parameters!['itemTitle'] ?? '');
+      case ActivityType.ebookDeleted:
+        return l10n.ebookDeleted(parameters!['itemTitle'] ?? '');
+      case ActivityType.ebookEdited:
+        if (parameters!['oldTitle'] != null && parameters!['newTitle'] != null) {
+          return l10n.ebookRenamed(parameters!['oldTitle'], parameters!['newTitle']);
+        }
+        return l10n.ebookEdited(parameters!['itemTitle'] ?? '');
+      case ActivityType.photoPageAdded:
+        return l10n.photoPageAdded(parameters!['itemTitle'] ?? '');
+      case ActivityType.photoPageDeleted:
+        return l10n.photoPageDeleted(parameters!['itemTitle'] ?? '');
+      case ActivityType.photoPageEdited:
+        if (parameters!['oldTitle'] != null && parameters!['newTitle'] != null) {
+          return l10n.photoPageRenamed(parameters!['oldTitle'], parameters!['newTitle']);
+        }
+        return l10n.photoPageEdited(parameters!['itemTitle'] ?? '');
+      default:
+        return title;
+    }
+  }
+
+  // Get localized description based on type and parameters
+  String getLocalizedDescription(dynamic l10n) {
+    if (parameters == null) return description; // Fallback to static description
+    
+    switch (type) {
+      case ActivityType.photoAdded:
+        return l10n.photoAddedDesc;
+      case ActivityType.photoDeleted:
+        return l10n.photoDeletedDesc;
+      case ActivityType.photoEdited:
+        if (parameters!['oldTitle'] != null && parameters!['newTitle'] != null) {
+          return l10n.photoRenamedDesc;
+        }
+        return l10n.photoEditedDesc;
+      case ActivityType.ebookAdded:
+        return l10n.ebookAddedDesc;
+      case ActivityType.ebookDeleted:
+        return l10n.ebookDeletedDesc;
+      case ActivityType.ebookEdited:
+        if (parameters!['oldTitle'] != null && parameters!['newTitle'] != null) {
+          return l10n.ebookRenamedDesc;
+        }
+        return l10n.ebookEditedDesc;
+      case ActivityType.photoPageAdded:
+        return l10n.photoPageAddedDesc(parameters!['photoCount'] ?? 0);
+      case ActivityType.photoPageDeleted:
+        return l10n.photoPageDeletedDesc;
+      case ActivityType.photoPageEdited:
+        if (parameters!['oldTitle'] != null && parameters!['newTitle'] != null) {
+          return l10n.photoPageRenamedDesc;
+        }
+        return l10n.photoPageEditedDesc;
+      default:
+        return description;
     }
   }
 }

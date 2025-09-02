@@ -3,9 +3,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:extended_image/extended_image.dart';
-import '../models/photo_model.dart';
 import '../services/data_service.dart';
-import 'text_to_ebook_editor_screen.dart';
+import '../models/photo_model.dart';
+import '../l10n/app_localizations.dart';
+import 'text_scanner_screen.dart';
 
 class PhotoViewScreen extends StatefulWidget {
   final String? photoId;
@@ -31,7 +32,8 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
   late AnimationController _animationController;
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
-  final GlobalKey<ExtendedImageGestureState> _gestureKey = GlobalKey<ExtendedImageGestureState>();
+  final GlobalKey<ExtendedImageGestureState> _gestureKey =
+      GlobalKey<ExtendedImageGestureState>();
 
   @override
   void initState() {
@@ -48,8 +50,6 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-
-
   }
 
   @override
@@ -108,15 +108,11 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
     });
   }
 
-  void _resetZoom() {
-    _gestureKey.currentState?.reset();
-  }
-
   void _handleDoubleTap() {
     final ExtendedImageGestureState? gestureState = _gestureKey.currentState;
     if (gestureState != null) {
       final double scale = gestureState.gestureDetails?.totalScale ?? 1.0;
-      
+
       if (scale > 1.01) {
         // Currently zoomed, zoom out to fit
         gestureState.handleDoubleTap(
@@ -152,11 +148,6 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.zoom_out_map),
-            onPressed: _resetZoom,
-            tooltip: 'Reset Zoom',
-          ),
           IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: _toggleBottomBar,
@@ -195,21 +186,24 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                     initialScale: 1.0,
                     inPageView: false,
                     initialAlignment: InitialAlignment.center,
-                    cacheGesture: false, // Disable gesture caching for better responsiveness
-                    hitTestBehavior: HitTestBehavior.opaque, // Ensure all touch areas are responsive
+                    cacheGesture:
+                        false, // Disable gesture caching for better responsiveness
+                    hitTestBehavior:
+                        HitTestBehavior
+                            .opaque, // Ensure all touch areas are responsive
                   );
                 },
                 onDoubleTap: (ExtendedImageGestureState state) {
                   final Offset? pointerDownPosition = state.pointerDownPosition;
                   final double? begin = state.gestureDetails?.totalScale;
                   double end;
-                  
+
                   if (begin == null || begin <= 1.01) {
                     end = 2.0;
                   } else {
                     end = 1.0;
                   }
-                  
+
                   state.handleDoubleTap(
                     scale: end,
                     doubleTapPosition: pointerDownPosition,
@@ -222,9 +216,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                         width: MediaQuery.of(context).size.width,
                         height: MediaQuery.of(context).size.height,
                         child: const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(color: Colors.white),
                         ),
                       );
                     case LoadState.completed:
@@ -258,206 +250,210 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
               ),
             ),
 
-          // Bottom sheet with photo details and actions
-          if (_showBottomBar)
-            Positioned(
-              bottom: _dragOffset,
-              left: 0,
-              right: 0,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  // Prevent tap from propagating to background
-                },
-                onPanStart: (details) {
-                  _dragOffset = 0.0;
-                },
-                onPanUpdate: (details) {
-                  setState(() {
-                    _dragOffset = (_dragOffset - details.delta.dy).clamp(-_bottomBarHeight, 0.0);
-                  });
-                },
-                onPanEnd: (details) {
-                  if (_dragOffset < -_bottomBarHeight * 0.5) {
-                    // Close if dragged more than 50%
-                    _toggleBottomBar();
-                  } else {
-                    // Snap back to original position
+            // Bottom sheet with photo details and actions
+            if (_showBottomBar)
+              Positioned(
+                bottom: _dragOffset,
+                left: 0,
+                right: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    // Prevent tap from propagating to background
+                  },
+                  onPanStart: (details) {
+                    _dragOffset = 0.0;
+                  },
+                  onPanUpdate: (details) {
                     setState(() {
-                      _dragOffset = 0.0;
+                      _dragOffset = (_dragOffset - details.delta.dy).clamp(
+                        -_bottomBarHeight,
+                        0.0,
+                      );
                     });
-                  }
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, -2),
+                  },
+                  onPanEnd: (details) {
+                    if (_dragOffset < -_bottomBarHeight * 0.5) {
+                      // Close if dragged more than 50%
+                      _toggleBottomBar();
+                    } else {
+                      // Snap back to original position
+                      setState(() {
+                        _dragOffset = 0.0;
+                      });
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[900],
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Handle bar
-                        Container(
-                          margin: const EdgeInsets.only(top: 12),
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[600],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-
-                        // Photo details
-                        Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Photo title
-                              Text(
-                                photo!.title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                      child: SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Handle bar
+                            Container(
+                              margin: const EdgeInsets.only(top: 12),
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[600],
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                photo!.timeAgo,
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                  fontSize: 14,
-                                ),
-                              ),
-
-                              // Description
-                              if (photo!.description.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                Text(
-                                  photo!.description,
-                                  style: TextStyle(
-                                    color: Colors.grey[300],
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-
-                              // Technical info
-                              const SizedBox(height: 12),
-                              _buildTechnicalInfo(),
-
-                              // Tags
-                              if (photo!.tags.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children:
-                                      photo!.tags.map((tag) {
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(
-                                              0xFF2563EB,
-                                            ).withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            border: Border.all(
-                                              color: const Color(
-                                                0xFF2563EB,
-                                              ).withOpacity(0.5),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            tag,
-                                            style: const TextStyle(
-                                              color: Color(0xFF2563EB),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-
-                        // Action buttons
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[850],
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(20),
-                              topRight: Radius.circular(20),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildActionButton(
-                                icon: Icons.edit,
-                                label: 'Edit',
-                                onTap: () {
-                                  _toggleBottomBar();
-                                  _editPhoto();
-                                },
+
+                            // Photo details
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Photo title
+                                  Text(
+                                    photo!.title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    photo!.timeAgo,
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+
+                                  // Description
+                                  if (photo!.description.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      photo!.description,
+                                      style: TextStyle(
+                                        color: Colors.grey[300],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+
+                                  // Technical info
+                                  const SizedBox(height: 12),
+                                  _buildTechnicalInfo(),
+
+                                  // Tags
+                                  if (photo!.tags.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      children:
+                                          photo!.tags.map((tag) {
+                                            return Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(
+                                                  0xFF2563EB,
+                                                ).withOpacity(0.2),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: const Color(
+                                                    0xFF2563EB,
+                                                  ).withOpacity(0.5),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                tag,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF2563EB),
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                    ),
+                                  ],
+                                ],
                               ),
-                              _buildActionButton(
-                                icon: Icons.share,
-                                label: 'Bagikan',
-                                onTap: () {
-                                  _toggleBottomBar();
-                                  _sharePhoto();
-                                },
+                            ),
+
+                            // Action buttons
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[850],
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(20),
+                                  topRight: Radius.circular(20),
+                                ),
                               ),
-                              _buildActionButton(
-                                icon: Icons.text_fields,
-                                label: 'Ekstrak Teks',
-                                onTap: () {
-                                  _toggleBottomBar();
-                                  _extractText();
-                                },
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildActionButton(
+                                    icon: Icons.edit,
+                                    label: AppLocalizations.of(context).edit,
+                                    onTap: () {
+                                      _toggleBottomBar();
+                                      _editPhoto();
+                                    },
+                                  ),
+                                  _buildActionButton(
+                                    icon: Icons.share,
+                                    label: AppLocalizations.of(context).share,
+                                    onTap: () {
+                                      _toggleBottomBar();
+                                      _sharePhoto();
+                                    },
+                                  ),
+                                  _buildActionButton(
+                                    icon: Icons.text_fields,
+                                    label: 'Ekstrak Teks',
+                                    onTap: () {
+                                      _toggleBottomBar();
+                                      _extractText();
+                                    },
+                                  ),
+                                  _buildActionButton(
+                                    icon: Icons.delete,
+                                    label: AppLocalizations.of(context).delete,
+                                    color: Colors.red,
+                                    onTap: () {
+                                      _toggleBottomBar();
+                                      _deletePhoto();
+                                    },
+                                  ),
+                                ],
                               ),
-                              _buildActionButton(
-                                icon: Icons.delete,
-                                label: 'Hapus',
-                                color: Colors.red,
-                                onTap: () {
-                                  _toggleBottomBar();
-                                  _deletePhoto();
-                                },
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            ),
           ],
         ),
       ),
@@ -567,9 +563,9 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  title: const Text(
-                    'Edit Foto',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  title: Text(
+                    AppLocalizations.of(context).editPhoto,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   content: SingleChildScrollView(
                     child: Column(
@@ -681,7 +677,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         if (photo!.description.isNotEmpty) {
           shareText += '\n\n${photo!.description}';
         }
-        shareText += '\n\nDibagikan dari YupiRead';
+        shareText += '\n\nDibagikan dari Yupiread';
 
         // Create XFile for sharing
         final xFile = XFile(
@@ -744,36 +740,20 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
 
   void _extractText() async {
     try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Mengekstrak teks dari foto...'),
-            ],
-          ),
-        ),
-      );
-
-      // Navigate to text editor with current photo
-      Navigator.pop(context); // Close loading dialog
+      // Navigate to text scanner with current photo
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => TextToEbookEditorScreen(
-            imagePaths: [photo!.imagePath],
+          builder: (context) => TextScannerScreen(
+            imageFile: File(photo!.imagePath),
+            saveImage: false,
           ),
         ),
       );
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog if still open
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengekstrak teks: $e'),
+          content: Text('Gagal membuka text scanner: $e'),
           backgroundColor: const Color(0xFFEF4444),
         ),
       );
@@ -788,9 +768,9 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            title: const Text('Hapus Foto'),
+            title: Text(AppLocalizations.of(context).deletePhoto),
             content: Text(
-              'Apakah Anda yakin ingin menghapus "${photo!.title}"?',
+              '${AppLocalizations.of(context).deleteConfirmation} "${photo!.title}"?',
             ),
             actions: [
               TextButton(
@@ -814,7 +794,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                   backgroundColor: const Color(0xFFEF4444),
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Hapus'),
+                child: Text(AppLocalizations.of(context).delete),
               ),
             ],
           ),

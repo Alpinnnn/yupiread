@@ -2,14 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/photo_model.dart';
 import '../models/ebook_model.dart';
 import '../models/activity_type.dart';
-import 'database_service.dart';
 
-class DataService {
+class DataService extends ChangeNotifier {
   static final DataService _instance = DataService._internal();
   factory DataService() => _instance;
   static DataService get instance => _instance;
@@ -20,23 +19,16 @@ class DataService {
   final List<EbookModel> _ebooks = [];
   final List<ActivityModel> _activities = [];
   final List<String> _availableTags = [
-    'Matematika',
-    'Fisika',
-    'Kimia',
-    'Biologi',
-    'Sejarah',
-    'Geografi',
-    'Bahasa',
-    'Seni',
-    'Olahraga',
-    'Teknologi',
-    'Kuliner',
-    'Travel',
-    'Personal',
-    'Bisnis',
-    'Kesehatan',
+    'Catatan',
+    'Penting',
+    'Tugas',
+    'Ide',
+    'Referensi',
   ];
   List<String> _customTags = [];
+
+  // Activity preferences for controlling which activities are logged
+  Map<ActivityType, bool> _activityPreferences = {};
 
   // User profile data
   String _username = 'User';
@@ -44,6 +36,7 @@ class DataService {
   int _readingStreak = 0;
   int _totalReadingTimeMinutes = 0;
   DateTime? _lastReadingDate;
+  bool _showToolsSection = false;
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
   List<PhotoPageModel> get photoPages => List.unmodifiable(_photoPages);
@@ -52,6 +45,7 @@ class DataService {
   List<String> get availableTags =>
       List.unmodifiable([..._availableTags, ..._customTags]);
   List<String> get customTags => List.unmodifiable(_customTags);
+  bool get showToolsSection => _showToolsSection;
 
   // Initialize data when app starts
   Future<void> initializeData() async {
@@ -61,38 +55,42 @@ class DataService {
     await _loadActivities();
     await _loadUserProfile();
     await _loadCustomTags();
+    await _loadActivityPreferences();
   }
 
   String addPhoto({
     required String title,
     required String imagePath,
-    List<String> tags = const [],
-    String description = '',
+    required List<String> tags,
+    String? description,
+    String? activityTitle,
+    String? activityDescription,
   }) {
     final id = _generateId();
     final photo = PhotoModel(
       id: id,
       title: title,
       imagePath: imagePath,
-      createdAt: DateTime.now(),
       tags: tags,
-      description: description,
+      description: description ?? '',
+      createdAt: DateTime.now(),
     );
 
-    _photos.insert(0, photo); // Add to beginning for newest first
+    _photos.add(photo);
     _savePhotos(); // Save to persistent storage
 
-    // Log activity with specific photo name
+    // Log activity with parameters for dynamic localization
     _logActivity(
-      title: 'Foto "$title" ditambahkan',
-      description: 'Foto catatan baru berhasil disimpan',
+      title: activityTitle ?? 'Foto "$title" ditambahkan',
+      description: activityDescription ?? 'Foto catatan baru berhasil disimpan',
       type: ActivityType.photoAdded,
+      parameters: {'itemTitle': title},
     );
 
     return id;
   }
 
-  bool deletePhoto(String id) {
+  bool deletePhoto(String id, {String? activityTitle, String? activityDescription}) {
     final index = _photos.indexWhere((photo) => photo.id == id);
     if (index != -1) {
       final photo = _photos[index];
@@ -102,11 +100,12 @@ class DataService {
       // Delete physical file
       _deletePhotoFile(photo.imagePath);
 
-      // Log activity with specific photo name
+      // Log activity with parameters for dynamic localization
       _logActivity(
-        title: 'Foto "${photo.title}" dihapus',
-        description: 'Foto catatan telah dihapus dari galeri',
+        title: activityTitle ?? 'Foto "${photo.title}" dihapus',
+        description: activityDescription ?? 'Foto catatan telah dihapus dari galeri',
         type: ActivityType.photoDeleted,
+        parameters: {'itemTitle': photo.title},
       );
 
       return true;
@@ -119,6 +118,8 @@ class DataService {
     String? title,
     List<String>? tags,
     String? description,
+    String? activityTitle,
+    String? activityDescription,
   }) {
     final index = _photos.indexWhere((photo) => photo.id == id);
     if (index != -1) {
@@ -132,18 +133,20 @@ class DataService {
       _photos[index] = newPhoto;
       _savePhotos(); // Save to persistent storage
 
-      // Log activity based on what changed
+      // Log activity with parameters for dynamic localization
       if (title != null && title != oldPhoto.title) {
         _logActivity(
-          title: 'Foto "${oldPhoto.title}" diubah menjadi "$title"',
-          description: 'Nama foto berhasil diperbarui',
+          title: activityTitle ?? 'Foto "${oldPhoto.title}" diubah menjadi "$title"',
+          description: activityDescription ?? 'Nama foto berhasil diperbarui',
           type: ActivityType.photoEdited,
+          parameters: {'oldTitle': oldPhoto.title, 'newTitle': title},
         );
       } else {
         _logActivity(
-          title: 'Foto "${newPhoto.title}" diedit',
-          description: 'Detail foto berhasil diperbarui',
+          title: activityTitle ?? 'Foto "${newPhoto.title}" diedit',
+          description: activityDescription ?? 'Detail foto berhasil diperbarui',
           type: ActivityType.photoEdited,
+          parameters: {'itemTitle': newPhoto.title},
         );
       }
 
@@ -223,18 +226,21 @@ class DataService {
     required String title,
     required String description,
     required ActivityType type,
+    Map<String, dynamic>? parameters,
   }) {
+    // Activity logging is always enabled for now
+    
     final activity = ActivityModel(
       id: _generateId(),
       title: title,
       description: description,
       timestamp: DateTime.now(),
       type: type,
+      parameters: parameters,
     );
 
     _activities.insert(0, activity); // Add to beginning for newest first
 
-    // Keep only last 20 activities
     if (_activities.length > 20) {
       _activities.removeRange(20, _activities.length);
     }
@@ -269,6 +275,8 @@ class DataService {
     String description = '',
     int totalPages = 1,
     String fileType = 'pdf',
+    String? activityTitle,
+    String? activityDescription,
   }) {
     final id = _generateId();
     final ebook = EbookModel(
@@ -285,17 +293,33 @@ class DataService {
     _ebooks.insert(0, ebook); // Add to beginning for newest first
     _saveEbooks(); // Save to persistent storage
 
-    // Log activity with specific ebook name
+    // Log activity with parameters for dynamic localization
     _logActivity(
-      title: 'Ebook "$title" ditambahkan',
-      description: 'Ebook catatan baru berhasil disimpan',
+      title: activityTitle ?? 'Ebook "$title" ditambahkan',
+      description: activityDescription ?? 'Ebook catatan baru berhasil disimpan',
       type: ActivityType.ebookAdded,
+      parameters: {'itemTitle': title},
     );
 
     return id;
   }
 
-  bool deleteEbook(String id) {
+  // Import PDF file as ebook
+  Future<String> importPdfFile(String filePath, {String? customTitle}) async {
+    final file = File(filePath);
+    final fileName = file.path.split('/').last.replaceAll('.pdf', '');
+    final title = customTitle ?? fileName;
+    
+    return addEbook(
+      title: title,
+      filePath: filePath,
+      fileType: 'pdf',
+      description: 'Imported PDF file',
+      tags: [],
+    );
+  }
+
+  bool deleteEbook(String id, {String? activityTitle, String? activityDescription}) {
     final index = _ebooks.indexWhere((ebook) => ebook.id == id);
     if (index != -1) {
       final ebook = _ebooks[index];
@@ -305,11 +329,12 @@ class DataService {
       // Delete physical file
       _deleteEbookFile(ebook.filePath);
 
-      // Log activity with specific ebook name
+      // Log activity with parameters for dynamic localization
       _logActivity(
-        title: 'Ebook "${ebook.title}" dihapus',
-        description: 'Ebook catatan telah dihapus dari galeri',
+        title: activityTitle ?? 'Ebook "${ebook.title}" dihapus',
+        description: activityDescription ?? 'Ebook catatan telah dihapus dari galeri',
         type: ActivityType.ebookDeleted,
+        parameters: {'itemTitle': ebook.title},
       );
 
       return true;
@@ -322,6 +347,8 @@ class DataService {
     String? title,
     List<String>? tags,
     String? description,
+    String? activityTitle,
+    String? activityDescription,
   }) {
     final index = _ebooks.indexWhere((ebook) => ebook.id == id);
     if (index != -1) {
@@ -335,18 +362,20 @@ class DataService {
       _ebooks[index] = newEbook;
       _saveEbooks(); // Save to persistent storage
 
-      // Log activity based on what changed
+      // Log activity with parameters for dynamic localization
       if (title != null && title != oldEbook.title) {
         _logActivity(
-          title: 'Ebook "${oldEbook.title}" diubah menjadi "$title"',
-          description: 'Nama ebook berhasil diperbarui',
+          title: activityTitle ?? 'Ebook "${oldEbook.title}" diubah menjadi "$title"',
+          description: activityDescription ?? 'Nama ebook berhasil diperbarui',
           type: ActivityType.ebookEdited,
+          parameters: {'oldTitle': oldEbook.title, 'newTitle': title},
         );
       } else {
         _logActivity(
-          title: 'Ebook "${newEbook.title}" diedit',
-          description: 'Detail ebook berhasil diperbarui',
+          title: activityTitle ?? 'Ebook "${newEbook.title}" diedit',
+          description: activityDescription ?? 'Detail ebook berhasil diperbarui',
           type: ActivityType.ebookEdited,
+          parameters: {'itemTitle': newEbook.title},
         );
       }
 
@@ -474,6 +503,8 @@ class DataService {
     required List<String> imagePaths,
     required List<String> tags,
     String description = '',
+    String? activityTitle,
+    String? activityDescription,
   }) {
     final id = _generateId();
     final photoPage = PhotoPageModel(
@@ -488,29 +519,30 @@ class DataService {
     _photoPages.insert(0, photoPage); // Add to beginning for newest first
     _savePhotoPages(); // Save to persistent storage
 
-    // Log activity with specific photo page name
+    // Log activity with parameters for dynamic localization
     _logActivity(
-      title: 'Halaman foto "$title" ditambahkan',
-      description:
-          'Halaman foto dengan ${imagePaths.length} foto berhasil disimpan',
+      title: activityTitle ?? 'Halaman foto "$title" ditambahkan',
+      description: activityDescription ?? 'Halaman foto dengan ${imagePaths.length} foto berhasil disimpan',
       type: ActivityType.photoPageAdded,
+      parameters: {'itemTitle': title, 'photoCount': imagePaths.length},
     );
 
     return id;
   }
 
-  bool deletePhotoPage(String id) {
+  bool deletePhotoPage(String id, {String? activityTitle, String? activityDescription}) {
     final index = _photoPages.indexWhere((photoPage) => photoPage.id == id);
     if (index != -1) {
       final photoPage = _photoPages[index];
       _photoPages.removeAt(index);
       _savePhotoPages(); // Save to persistent storage
 
-      // Log activity with specific photo page name
+      // Log activity with parameters for dynamic localization
       _logActivity(
-        title: 'Halaman foto "${photoPage.title}" dihapus',
-        description: 'Halaman foto catatan telah dihapus dari galeri',
+        title: activityTitle ?? 'Halaman foto "${photoPage.title}" dihapus',
+        description: activityDescription ?? 'Halaman foto catatan telah dihapus dari galeri',
         type: ActivityType.photoPageDeleted,
+        parameters: {'itemTitle': photoPage.title},
       );
 
       return true;
@@ -524,6 +556,8 @@ class DataService {
     String? description,
     List<String>? tags,
     List<String>? imagePaths,
+    String? activityTitle,
+    String? activityDescription,
   }) {
     final index = _photoPages.indexWhere((photoPage) => photoPage.id == id);
     if (index != -1) {
@@ -538,18 +572,20 @@ class DataService {
       _photoPages[index] = newPhotoPage;
       _savePhotoPages(); // Save to persistent storage
 
-      // Log activity based on what changed
+      // Log activity with parameters for dynamic localization
       if (title != null && title != oldPhotoPage.title) {
         _logActivity(
-          title: 'Halaman foto "${oldPhotoPage.title}" diubah menjadi "$title"',
-          description: 'Nama halaman foto berhasil diperbarui',
+          title: activityTitle ?? 'Halaman foto "${oldPhotoPage.title}" diubah menjadi "$title"',
+          description: activityDescription ?? 'Nama halaman foto berhasil diperbarui',
           type: ActivityType.photoPageEdited,
+          parameters: {'oldTitle': oldPhotoPage.title, 'newTitle': title},
         );
       } else {
         _logActivity(
-          title: 'Halaman foto "${newPhotoPage.title}" diedit',
-          description: 'Detail halaman foto berhasil diperbarui',
+          title: activityTitle ?? 'Halaman foto "${newPhotoPage.title}" diedit',
+          description: activityDescription ?? 'Detail halaman foto berhasil diperbarui',
           type: ActivityType.photoPageEdited,
+          parameters: {'itemTitle': newPhotoPage.title},
         );
       }
 
@@ -762,6 +798,7 @@ class DataService {
                   'description': activity.description,
                   'timestamp': activity.timestamp.millisecondsSinceEpoch,
                   'type': activity.type.toString(),
+                  'parameters': activity.parameters,
                 },
               )
               .toList();
@@ -793,6 +830,9 @@ class DataService {
               (e) => e.toString() == activityData['type'],
               orElse: () => ActivityType.photoAdded,
             ),
+            parameters: activityData['parameters'] != null 
+                ? Map<String, dynamic>.from(activityData['parameters'])
+                : null,
           );
           _activities.add(activity);
         }
@@ -811,6 +851,7 @@ class DataService {
         'readingStreak': _readingStreak,
         'totalReadingTimeMinutes': _totalReadingTimeMinutes,
         'lastReadingDate': _lastReadingDate?.millisecondsSinceEpoch,
+        'showToolsSection': _showToolsSection,
       };
 
       await prefs.setString('userProfile', jsonEncode(userProfileJson));
@@ -836,6 +877,7 @@ class DataService {
                   userProfileJson['lastReadingDate'],
                 )
                 : null;
+        _showToolsSection = userProfileJson['showToolsSection'] ?? false;
       }
     } catch (e) {
       // Handle load error
@@ -878,16 +920,16 @@ class DataService {
       _ebooks.clear();
       _activities.clear();
       _customTags.clear();
-      
-      // Reset user profile data
       _username = 'User';
       _profileImagePath = null;
       _readingStreak = 0;
       _totalReadingTimeMinutes = 0;
+      _lastReadingDate = null;
+      _showToolsSection = false;
       
       // Clear app directory files (photos, ebooks, etc.)
       final appDir = await getApplicationDocumentsDirectory();
-      final yupireadDir = Directory('${appDir.path}/yupiread');
+      final yupireadDir = Directory('${appDir.path}/Yupiread');
       
       if (await yupireadDir.exists()) {
         await yupireadDir.delete(recursive: true);
@@ -924,6 +966,12 @@ class DataService {
     if (username != null) _username = username;
     if (profileImagePath != null) _profileImagePath = profileImagePath;
     await _saveUserProfile();
+  }
+
+  Future<void> setShowToolsSection(bool show) async {
+    _showToolsSection = show;
+    await _saveUserProfile();
+    notifyListeners(); // Notify UI to rebuild
   }
 
   Future<void> addReadingTime(int minutes) async {
@@ -975,5 +1023,65 @@ class DataService {
       return true;
     }
     return false;
+  }
+
+  // Activity preferences management
+  Map<ActivityType, bool> getActivityPreferences() {
+    return Map.from(_activityPreferences);
+  }
+
+  void setActivityPreference(ActivityType type, bool enabled) {
+    _activityPreferences[type] = enabled;
+    _saveActivityPreferences();
+  }
+
+  void resetActivityPreferences() {
+    _activityPreferences.clear();
+    // All activities enabled by default
+    for (ActivityType type in ActivityType.values) {
+      _activityPreferences[type] = true;
+    }
+    _saveActivityPreferences();
+  }
+
+  Future<void> _loadActivityPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final prefsString = prefs.getString('activityPreferences');
+      
+      if (prefsString != null) {
+        final prefsMap = jsonDecode(prefsString) as Map<String, dynamic>;
+        _activityPreferences.clear();
+        
+        for (ActivityType type in ActivityType.values) {
+          _activityPreferences[type] = prefsMap[type.toString()] ?? true;
+        }
+      } else {
+        // Initialize with all enabled by default
+        for (ActivityType type in ActivityType.values) {
+          _activityPreferences[type] = true;
+        }
+      }
+    } catch (e) {
+      // Initialize with all enabled by default on error
+      for (ActivityType type in ActivityType.values) {
+        _activityPreferences[type] = true;
+      }
+    }
+  }
+
+  Future<void> _saveActivityPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final prefsMap = <String, bool>{};
+      
+      for (ActivityType type in ActivityType.values) {
+        prefsMap[type.toString()] = _activityPreferences[type] ?? true;
+      }
+      
+      await prefs.setString('activityPreferences', jsonEncode(prefsMap));
+    } catch (e) {
+      // Ignore save errors
+    }
   }
 }

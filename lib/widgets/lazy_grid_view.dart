@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class LazyGridView<T> extends StatefulWidget {
   final Future<List<T>> Function(int offset, int limit) loadItems;
@@ -131,11 +132,11 @@ class _LazyGridViewState<T> extends State<LazyGridView<T>> {
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                const Text('Terjadi kesalahan'),
+                Text(AppLocalizations.of(context).errorOccurred),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _loadInitialItems,
-                  child: const Text('Coba Lagi'),
+                  child: Text(AppLocalizations.of(context).tryAgain),
                 ),
               ],
             ),
@@ -151,8 +152,8 @@ class _LazyGridViewState<T> extends State<LazyGridView<T>> {
 
     if (_items.isEmpty) {
       return widget.emptyWidget ??
-          const Center(
-            child: Text('Tidak ada data'),
+          Center(
+            child: Text(AppLocalizations.of(context).noDataAvailable),
           );
     }
 
@@ -311,11 +312,11 @@ class _LazyListViewState<T> extends State<LazyListView<T>> {
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                const Text('Terjadi kesalahan'),
+                Text(AppLocalizations.of(context).errorOccurred),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _loadInitialItems,
-                  child: const Text('Coba Lagi'),
+                  child: Text(AppLocalizations.of(context).tryAgain),
                 ),
               ],
             ),
@@ -331,8 +332,8 @@ class _LazyListViewState<T> extends State<LazyListView<T>> {
 
     if (_items.isEmpty) {
       return widget.emptyWidget ??
-          const Center(
-            child: Text('Tidak ada data'),
+          Center(
+            child: Text(AppLocalizations.of(context).noDataAvailable),
           );
     }
 

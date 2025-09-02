@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
 import '../models/activity_type.dart';
+import '../l10n/app_localizations.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,6 +17,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -26,12 +29,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const SizedBox(height: 20),
               Text(
-                'Dashboard',
+                l10n.dashboard,
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
               const SizedBox(height: 8),
               Text(
-                'Ringkasan aktivitas Anda',
+                l10n.recentActivity,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 32),
@@ -51,9 +54,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           icon: Icons.photo_library,
-                          title: 'Total Foto',
+                          title: l10n.totalPhotos,
                           value: '${_dataService.totalPhotos}',
-                          subtitle: 'Catatan tersimpan',
+                          subtitle: l10n.photos,
                           color: const Color(0xFF3B82F6),
                           backgroundColor: const Color(
                             0xFF3B82F6,
@@ -65,9 +68,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           icon: Icons.menu_book,
-                          title: 'Total Ebook',
+                          title: l10n.totalEbooks,
                           value: '${_dataService.totalEbooks}',
-                          subtitle: 'Ebook dibuat',
+                          subtitle: l10n.ebooks,
                           color: const Color(0xFF10B981),
                           backgroundColor: const Color(
                             0xFF10B981,
@@ -79,9 +82,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           icon: Icons.schedule,
-                          title: 'Waktu Baca',
+                          title: l10n.readingTimeLabel,
                           value: _dataService.formattedReadingTime,
-                          subtitle: 'Total membaca',
+                          subtitle: l10n.totalReading,
                           color: const Color(0xFF8B5CF6),
                           backgroundColor: const Color(
                             0xFF8B5CF6,
@@ -93,9 +96,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: _buildStatCard(
                           context,
                           icon: Icons.local_fire_department,
-                          title: 'Reading Streak',
-                          value: '${_dataService.readingStreak} hari',
-                          subtitle: 'Berturut-turut',
+                          title: l10n.readingStreakLabel,
+                          value: '${_dataService.readingStreak} ${l10n.days}',
+                          subtitle: l10n.consecutive,
                           color: const Color(0xFFF59E0B),
                           backgroundColor: const Color(
                             0xFFF59E0B,
@@ -189,6 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentActivity(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final activities = _dataService.activities.take(3).toList();
 
     return Container(
@@ -213,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Aktivitas Terbaru',
+                l10n.myActivity,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -225,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _showAllActivities(context);
                 },
                 child: Text(
-                  'Lihat Semua',
+                  l10n.viewAll,
                   style: TextStyle(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.primary,
@@ -240,7 +244,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  'Belum ada aktivitas',
+                  l10n.noActivityYet,
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodyMedium?.color,
                     fontSize: 14,
@@ -257,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (index > 0) const SizedBox(height: 12),
                   _buildActivityItem(
                     icon: _getActivityIcon(activity.type),
-                    title: activity.title,
+                    title: activity.getLocalizedTitle(l10n),
                     time: activity.timeAgo,
                     color: Color(activity.type.colorValue),
                   ),
@@ -344,6 +348,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showAllActivities(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -371,7 +376,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Semua Aktivitas',
+                  l10n.allActivities,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -388,7 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         margin: const EdgeInsets.only(bottom: 16),
                         child: _buildActivityItem(
                           icon: _getActivityIcon(activity.type),
-                          title: activity.title,
+                          title: activity.getLocalizedTitle(AppLocalizations.of(context)),
                           time: activity.timeAgo,
                           color: Color(activity.type.colorValue),
                         ),

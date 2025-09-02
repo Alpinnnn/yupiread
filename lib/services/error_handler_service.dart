@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class ErrorHandlerService {
   static final ErrorHandlerService _instance = ErrorHandlerService._internal();
@@ -61,7 +62,7 @@ class ErrorHandlerService {
     if (error is FileSystemException) {
       // Retry on temporary file system issues
       return error.osError?.errorCode == 32 || // File in use
-             error.osError?.errorCode == 5;   // Access denied
+          error.osError?.errorCode == 5; // Access denied
     }
     return false;
   }
@@ -75,11 +76,11 @@ class ErrorHandlerService {
       return await operation();
     } catch (error, stackTrace) {
       _logError(error, stackTrace, context);
-      
+
       if (fallbackValue != null) {
         return fallbackValue;
       }
-      
+
       rethrow;
     }
   }
@@ -93,13 +94,13 @@ class ErrorHandlerService {
 
   void showErrorSnackBar(BuildContext context, String message) {
     if (!context.mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
         action: SnackBarAction(
-          label: 'OK',
+          label: AppLocalizations.of(context).ok,
           textColor: Colors.white,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -120,57 +121,58 @@ class ErrorHandlerService {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: onCancel ?? () => Navigator.of(context).pop(),
-            child: const Text('Batal'),
+      builder:
+          (context) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: onCancel ?? () => Navigator.of(context).pop(),
+                child: Text(AppLocalizations.of(context).cancel),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onRetry();
+                },
+                child: Text(AppLocalizations.of(context).tryAgain),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onRetry();
-            },
-            child: const Text('Coba Lagi'),
-          ),
-        ],
-      ),
     );
   }
 
-  String getErrorMessage(dynamic error) {
+  String getErrorMessage(BuildContext context, dynamic error) {
     if (error is ErrorHandlerException) {
       return error.message;
     }
-    
+
     if (error is SocketException) {
-      return 'Tidak dapat terhubung ke internet';
+      return AppLocalizations.of(context).noInternetConnection;
     }
-    
+
     if (error is TimeoutException) {
       return 'Operasi timeout, silakan coba lagi';
     }
-    
+
     if (error is FileSystemException) {
       switch (error.osError?.errorCode) {
         case 2:
-          return 'File tidak ditemukan';
+          return AppLocalizations.of(context).fileNotFound;
         case 5:
-          return 'Akses ditolak';
+          return AppLocalizations.of(context).accessDenied;
         case 32:
-          return 'File sedang digunakan';
+          return AppLocalizations.of(context).fileInUse;
         default:
-          return 'Kesalahan sistem file';
+          return AppLocalizations.of(context).fileSystemError;
       }
     }
-    
+
     if (error is FormatException) {
-      return 'Format data tidak valid';
+      return AppLocalizations.of(context).invalidDataFormat;
     }
-    
-    return 'Terjadi kesalahan: ${error.toString()}';
+
+    return AppLocalizations.of(context).errorOccurredWith(error.toString());
   }
 }
 
@@ -179,11 +181,7 @@ class ErrorHandlerException implements Exception {
   final dynamic originalError;
   final int attempts;
 
-  ErrorHandlerException(
-    this.message, {
-    this.originalError,
-    this.attempts = 1,
-  });
+  ErrorHandlerException(this.message, {this.originalError, this.attempts = 1});
 
   @override
   String toString() {
@@ -208,15 +206,15 @@ mixin ErrorHandlerMixin<T extends StatefulWidget> on State<T> {
     } catch (error) {
       if (mounted) {
         _errorHandler.showErrorSnackBar(
-          context,
-          _errorHandler.getErrorMessage(error),
+          this.context,
+          _errorHandler.getErrorMessage(this.context, error),
         );
       }
-      
+
       if (fallbackValue != null) {
         return fallbackValue;
       }
-      
+
       rethrow;
     }
   }

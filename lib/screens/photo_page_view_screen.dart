@@ -7,7 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:extended_image/extended_image.dart';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
-import 'text_to_ebook_editor_screen.dart';
+import '../l10n/app_localizations.dart';
+import 'text_scanner_screen.dart';
 import 'package:path/path.dart' as path;
 
 class PhotoPageViewScreen extends StatefulWidget {
@@ -90,11 +91,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
 
   void _handleDoubleTap() {
     if (_currentPhotoIndex < _gestureKeys.length) {
-      final ExtendedImageGestureState? gestureState = 
+      final ExtendedImageGestureState? gestureState =
           _gestureKeys[_currentPhotoIndex].currentState;
       if (gestureState != null) {
         final double scale = gestureState.gestureDetails?.totalScale ?? 1.0;
-        
+
         if (scale > 1.01) {
           // Currently zoomed, zoom out to fit
           gestureState.handleDoubleTap(
@@ -111,7 +112,6 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -147,11 +147,6 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.zoom_out_map),
-            onPressed: _resetZoom,
-            tooltip: 'Reset Zoom',
-          ),
           IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: _toggleBottomBar,
@@ -194,7 +189,10 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
               // Main photo page view
               PageView.builder(
                 controller: _pageController,
-                physics: _isZoomed ? const NeverScrollableScrollPhysics() : _CustomPageScrollPhysics(),
+                physics:
+                    _isZoomed
+                        ? const NeverScrollableScrollPhysics()
+                        : _CustomPageScrollPhysics(),
                 onPageChanged: (index) {
                   final now = DateTime.now();
                   if (_lastSwipeTime != null &&
@@ -216,7 +214,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                     _gestureKeys.add(GlobalKey<ExtendedImageGestureState>());
                     _zoomStates.add(false);
                   }
-                  
+
                   return ExtendedImage.file(
                     File(photoPage!.imagePaths[index]),
                     key: _gestureKeys[index],
@@ -231,15 +229,17 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                         speed: 1.0,
                         inertialSpeed: 100.0,
                         initialScale: 1.0,
-                        inPageView: false, // Changed to false to prevent gesture conflicts
+                        inPageView:
+                            false, // Changed to false to prevent gesture conflicts
                         initialAlignment: InitialAlignment.center,
-                        cacheGesture: false, // Disable gesture caching for better responsiveness
+                        cacheGesture:
+                            false, // Disable gesture caching for better responsiveness
                         gestureDetailsIsChanged: (GestureDetails? details) {
                           // Track zoom state changes with improved detection
                           if (details != null && details.totalScale != null) {
                             final bool wasZoomed = _isZoomed;
                             final bool nowZoomed = details.totalScale! > 1.01;
-                            
+
                             if (wasZoomed != nowZoomed) {
                               setState(() {
                                 _isZoomed = nowZoomed;
@@ -253,16 +253,17 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                       );
                     },
                     onDoubleTap: (ExtendedImageGestureState state) {
-                      final Offset? pointerDownPosition = state.pointerDownPosition;
+                      final Offset? pointerDownPosition =
+                          state.pointerDownPosition;
                       final double? begin = state.gestureDetails?.totalScale;
                       double end;
-                      
+
                       if (begin == 1.0) {
                         end = 2.0;
                       } else {
                         end = 1.0;
                       }
-                      
+
                       state.handleDoubleTap(
                         scale: end,
                         doubleTapPosition: pointerDownPosition,
@@ -613,7 +614,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                                   children: [
                                     _buildActionButton(
                                       icon: Icons.edit,
-                                      label: 'Edit',
+                                      label: AppLocalizations.of(context).edit,
                                       onTap: _editPhotoPage,
                                     ),
                                     _buildActionButton(
@@ -623,7 +624,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                                     ),
                                     _buildActionButton(
                                       icon: Icons.share,
-                                      label: 'Bagikan',
+                                      label: AppLocalizations.of(context).share,
                                       onTap: _sharePhotoPage,
                                     ),
                                     _buildActionButton(
@@ -633,7 +634,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                                     ),
                                     _buildActionButton(
                                       icon: Icons.delete,
-                                      label: 'Hapus',
+                                      label: AppLocalizations.of(context).delete,
                                       color: Colors.red,
                                       onTap: _deletePhotoPage,
                                     ),
@@ -685,36 +686,21 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
 
   void _extractTextFromPage() async {
     try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Mengekstrak teks dari semua foto...'),
-            ],
-          ),
-        ),
-      );
-
-      // Navigate to text editor with all photos from the page
-      Navigator.pop(context); // Close loading dialog
+      // Navigate to text scanner with current photo from the page
+      final currentImagePath = photoPage!.imagePaths[_currentPhotoIndex];
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => TextToEbookEditorScreen(
-            imagePaths: photoPage!.imagePaths,
+          builder: (context) => TextScannerScreen(
+            imageFile: File(currentImagePath),
+            saveImage: false,
           ),
         ),
       );
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog if still open
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengekstrak teks: $e'),
+          content: Text('Gagal membuka text scanner: $e'),
           backgroundColor: const Color(0xFFEF4444),
         ),
       );
@@ -738,7 +724,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
           (context) => StatefulBuilder(
             builder:
                 (context, setState) => AlertDialog(
-                  title: const Text('Edit Halaman Foto'),
+                  title: Text(AppLocalizations.of(context).editPhotoPage),
                   content: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -886,14 +872,14 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                   Navigator.pop(context);
                   _pickPhotosFromCamera();
                 },
-                child: const Text('Kamera'),
+                child: Text(AppLocalizations.of(context).cameraOption),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                   _pickPhotosFromGallery();
                 },
-                child: const Text('Galeri'),
+                child: Text(AppLocalizations.of(context).galleryOption),
               ),
             ],
           ),
@@ -983,7 +969,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       if (photoPage!.description.isNotEmpty) {
         shareText += '\n\n${photoPage!.description}';
       }
-      shareText += '\n\n${photoPage!.photoCount} foto dibagikan dari YupiRead';
+      shareText += '\n\n${photoPage!.photoCount} foto dibagikan dari Yupiread';
 
       await Share.shareXFiles(
         files,
@@ -1016,9 +1002,9 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Hapus Halaman Foto'),
-            content: const Text(
-              'Apakah Anda yakin ingin menghapus halaman foto ini?',
+            title: Text(AppLocalizations.of(context).deletePhotoPage),
+            content: Text(
+              AppLocalizations.of(context).deletePhotoPageConfirmation,
             ),
             actions: [
               TextButton(
@@ -1032,7 +1018,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                   Navigator.pop(context); // Go back to gallery
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Hapus'),
+                child: Text(AppLocalizations.of(context).delete),
               ),
             ],
           ),
@@ -1058,9 +1044,9 @@ class _CustomPageScrollPhysics extends PageScrollPhysics {
 
   @override
   double get minFlingVelocity => 200.0; // Higher threshold for more deliberate swipes
-  
+
   @override
   double get dragStartDistanceMotionThreshold => 15.0; // Require more movement to start drag
-  
+
   // Removed touchSlop override as it doesn't exist in PageScrollPhysics
 }

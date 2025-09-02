@@ -11,6 +11,7 @@ class TagSettingsScreen extends StatefulWidget {
 class _TagSettingsScreenState extends State<TagSettingsScreen> {
   final DataService _dataService = DataService.instance;
   final TextEditingController _tagController = TextEditingController();
+  String? _selectedTagForDeletion;
 
   @override
   void dispose() {
@@ -135,9 +136,9 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Default Tags Section
+                    // Available Tags Section
                     Text(
-                      'Tag Default',
+                      'Available Tags',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -145,82 +146,45 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          [
-                            'Kuliah',
-                            'Kerja',
-                            'Hobi',
-                            'Travel',
-                            'Makanan',
-                            'Olahraga',
-                            'Teknologi',
-                            'Seni',
-                            'Musik',
-                            'Film',
-                            'Buku',
-                            'Gaming',
-                            'Bisnis',
-                            'Kesehatan',
-                          ].map((tag) => _buildDefaultTagChip(tag)).toList(),
+                    Expanded(
+                      child: _dataService.availableTags.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.label_outline,
+                                    size: 48,
+                                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Belum ada tag tersedia',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tambahkan tag untuk mengorganisir foto dan ebook Anda',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _dataService.availableTags
+                                  .map((tag) => _buildUnifiedTagChip(tag))
+                                  .toList(),
+                            ),
                     ),
-                    if (_dataService.customTags.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        'Tag Custom',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: _dataService.customTags.length,
-                          itemBuilder: (context, index) {
-                            final tag = _dataService.customTags[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: _buildCustomTagItem(tag),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    if (_dataService.customTags.isEmpty) ...[
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.label_outline,
-                              size: 48,
-                              color: Theme.of(context).textTheme.bodyMedium?.color,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Belum ada tag custom',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context).textTheme.bodyLarge?.color,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tambahkan tag custom untuk mengorganisir foto Anda',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).textTheme.bodyMedium?.color,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -231,58 +195,87 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
     );
   }
 
-  Widget _buildDefaultTagChip(String tag) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Text(
-        tag,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: Theme.of(context).textTheme.bodyMedium?.color,
+  Widget _buildUnifiedTagChip(String tag) {
+    final isDefaultTag = ['Catatan', 'Penting', 'Tugas', 'Ide', 'Referensi'].contains(tag);
+    final isSelected = _selectedTagForDeletion == tag;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTagForDeletion = isSelected ? null : tag;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              : Theme.of(context).colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected 
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).dividerColor,
+            width: isSelected ? 2 : 1,
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCustomTagItem(String tag) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.label, size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.label,
+              size: 16,
+              color: isSelected 
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).textTheme.bodyMedium?.color,
+            ),
+            const SizedBox(width: 6),
+            Text(
               tag,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.primary,
+                color: isSelected 
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
-          ),
-          IconButton(
-            onPressed: () => _showDeleteConfirmation(tag),
-            icon: const Icon(
-              Icons.delete_outline,
-              size: 20,
-              color: Color(0xFFEF4444),
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+            if (isSelected && !isDefaultTag) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _showDeleteConfirmation(tag),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+            if (isSelected && isDefaultTag) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.lock,
+                  size: 12,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -343,7 +336,9 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                   Navigator.pop(context);
 
                   if (success) {
-                    setState(() {});
+                    setState(() {
+                      _selectedTagForDeletion = null; // Clear selection after deletion
+                    });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Tag "$tag" berhasil dihapus'),

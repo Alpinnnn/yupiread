@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../services/data_service.dart';
 import '../services/text_recognition_service.dart';
+import '../l10n/app_localizations.dart';
 
 class TextToEbookEditorScreen extends StatefulWidget {
   final String? initialText;
@@ -46,7 +47,12 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
     if (widget.existingEbookId != null) {
       _loadExistingEbook();
     } else {
-      _titleController.text = 'Ebook dari Teks';
+      // Set default title after first build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _titleController.text.isEmpty) {
+          _titleController.text = AppLocalizations.of(context).ebookFromText;
+        }
+      });
     }
     
     // Extract text from images if provided
@@ -91,16 +97,16 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
       });
 
       if (cleanedText.isEmpty) {
-        _showMessage('Tidak ada teks yang berhasil diekstrak dari gambar', isError: true);
+        _showMessage(AppLocalizations.of(context).noTextExtracted, isError: true);
       } else {
-        _showMessage('Teks berhasil diekstrak! Anda dapat mengeditnya sebelum menyimpan.');
+        _showMessage(AppLocalizations.of(context).textExtractedSuccess);
       }
     } catch (e) {
       setState(() {
         _isExtracting = false;
         _extractionStatus = '';
       });
-      _showMessage('Gagal mengekstrak teks: ${e.toString()}', isError: true);
+      _showMessage('${AppLocalizations.of(context).textExtractionFailed}${e.toString()}', isError: true);
     }
   }
 
@@ -275,12 +281,12 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
 
   Future<void> _saveEbook() async {
     if (_titleController.text.trim().isEmpty) {
-      _showMessage('Judul ebook tidak boleh kosong', isError: true);
+      _showMessage(AppLocalizations.of(context).ebookTitleRequired, isError: true);
       return;
     }
     
     if (_textController.text.trim().isEmpty) {
-      _showMessage('Konten teks tidak boleh kosong', isError: true);
+      _showMessage(AppLocalizations.of(context).textContentRequired, isError: true);
       return;
     }
 
@@ -307,7 +313,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
         _isLoading = false;
       });
 
-      _showMessage('Ebook berhasil disimpan!');
+      _showMessage(AppLocalizations.of(context).ebookSavedSuccess);
       
       // Navigate back to ebook screen
       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -315,7 +321,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showMessage('Gagal menyimpan ebook: ${e.toString()}', isError: true);
+      _showMessage('${AppLocalizations.of(context).ebookSaveFailed}${e.toString()}', isError: true);
     }
   }
 
@@ -325,7 +331,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          widget.existingEbookId != null ? 'Edit Ebook' : 'Buat Ebook dari Teks',
+          widget.existingEbookId != null ? AppLocalizations.of(context).editEbook : AppLocalizations.of(context).createEbookFromText,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: Theme.of(context).appBarTheme.foregroundColor,
@@ -340,7 +346,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveEbook,
-              tooltip: 'Simpan Ebook',
+              tooltip: AppLocalizations.of(context).saveEbook,
             ),
         ],
       ),
@@ -367,8 +373,8 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
                   // Title field
                   TextField(
                     controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Judul Ebook',
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).ebookTitle,
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.title),
                     ),
@@ -379,8 +385,8 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
                   // Description field
                   TextField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Deskripsi (Opsional)',
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).descriptionOptional,
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.description),
                     ),
@@ -401,7 +407,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
                       const Spacer(),
                       TextButton(
                         onPressed: _showTagSelectionDialog,
-                        child: const Text('Pilih Tag'),
+                        child: Text(AppLocalizations.of(context).selectTags),
                       ),
                     ],
                   ),
@@ -431,7 +437,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
                       const Icon(Icons.text_fields, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        'Konten Teks',
+                        AppLocalizations.of(context).textContent,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const Spacer(),
@@ -451,8 +457,8 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
                     ),
                     child: TextField(
                       controller: _textController,
-                      decoration: const InputDecoration(
-                        hintText: 'Masukkan atau edit teks ebook di sini...',
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context).enterEditTextHere,
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(16),
                       ),
@@ -473,7 +479,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _isLoading ? null : () => Navigator.pop(context),
                           icon: const Icon(Icons.cancel),
-                          label: const Text('Batal'),
+                          label: Text(AppLocalizations.of(context).cancel),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -487,7 +493,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.save),
-                          label: Text(_isLoading ? 'Menyimpan...' : 'Simpan Ebook'),
+                          label: Text(_isLoading ? AppLocalizations.of(context).saving : AppLocalizations.of(context).saveEbook),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).colorScheme.primary,
                             foregroundColor: Colors.white,

@@ -12,8 +12,10 @@ import 'package:path_provider/path_provider.dart';
 import '../models/ebook_model.dart';
 import '../services/data_service.dart';
 import 'ebook_reader_screen.dart';
-import 'json_ebook_reader_screen.dart';
+import '../screens/json_ebook_reader_screen.dart';
+import '../screens/txt_reader_screen.dart';
 import 'text_ebook_editor_screen.dart';
+import '../l10n/app_localizations.dart';
 
 // Word document data classes
 class WordFormatting {
@@ -105,6 +107,8 @@ class _EbookScreenState extends State<EbookScreen> {
     
     if (ebook.fileType == 'json_delta') {
       readerScreen = JsonEbookReaderScreen(ebook: ebook);
+    } else if (ebook.fileType == 'txt') {
+      readerScreen = TxtReaderScreen(ebookId: ebook.id);
     } else {
       readerScreen = EbookReaderScreen(ebookId: ebook.id);
     }
@@ -117,6 +121,8 @@ class _EbookScreenState extends State<EbookScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -133,12 +139,12 @@ class _EbookScreenState extends State<EbookScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Ebook',
+                        l10n.ebooks,
                         style: Theme.of(context).textTheme.headlineLarge,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${_filteredEbooks.length} ebook tersedia',
+                        '${_filteredEbooks.length} ${l10n.ebooks}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -225,7 +231,7 @@ class _EbookScreenState extends State<EbookScreen> {
               Expanded(
                 child:
                     _filteredEbooks.isEmpty
-                        ? _buildEmptyState()
+                        ? _buildEmptyState(context)
                         : ListView.builder(
                           itemCount: _filteredEbooks.length,
                           itemBuilder: (context, index) {
@@ -243,7 +249,7 @@ class _EbookScreenState extends State<EbookScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -262,7 +268,7 @@ class _EbookScreenState extends State<EbookScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Belum ada ebook',
+            AppLocalizations.of(context).noEbooksYet,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -271,7 +277,7 @@ class _EbookScreenState extends State<EbookScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Impor file PDF atau Word untuk mulai membaca',
+            AppLocalizations.of(context).importPdfOrWord,
             style: TextStyle(
               fontSize: 14, 
               color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -282,7 +288,7 @@ class _EbookScreenState extends State<EbookScreen> {
           ElevatedButton.icon(
             onPressed: _showImportBottomSheet,
             icon: const Icon(Icons.add),
-            label: const Text('Impor Ebook'),
+            label: Text(AppLocalizations.of(context).importEbook),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
@@ -433,60 +439,6 @@ class _EbookScreenState extends State<EbookScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            PopupMenuButton<String>(
-              icon: Icon(
-                Icons.more_vert, 
-                color: Theme.of(context).textTheme.bodyMedium?.color, 
-                size: 20,
-              ),
-              onSelected: (value) {
-                switch (value) {
-                  case 'read':
-                    _openEbook(ebook);
-                    break;
-                  case 'edit':
-                    _showEditEbookDialog(ebook);
-                    break;
-                  case 'delete':
-                    _deleteEbook(ebook);
-                    break;
-                }
-              },
-              itemBuilder:
-                  (context) => [
-                    const PopupMenuItem(
-                      value: 'read',
-                      child: Row(
-                        children: [
-                          Icon(Icons.play_arrow, size: 16),
-                          SizedBox(width: 8),
-                          Text('Baca'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 16),
-                          SizedBox(width: 8),
-                          Text('Edit'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, size: 16, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Hapus', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-            ),
           ],
         ),
       ),
@@ -533,8 +485,8 @@ class _EbookScreenState extends State<EbookScreen> {
                     Expanded(
                       child: _buildImportOption(
                         icon: Icons.picture_as_pdf,
-                        title: 'File PDF',
-                        subtitle: 'Impor dokumen PDF',
+                        title: AppLocalizations.of(context).pdfFile,
+                        subtitle: AppLocalizations.of(context).importPdfDocument,
                         onTap: () {
                           Navigator.pop(context);
                           _importPdfFile();
@@ -545,8 +497,8 @@ class _EbookScreenState extends State<EbookScreen> {
                     Expanded(
                       child: _buildImportOption(
                         icon: Icons.description,
-                        title: 'File Word',
-                        subtitle: 'Impor dokumen Word',
+                        title: AppLocalizations.of(context).wordFile,
+                        subtitle: AppLocalizations.of(context).importWordDocument,
                         onTap: () {
                           Navigator.pop(context);
                           _importWordFile();
@@ -558,8 +510,8 @@ class _EbookScreenState extends State<EbookScreen> {
                 const SizedBox(height: 16),
                 _buildImportOption(
                   icon: Icons.edit_note,
-                  title: 'Buat Ebook',
-                  subtitle: 'Tulis ebook dari teks',
+                  title: AppLocalizations.of(context).textEbook,
+                  subtitle: AppLocalizations.of(context).createNewTextEbook,
                   onTap: () {
                     Navigator.pop(context);
                     _navigateToTextEditor();
@@ -637,7 +589,7 @@ class _EbookScreenState extends State<EbookScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengimpor file PDF: ${e.toString()}'),
+            content: Text('${AppLocalizations.of(context).failedToImportPdf}: ${e.toString()}'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -674,12 +626,12 @@ class _EbookScreenState extends State<EbookScreen> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => const AlertDialog(
+            builder: (context) => AlertDialog(
               content: Row(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 20),
-                  Text('Mengkonversi Word ke PDF...'),
+                  const CircularProgressIndicator(),
+                  const SizedBox(width: 20),
+                  Text(AppLocalizations.of(context).convertingWordToPdf),
                 ],
               ),
             ),
@@ -703,8 +655,8 @@ class _EbookScreenState extends State<EbookScreen> {
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Gagal mengkonversi Word ke PDF'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context).failedToConvertWord),
                 backgroundColor: Color(0xFFEF4444),
               ),
             );
@@ -720,7 +672,7 @@ class _EbookScreenState extends State<EbookScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengimpor file Word: ${e.toString()}'),
+            content: Text('${AppLocalizations.of(context).failedToImportWord}: ${e.toString()}'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -765,7 +717,7 @@ class _EbookScreenState extends State<EbookScreen> {
       
       // Set up document properties
       document.documentInformation.title = fileName.replaceAll('.docx', '');
-      document.documentInformation.creator = 'YupiRead';
+      document.documentInformation.creator = 'Yupiread';
       
       // Create pages with formatted content and images
       await _createAdvancedPdfPages(document, wordData);
@@ -1350,127 +1302,6 @@ class _EbookScreenState extends State<EbookScreen> {
     );
   }
 
-  void _showEditEbookDialog(EbookModel ebook) {
-    final TextEditingController titleController = TextEditingController(
-      text: ebook.title,
-    );
-    final TextEditingController descriptionController = TextEditingController(
-      text: ebook.description,
-    );
-    List<String> selectedTags = List.from(ebook.tags);
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => StatefulBuilder(
-            builder:
-                (context, setDialogState) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: const Text(
-                    'Edit Ebook',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextField(
-                          controller: titleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Judul Ebook',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: descriptionController,
-                          decoration: const InputDecoration(
-                            labelText: 'Deskripsi (Opsional)',
-                            border: OutlineInputBorder(),
-                          ),
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Pilih Tag (Opsional):',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children:
-                              _dataService.availableTags.map((tag) {
-                                final isSelected = selectedTags.contains(tag);
-                                return FilterChip(
-                                  label: Text(tag),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setDialogState(() {
-                                      if (selected) {
-                                        selectedTags.add(tag);
-                                      } else {
-                                        selectedTags.remove(tag);
-                                      }
-                                    });
-                                  },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
-                                );
-                              }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Batal'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        final ebookTitle = titleController.text.trim();
-                        final ebookDescription =
-                            descriptionController.text.trim();
-
-                        if (ebookTitle.isNotEmpty) {
-                          _dataService.updateEbook(
-                            id: ebook.id,
-                            title: ebookTitle,
-                            tags: selectedTags,
-                            description: ebookDescription,
-                          );
-                          _updateFilteredEbooks();
-                          Navigator.pop(context);
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Ebook "$ebookTitle" berhasil diperbarui',
-                              ),
-                              backgroundColor: const Color(0xFF10B981),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Simpan'),
-                    ),
-                  ],
-                ),
-          ),
-    );
-  }
-
-
   void _navigateToTextEditor() {
     Navigator.push(
       context,
@@ -1573,44 +1404,4 @@ class _EbookScreenState extends State<EbookScreen> {
     );
   }
 
-  void _deleteEbook(EbookModel ebook) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Text('Hapus Ebook'),
-            content: Text(
-              'Apakah Anda yakin ingin menghapus "${ebook.title}"?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  _dataService.deleteEbook(ebook.id);
-                  _updateFilteredEbooks();
-                  Navigator.pop(context);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Ebook "${ebook.title}" berhasil dihapus'),
-                      backgroundColor: const Color(0xFFEF4444),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444),
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Hapus'),
-              ),
-            ],
-          ),
-    );
-  }
 }

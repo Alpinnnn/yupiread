@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
+import '../l10n/app_localizations.dart';
 
 class DocumentScannerScreen extends StatefulWidget {
   final Function(List<String>) onDocumentsScanned;
@@ -44,7 +45,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(
-          widget.useGallery ? 'Scan dari Galeri' : 'Scan dari Kamera',
+          widget.useGallery ? AppLocalizations.of(context).scanFromGallery : AppLocalizations.of(context).scanFromCamera,
           style: const TextStyle(color: Colors.white),
         ),
         leading: IconButton(
@@ -88,9 +89,9 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
             color: Colors.white,
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Scan Dokumen',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).scanDocument,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -110,15 +111,15 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
           // Scan Options
           _buildScanOption(
             icon: Icons.camera_alt,
-            title: 'Scan dengan Kamera',
-            subtitle: 'Deteksi otomatis tepi dokumen secara real-time',
+            title: AppLocalizations.of(context).scanWithCamera,
+            subtitle: AppLocalizations.of(context).autoDetectEdges,
             onTap: _scanWithCamera,
           ),
           const SizedBox(height: 16),
           _buildScanOption(
             icon: Icons.photo_library,
-            title: 'Pilih dari Galeri',
-            subtitle: 'Crop dokumen dari foto yang sudah ada',
+            title: AppLocalizations.of(context).selectFromGallery,
+            subtitle: AppLocalizations.of(context).cropFromExisting,
             onTap: _scanFromGallery,
           ),
 

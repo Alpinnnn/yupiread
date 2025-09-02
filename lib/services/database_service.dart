@@ -14,7 +14,7 @@ class DatabaseService {
   DatabaseService._internal();
 
   static Database? _database;
-  static const String _databaseName = 'yupiread.db';
+  static const String _databaseName = 'Yupiread.db';
   static const int _databaseVersion = 1;
 
   Future<Database> get database async {

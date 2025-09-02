@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/theme_service.dart' as theme_service;
+import '../l10n/app_localizations.dart';
 
 class ThemeSelectionDialog extends StatefulWidget {
   final theme_service.ThemeMode currentTheme;
@@ -38,8 +39,8 @@ class _ThemeSelectionDialogState extends State<ThemeSelectionDialog> {
             size: 24,
           ),
           const SizedBox(width: 12),
-          const Text(
-            'Pilih Tema',
+          Text(
+            AppLocalizations.of(context).selectTheme,
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 20,
@@ -52,24 +53,24 @@ class _ThemeSelectionDialogState extends State<ThemeSelectionDialog> {
         children: [
           _buildThemeOption(
             theme_service.ThemeMode.system,
-            'Mengikuti Sistem',
-            'Tema akan mengikuti pengaturan sistem perangkat',
+            AppLocalizations.of(context).followSystem,
+            AppLocalizations.of(context).followSystemDesc,
             Icons.brightness_auto,
             Colors.blue,
           ),
           const SizedBox(height: 12),
           _buildThemeOption(
             theme_service.ThemeMode.light,
-            'Tema Terang',
-            'Tampilan dengan latar belakang terang',
+            AppLocalizations.of(context).lightTheme,
+            AppLocalizations.of(context).lightThemeDesc,
             Icons.light_mode,
             Colors.orange,
           ),
           const SizedBox(height: 12),
           _buildThemeOption(
             theme_service.ThemeMode.dark,
-            'Tema Gelap',
-            'Tampilan dengan latar belakang gelap',
+            AppLocalizations.of(context).darkTheme,
+            AppLocalizations.of(context).darkThemeDesc,
             Icons.dark_mode,
             Colors.indigo,
           ),
@@ -79,7 +80,7 @@ class _ThemeSelectionDialogState extends State<ThemeSelectionDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            'Batal',
+            AppLocalizations.of(context).cancel,
             style: TextStyle(
               color: Theme.of(context).colorScheme.secondary,
               fontWeight: FontWeight.w500,
@@ -99,8 +100,8 @@ class _ThemeSelectionDialogState extends State<ThemeSelectionDialog> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
-          child: const Text(
-            'Terapkan',
+          child: Text(
+            AppLocalizations.of(context).apply,
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
