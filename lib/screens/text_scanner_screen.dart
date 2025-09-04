@@ -158,9 +158,15 @@ class _TextScannerScreenState extends State<TextScannerScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                widget.imageFile,
-                fit: BoxFit.cover,
+              child: InteractiveViewer(
+                panEnabled: true,
+                scaleEnabled: true,
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Image.file(
+                  widget.imageFile,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           ),
@@ -215,30 +221,23 @@ class _TextScannerScreenState extends State<TextScannerScreen> {
                     )
                   else
                     Expanded(
-                      child: TextField(
-                        controller: _textController,
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Theme.of(context).dividerColor),
                         ),
-                        decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context).editScannedText,
-                          hintStyle: TextStyle(
-                            color: Theme.of(context).hintColor,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Theme.of(context).dividerColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFF6366F1)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(12.0),
+                          child: SelectableText(
+                            _scannedText.isNotEmpty ? _scannedText : AppLocalizations.of(context).editScannedText,
+                            style: TextStyle(
+                              color: _scannedText.isNotEmpty 
+                                  ? Theme.of(context).textTheme.bodyLarge?.color
+                                  : Theme.of(context).hintColor,
+                            ),
+                            showCursor: false,
+                            enableInteractiveSelection: true,
                           ),
                         ),
                       ),

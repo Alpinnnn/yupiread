@@ -802,7 +802,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get merge => 'Merge';
 
   @override
-  String get pdfTools => 'PDF Tools';
+  String get pdfTools => 'Tools';
 
   @override
   String pdfsSelected(int count) => '$count PDFs selected';
@@ -812,4 +812,169 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deselectAll => 'Deselect All';
+
+  // Language Selection Dialog
+  @override
+  String get selectLanguageTitle => 'Select Language';
+  
+  @override
+  String get indonesianLanguage => 'Bahasa Indonesia';
+  
+  @override
+  String get englishLanguage => 'English';
+  
+  @override
+  String get indonesianLanguageDesc => 'Use Indonesian language for the app';
+  
+  @override
+  String get englishLanguageDesc => 'Use English language for the app';
+  
+  @override
+  String get languageChangedSuccess => 'Language changed successfully';
+  
+  @override
+  String get languageChangedTitle => 'Language Changed Successfully';
+  
+  @override
+  String get restartAppRequired => 'The app needs to be restarted to apply the language changes.';
+
+  // Profile Screen
+  @override
+  String get managementSetting => 'Management Setting';
+  
+  @override
+  String get appSetting => 'App Setting';
+  
+  @override
+  String get tagSetting => 'Tag Setting';
+  
+  @override
+  String get gallerySetting => 'Gallery Setting';
+  
+  @override
+  String get ebookSetting => 'Ebook Setting';
+  
+  @override
+  String get languageSettingsProfile => 'Language Settings';
+  
+  @override
+  String get themeSetting => 'Theme Setting';
+  
+  @override
+  String get activitySettingsProfile => 'Activity Settings';
+  
+  @override
+  String get removeData => 'Remove Data';
+  
+  @override
+  String get cropProfilePhoto => 'Crop Profile Photo';
+  
+  @override
+  String get profilePhotoUpdatedSuccess => 'Profile photo updated successfully';
+  
+  @override
+  String get failedToUpdateProfilePhoto => 'Failed to update profile photo';
+  
+  @override
+  String get themeChangedTo => 'Theme changed to';
+  
+  @override
+  String get toolsSectionEnabled => 'Tools section enabled';
+  
+  @override
+  String get toolsSectionDisabled => 'Tools section disabled';
+  
+  @override
+  String get removeAllData => 'Remove All Data';
+  
+  @override
+  String get removeDataConfirmation => 'Are you sure you want to remove all app data? This action cannot be undone and will delete:\n\n• All photos and notes\n• All ebooks and reading progress\n• Activity history\n• Profile settings\n• Custom tags\n\nThe app will start fresh.';
+  
+  @override
+  String get removeAll => 'Remove All';
+  
+  @override
+  String get removingData => 'Removing data...';
+  
+  @override
+  String get allDataRemoved => 'All data successfully removed';
+  
+  @override
+  String get failedToRemoveData => 'Failed to remove data';
+
+  // Gallery Screen Additional Localization
+  @override
+  String get failedToSelectPhoto => 'Failed to select photo';
+  
+  @override
+  String get selectAddMethod => 'Select Add Method';
+  
+  @override
+  String youSelected(int count) => 'You selected $count photos. How would you like to add them?';
+  
+  @override
+  String get separatePhotos => 'Separate Photos';
+  
+  @override
+  String get separatePhotosDesc => 'Each photo as separate item in gallery';
+  
+  @override
+  String get multiPhoto => 'Multi-Photo';
+  
+  @override
+  String addPhotosCount(int count) => 'Add $count Photos';
+  
+  @override
+  String get titlePrefix => 'Title Prefix (will add number)';
+  
+  @override
+  String get descriptionOptionalShort => 'Description (optional)';
+  
+  @override
+  String get tagsOptional => 'Tags (optional):';
+  
+  @override
+  String get newTagsComma => 'New tags (separate with comma)';
+  
+  @override
+  String get saveAll => 'Save All';
+  
+  @override
+  String get createPhotoPageTitle => 'Create Photo Page';
+  
+  @override
+  String photosSelected(int count) => '$count photos selected';
+  
+  @override
+  String get pageTitle => 'Page Title';
+  
+  @override
+  String get createPage => 'Create Page';
+  
+  @override
+  String photosAddedSuccessfully(int count) => '$count photos successfully added';
+  
+  @override
+  String photoPageCreatedSuccess(String title, int count) => 'Photo page "$title" successfully created with $count photos';
+  
+  @override
+  String photoDeletedSuccess(String title) => 'Photo "$title" successfully deleted';
+  
+  @override
+  String failedToSavePhotoError(String error) => 'Failed to save photo: $error';
+  
+  @override
+  String failedToSelectPhotoError(String error) => 'Failed to select photo: $error';
+  
+  @override
+  String failedToAddPhotosError(String error) => 'Failed to add photos: $error';
+  
+  @override
+  String get multiPhotoPageTitle => 'Multi-Photo Page';
+  
+  @override
+  String get multiPhotoPageDesc => 'All photos in one page that can be swiped';
+  
+  @override
+  String get photoPage => 'Photo Page';
 }

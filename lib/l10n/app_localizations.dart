@@ -355,8 +355,68 @@ abstract class AppLocalizations {
   String get addPdfsFirst => 'Add some PDF files first';
   String get compress => 'Compress';
   String get merge => 'Merge';
-  String get pdfTools => 'PDF Tools';
+  String get pdfTools => 'Tools';
   String pdfsSelected(int count) => '$count PDFs selected';
   String get selectAll => 'Select All';
   String get deselectAll => 'Deselect All';
+
+  // Language Selection Dialog
+  String get selectLanguageTitle => 'Select Language';
+  String get indonesianLanguage => 'Bahasa Indonesia';
+  String get englishLanguage => 'English';
+  String get indonesianLanguageDesc => 'Use Indonesian language for the app';
+  String get englishLanguageDesc => 'Use English language for the app';
+  String get languageChangedSuccess => 'Language changed successfully';
+  String get languageChangedTitle => 'Language Changed Successfully';
+  String get restartAppRequired => 'The app needs to be restarted to apply the language changes.';
+
+  // Profile Screen
+  String get managementSetting => 'Management Setting';
+  String get appSetting => 'App Setting';
+  String get tagSetting => 'Tag Setting';
+  String get gallerySetting => 'Gallery Setting';
+  String get ebookSetting => 'Ebook Setting';
+  String get languageSettingsProfile => 'Language Settings';
+  String get themeSetting => 'Theme Setting';
+  String get activitySettingsProfile => 'Activity Settings';
+  String get removeData => 'Remove Data';
+  String get cropProfilePhoto => 'Crop Profile Photo';
+  String get profilePhotoUpdatedSuccess => 'Profile photo updated successfully';
+  String get failedToUpdateProfilePhoto => 'Failed to update profile photo';
+  String get themeChangedTo => 'Theme changed to';
+  String get toolsSectionEnabled => 'Tools section enabled';
+  String get toolsSectionDisabled => 'Tools section disabled';
+  String get removeAllData => 'Remove All Data';
+  String get removeDataConfirmation => 'Are you sure you want to remove all app data? This action cannot be undone and will delete:\n\n• All photos and notes\n• All ebooks and reading progress\n• Activity history\n• Profile settings\n• Custom tags\n\nThe app will start fresh.';
+  String get removeAll => 'Remove All';
+  String get removingData => 'Removing data...';
+  String get allDataRemoved => 'All data successfully removed';
+  String get failedToRemoveData => 'Failed to remove data';
+
+  // Gallery Screen Additional Localization
+  String get failedToSelectPhoto => 'Failed to select photo';
+  String get selectAddMethod => 'Select Add Method';
+  String youSelected(int count) => 'You selected $count photos. How would you like to add them?';
+  String get separatePhotos => 'Separate Photos';
+  String get separatePhotosDesc => 'Each photo as separate item in gallery';
+  String get multiPhoto => 'Multi-Photo';
+  String addPhotosCount(int count) => 'Add $count Photos';
+  String get titlePrefix => 'Title Prefix (will add number)';
+  String get descriptionOptionalShort => 'Description (optional)';
+  String get tagsOptional => 'Tags (optional):';
+  String get newTagsComma => 'New tags (separate with comma)';
+  String get saveAll => 'Save All';
+  String get createPhotoPageTitle => 'Create Photo Page';
+  String photosSelected(int count) => '$count photos selected';
+  String get pageTitle => 'Page Title';
+  String get createPage => 'Create Page';
+  String photosAddedSuccessfully(int count) => '$count photos successfully added';
+  String photoPageCreatedSuccess(String title, int count) => 'Photo page "$title" successfully created with $count photos';
+  String photoDeletedSuccess(String title) => 'Photo "$title" successfully deleted';
+  String failedToSavePhotoError(String error) => 'Failed to save photo: $error';
+  String failedToSelectPhotoError(String error) => 'Failed to select photo: $error';
+  String failedToAddPhotosError(String error) => 'Failed to add photos: $error';
+  String get multiPhotoPageTitle => 'Multi-Photo Page';
+  String get multiPhotoPageDesc => 'All photos in one page that can be swiped';
+  String get photoPage => 'Photo Page';
 }

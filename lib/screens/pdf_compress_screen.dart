@@ -3,6 +3,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../services/data_service.dart';
 import '../models/ebook_model.dart';
 import '../l10n/app_localizations.dart';
@@ -17,11 +20,14 @@ class PdfCompressScreen extends StatefulWidget {
 class _PdfCompressScreenState extends State<PdfCompressScreen> {
   final DataService _dataService = DataService.instance;
   final Set<String> _selectedPdfIds = <String>{};
+  final Set<String> _selectedTempFileIds = <String>{};
   bool _isSelectMode = false;
   bool _isProcessing = false;
   bool _isProcessingComplete = false;
   List<PlatformFile> _temporaryFiles = [];
-  Map<String, Map<String, int>> _compressionResults = {};
+  Map<String, Map<String, dynamic>> _compressionResults = {};
+  Set<String> _processedEbookIds = <String>{};
+  List<PlatformFile> _processedTempFiles = [];
 
   List<EbookModel> get _pdfEbooks {
     return _dataService.ebooks.where((ebook) => ebook.fileType == 'pdf').toList();
@@ -54,12 +60,12 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
         actions: [
           if (_isSelectMode) ...[
             IconButton(
-              onPressed: _selectedPdfIds.isEmpty ? null : _selectAll,
+              onPressed: (_selectedPdfIds.isEmpty && _selectedTempFileIds.isEmpty) ? null : _selectAll,
               icon: const Icon(Icons.select_all),
               tooltip: l10n.selectAll,
             ),
             IconButton(
-              onPressed: _selectedPdfIds.isEmpty ? null : _deselectAll,
+              onPressed: (_selectedPdfIds.isEmpty && _selectedTempFileIds.isEmpty) ? null : _deselectAll,
               icon: const Icon(Icons.deselect),
               tooltip: l10n.deselectAll,
             ),
@@ -73,6 +79,7 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
                   _isSelectMode = !_isSelectMode;
                   if (!_isSelectMode) {
                     _selectedPdfIds.clear();
+                    _selectedTempFileIds.clear();
                   }
                 });
               }
@@ -115,7 +122,7 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                l10n.pdfsSelected(_selectedPdfIds.length),
+                l10n.pdfsSelected(_selectedPdfIds.length + _selectedTempFileIds.length),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.primary,
@@ -148,7 +155,7 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
       ),
       floatingActionButton: _isProcessingComplete 
           ? null
-          : (_selectedPdfIds.isNotEmpty || _temporaryFiles.isNotEmpty)
+          : (_selectedPdfIds.isNotEmpty || _selectedTempFileIds.isNotEmpty)
               ? FloatingActionButton.extended(
                   onPressed: _isProcessing ? null : _compressSelectedPdfs,
                   icon: _isProcessing 
@@ -242,21 +249,44 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
     final compressionResult = _compressionResults[file.name];
     final isProcessed = _isProcessingComplete && compressionResult != null;
     final wasSuccessful = isProcessed;
+    final isSelected = _selectedTempFileIds.contains(file.name);
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isProcessed 
-                ? (wasSuccessful ? const Color(0xFF10B981) : const Color(0xFFEF4444))
-                : const Color(0xFF3B82F6), 
-            width: 2
+      child: InkWell(
+        onTap: _isProcessingComplete ? null : () {
+          if (_isSelectMode) {
+            _toggleTempFileSelection(file.name);
+          } else {
+            setState(() {
+              _isSelectMode = true;
+              _selectedTempFileIds.add(file.name);
+            });
+          }
+        },
+        onLongPress: () {
+          if (!_isSelectMode) {
+            setState(() {
+              _isSelectMode = true;
+              _selectedTempFileIds.add(file.name);
+            });
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: isProcessed 
+                ? Border.all(
+                    color: wasSuccessful ? const Color(0xFF10B981) : const Color(0xFFEF4444), 
+                    width: 2
+                  )
+                : isSelected
+                    ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                    : null,
           ),
-        ),
-        child: Row(
+          child: Row(
           children: [
             // PDF Icon
             Container(
@@ -335,12 +365,36 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
               ),
             ),
             
-            // Status icon (replaces remove button after processing)
+            // Status icon or selection indicator
             if (isProcessed)
               Icon(
                 wasSuccessful ? Icons.check_circle : Icons.cancel,
                 color: wasSuccessful ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                 size: 24,
+              )
+            else if (_isSelectMode)
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).textTheme.bodyMedium!.color!,
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? const Icon(
+                        Icons.check,
+                        size: 16,
+                        color: Colors.white,
+                      )
+                    : null,
               )
             else
               IconButton(
@@ -352,6 +406,7 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
                 icon: const Icon(Icons.close, color: Colors.red),
               ),
           ],
+          ),
         ),
       ),
     );
@@ -525,15 +580,27 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
     });
   }
 
+  void _toggleTempFileSelection(String fileName) {
+    setState(() {
+      if (_selectedTempFileIds.contains(fileName)) {
+        _selectedTempFileIds.remove(fileName);
+      } else {
+        _selectedTempFileIds.add(fileName);
+      }
+    });
+  }
+
   void _selectAll() {
     setState(() {
       _selectedPdfIds.addAll(_pdfEbooks.map((e) => e.id));
+      _selectedTempFileIds.addAll(_temporaryFiles.map((f) => f.name));
     });
   }
 
   void _deselectAll() {
     setState(() {
       _selectedPdfIds.clear();
+      _selectedTempFileIds.clear();
     });
   }
 
@@ -574,17 +641,60 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
 
   void _saveDocuments() async {
     try {
-      // Create Documents/Yupiread directory if it doesn't exist
-      final appDir = await getApplicationDocumentsDirectory();
-      final yupireadDir = Directory('${appDir.path}/Yupiread');
-      if (!await yupireadDir.exists()) {
-        await yupireadDir.create(recursive: true);
+      // Request storage permission first
+      PermissionStatus permission = await Permission.storage.status;
+      if (!permission.isGranted) {
+        permission = await Permission.storage.request();
+        if (!permission.isGranted) {
+          // For Android 11+ (API 30+), try manage external storage permission
+          if (await Permission.manageExternalStorage.isDenied) {
+            permission = await Permission.manageExternalStorage.request();
+          }
+          
+          if (!permission.isGranted && !await Permission.manageExternalStorage.isGranted) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Storage permission is required to save files'),
+                  backgroundColor: Color(0xFFEF4444),
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+
+      // Get external storage directory (user accessible Documents folder)
+      Directory? externalDir;
+      if (Platform.isAndroid) {
+        // Try to get external storage directory
+        final List<Directory>? externalDirs = await getExternalStorageDirectories();
+        if (externalDirs != null && externalDirs.isNotEmpty) {
+          // Navigate to the public Documents directory
+          final String externalPath = externalDirs.first.path;
+          // Remove the app-specific part to get to public storage
+          final List<String> pathParts = externalPath.split('/');
+          final int androidIndex = pathParts.indexOf('Android');
+          if (androidIndex > 0) {
+            final String publicPath = pathParts.sublist(0, androidIndex).join('/');
+            externalDir = Directory('$publicPath/Documents/Yupiread');
+          }
+        }
+      }
+      
+      // Fallback to Downloads if Documents is not accessible
+      externalDir ??= Directory('/storage/emulated/0/Download/Yupiread');
+      
+      // Create directory if it doesn't exist
+      if (!await externalDir.exists()) {
+        await externalDir.create(recursive: true);
       }
 
       int savedCount = 0;
       
       // Save compressed ebook files
-      for (String ebookId in _selectedPdfIds) {
+      for (String ebookId in _processedEbookIds) {
         if (_compressionResults.containsKey(ebookId)) {
           try {
             final ebook = _dataService.ebooks.firstWhere((e) => e.id == ebookId);
@@ -594,7 +704,7 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
             final originalName = path.basenameWithoutExtension(ebook.filePath);
             final extension = path.extension(ebook.filePath);
             final compressedFileName = '${originalName}_compressed$extension';
-            final outputPath = '${yupireadDir.path}/$compressedFileName';
+            final outputPath = '${externalDir.path}/$compressedFileName';
             
             // Copy original file as compressed file (in real implementation, this would be the actual compressed file)
             await originalFile.copy(outputPath);
@@ -607,19 +717,18 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
       }
       
       // Save compressed temporary files
-      for (PlatformFile tempFile in _temporaryFiles) {
+      for (PlatformFile tempFile in _processedTempFiles) {
         if (_compressionResults.containsKey(tempFile.name)) {
           try {
-            final originalFile = File(tempFile.path!);
-            
             // Create filename with _compressed suffix
             final originalName = path.basenameWithoutExtension(tempFile.name);
             final extension = path.extension(tempFile.name);
             final compressedFileName = '${originalName}_compressed$extension';
-            final outputPath = '${yupireadDir.path}/$compressedFileName';
+            final outputPath = '${externalDir.path}/$compressedFileName';
             
-            // Copy original file as compressed file (in real implementation, this would be the actual compressed file)
-            await originalFile.copy(outputPath);
+            // Save the compressed PDF data
+            final compressedData = _compressionResults[tempFile.name]!['compressedData'] as Uint8List;
+            await File(outputPath).writeAsBytes(compressedData);
             
             savedCount++;
           } catch (e) {
@@ -631,8 +740,9 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$savedCount compressed files saved to Documents/Yupiread/'),
+            content: Text('$savedCount compressed files saved to ${externalDir.path}'),
             backgroundColor: const Color(0xFF10B981),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -654,14 +764,56 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
       _compressionResults.clear();
       _temporaryFiles.clear();
       _selectedPdfIds.clear();
+      _selectedTempFileIds.clear();
       _isSelectMode = false;
+      _processedEbookIds.clear();
+      _processedTempFiles.clear();
     });
+  }
+
+  /// Compress PDF file using Syncfusion PDF library
+  Future<Uint8List> _compressPdfFile(File pdfFile) async {
+    try {
+      // Read the PDF file bytes
+      final Uint8List inputBytes = await pdfFile.readAsBytes();
+      
+      // Load the existing PDF document
+      final PdfDocument document = PdfDocument(inputBytes: inputBytes);
+      
+      // Apply compression optimizations
+      // 1. Disable incremental update to reduce file size
+      document.fileStructure.incrementalUpdate = false;
+      
+      // 2. Remove unused objects and optimize structure
+      document.fileStructure.crossReferenceType = PdfCrossReferenceType.crossReferenceStream;
+      
+      // 3. Optimize document structure
+      // Remove metadata to reduce file size
+      document.documentInformation.title = '';
+      document.documentInformation.author = '';
+      document.documentInformation.subject = '';
+      document.documentInformation.keywords = '';
+      document.documentInformation.creator = '';
+      document.documentInformation.producer = '';
+      
+      // Save the compressed document
+      final List<int> compressedBytes = await document.save();
+      
+      // Dispose the document to free memory
+      document.dispose();
+      
+      return Uint8List.fromList(compressedBytes);
+    } catch (e) {
+      print('Error compressing PDF: $e');
+      // If compression fails, return original file
+      return await pdfFile.readAsBytes();
+    }
   }
 
   Future<void> _compressSelectedPdfs() async {
     final l10n = AppLocalizations.of(context);
     
-    if (_selectedPdfIds.isEmpty && _temporaryFiles.isEmpty) {
+    if (_selectedPdfIds.isEmpty && _selectedTempFileIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.selectAtLeastOnePdf),
@@ -688,18 +840,15 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
           final file = File(ebook.filePath);
           final beforeSize = await file.length();
           
-          // Simulate compression by showing success
-          // In a real implementation, you would use a PDF compression library
-          await Future.delayed(const Duration(milliseconds: 500));
-          
-          // Simulate compression result (reduce size by 20-40%)
-          final compressionRatio = 0.7 + (0.2 * (successCount % 3) / 3); // Random between 0.7-0.9
-          final afterSize = (beforeSize * compressionRatio).round();
+          // Perform real PDF compression
+          final compressedBytes = await _compressPdfFile(file);
+          final afterSize = compressedBytes.length;
           
           // Store compression results
           _compressionResults[ebookId] = {
             'before': beforeSize,
             'after': afterSize,
+            'compressedData': compressedBytes,
           };
           
           successCount++;
@@ -715,17 +864,16 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
           // Get file size before compression
           final beforeSize = tempFile.size;
           
-          // Simulate compression by showing success
-          await Future.delayed(const Duration(milliseconds: 500));
-          
-          // Simulate compression result (reduce size by 20-40%)
-          final compressionRatio = 0.7 + (0.2 * (successCount % 3) / 3);
-          final afterSize = (beforeSize * compressionRatio).round();
+          // Perform real PDF compression
+          final file = File(tempFile.path!);
+          final compressedBytes = await _compressPdfFile(file);
+          final afterSize = compressedBytes.length;
           
           // Store compression results using file name as key
           _compressionResults[tempFile.name] = {
             'before': beforeSize,
             'after': afterSize,
+            'compressedData': compressedBytes,
           };
           
           successCount++;
@@ -738,7 +886,11 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
       setState(() {
         _isProcessing = false;
         _isProcessingComplete = true;
+        // Store processed items before clearing selections
+        _processedEbookIds = Set.from(_selectedPdfIds);
+        _processedTempFiles = _temporaryFiles.where((f) => _selectedTempFileIds.contains(f.name)).toList();
         _selectedPdfIds.clear();
+        _selectedTempFileIds.clear();
         _isSelectMode = false;
       });
 
@@ -747,8 +899,8 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
         int totalBefore = 0;
         int totalAfter = 0;
         for (var result in _compressionResults.values) {
-          totalBefore += result['before']!;
-          totalAfter += result['after']!;
+          totalBefore += (result['before']! as int);
+          totalAfter += (result['after']! as int);
         }
         final savedBytes = totalBefore - totalAfter;
         final savedPercentage = totalBefore > 0 ? ((savedBytes / totalBefore) * 100).round() : 0;

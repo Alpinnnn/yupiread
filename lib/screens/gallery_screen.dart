@@ -6,6 +6,7 @@ import '../services/data_service.dart';
 import 'photo_view_screen.dart';
 import 'document_scanner_screen.dart';
 import 'photo_page_view_screen.dart';
+import 'text_scanner_screen.dart';
 import '../l10n/app_localizations.dart';
 
 class GalleryScreen extends StatefulWidget {
@@ -279,18 +280,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
                             width: double.infinity,
                             height: double.infinity,
                             color: Colors.grey[200],
-                            child: const Column(
+                            child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.broken_image,
                                   size: 32,
                                   color: Colors.grey,
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Text(
-                                  'Gagal memuat',
-                                  style: TextStyle(
+                                  AppLocalizations.of(context).failedToLoad,
+                                  style: const TextStyle(
                                     color: Colors.grey,
                                     fontSize: 12,
                                   ),
@@ -407,18 +408,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
                             width: double.infinity,
                             height: double.infinity,
                             color: Colors.grey[200],
-                            child: const Column(
+                            child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.broken_image,
                                   size: 32,
                                   color: Colors.grey,
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Text(
-                                  'Gagal memuat',
-                                  style: TextStyle(
+                                  AppLocalizations.of(context).failedToLoad,
+                                  style: const TextStyle(
                                     color: Colors.grey,
                                     fontSize: 12,
                                   ),
@@ -561,22 +562,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   children: [
                     Expanded(
                       child: _buildBottomSheetOption(
-                        icon: Icons.camera_alt,
-                        title: AppLocalizations.of(context).scanFromCamera,
+                        icon: Icons.document_scanner,
+                        title: l10n.scanDocument,
                         onTap: () {
                           Navigator.pop(context);
-                          _scanFromCamera();
+                          _scanFromGallery();
                         },
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildBottomSheetOption(
-                        icon: Icons.photo_library,
-                        title: AppLocalizations.of(context).scanFromGallery,
+                        icon: Icons.text_fields,
+                        title: l10n.scanText,
                         onTap: () {
                           Navigator.pop(context);
-                          _scanFromGallery();
+                          _scanTextFromPhoto();
                         },
                       ),
                     ),
@@ -635,7 +636,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal menyimpan foto: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context).failedToSavePhotoError(e.toString())),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -765,20 +766,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  // Scan document from camera
-  void _scanFromCamera() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DocumentScannerScreen(
-          useGallery: false,
-          onDocumentsScanned: (List<String> scannedImagePaths) {
-            _handleScannedDocuments(scannedImagePaths, AppLocalizations.of(context).scannedFromCamera);
-          },
-        ),
-      ),
-    );
-  }
 
   // Scan document from gallery
   void _scanFromGallery() {
@@ -805,6 +792,41 @@ class _GalleryScreenState extends State<GalleryScreen> {
     } else {
       // Multiple documents - show validation dialog
       _showScannedDocumentsValidationDialog(imagePaths, defaultTitle);
+    }
+  }
+
+  // Scan text from photo
+  void _scanTextFromPhoto() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 100,
+      );
+
+      if (image != null) {
+        final File imageFile = File(image.path);
+        
+        // Navigate to text scanner screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TextScannerScreen(
+              imageFile: imageFile,
+              saveImage: false, // Don't save the image, just scan text
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).failedToSelectPhotoError(e.toString())),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 
@@ -914,7 +936,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
           ],
         );
@@ -1039,7 +1061,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
+                child: Text(AppLocalizations.of(context).cancel),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -1077,9 +1099,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text(
-          'Pilih Cara Menambahkan Foto',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context).selectAddMethod,
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
@@ -1089,7 +1111,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Anda memilih ${images.length} foto. Bagaimana Anda ingin menambahkannya?',
+              AppLocalizations.of(context).youSelected(images.length),
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 16),
@@ -1099,28 +1121,28 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 color: const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.collections, size: 16, color: Color(0xFF2563EB)),
-                      SizedBox(width: 8),
+                      const Icon(Icons.collections, size: 16, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 8),
                       Text(
-                        'Multi-Photo Page',
-                        style: TextStyle(
+                        AppLocalizations.of(context).multiPhotoPageTitle,
+                        style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 14,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Semua foto dalam satu halaman yang bisa di-swipe',
-                    style: TextStyle(
+                    AppLocalizations.of(context).multiPhotoPageDesc,
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF64748B),
+                      color: Color(0xFF6B7280),
                     ),
                   ),
                 ],
@@ -1133,28 +1155,28 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 color: const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.photo, size: 16, color: Color(0xFF059669)),
-                      SizedBox(width: 8),
+                      const Icon(Icons.photo, size: 16, color: Color(0xFF059669)),
+                      const SizedBox(width: 8),
                       Text(
-                        'Foto Terpisah',
-                        style: TextStyle(
+                        AppLocalizations.of(context).separatePhotos,
+                        style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 14,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Setiap foto sebagai item terpisah di galeri',
-                    style: TextStyle(
+                    AppLocalizations.of(context).separatePhotosDesc,
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF64748B),
+                      color: Color(0xFF6B7280),
                     ),
                   ),
                 ],
@@ -1175,7 +1197,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF2563EB),
             ),
-            child: const Text('Multi-Photo'),
+            child: Text(AppLocalizations.of(context).multiPhoto),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1186,7 +1208,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               backgroundColor: const Color(0xFF059669),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Foto Terpisah'),
+            child: Text(AppLocalizations.of(context).separatePhotos),
           ),
         ],
       ),
@@ -1223,7 +1245,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal menyimpan foto: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context).failedToSavePhotoError(e.toString())),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -1328,7 +1350,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -1409,7 +1431,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal menyimpan foto: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context).failedToSavePhotoError(e.toString())),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -1419,7 +1441,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   void _showPhotoPageCreationDialog(List<String> imagePaths) {
     final TextEditingController titleController = TextEditingController(
-      text: 'Halaman Foto ${DateTime.now().day}/${DateTime.now().month}',
+      text: '${AppLocalizations.of(context).photoPage} ${DateTime.now().day}/${DateTime.now().month}',
     );
     final TextEditingController descriptionController = TextEditingController();
     List<String> selectedTags = [];
@@ -1433,9 +1455,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  title: const Text(
-                    'Buat Halaman Foto',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  title: Text(
+                    AppLocalizations.of(context).createPhotoPageTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   content: SingleChildScrollView(
                     child: Column(
@@ -1443,7 +1465,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${imagePaths.length} foto dipilih',
+                          AppLocalizations.of(context).photosSelected(imagePaths.length),
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -1452,9 +1474,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         const SizedBox(height: 16),
                         TextField(
                           controller: titleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Judul Halaman',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context).pageTitle,
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                         const SizedBox(height: 16),

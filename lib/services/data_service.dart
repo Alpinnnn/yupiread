@@ -724,17 +724,19 @@ class DataService extends ChangeNotifier {
       final ebooksJson =
           _ebooks
               .map(
-                (ebook) => {
-                  'id': ebook.id,
-                  'title': ebook.title,
-                  'filePath': ebook.filePath,
-                  'createdAt': ebook.createdAt.millisecondsSinceEpoch,
-                  'tags': ebook.tags,
-                  'description': ebook.description,
-                  'currentPage': ebook.currentPage,
-                  'totalPages': ebook.totalPages,
-                  'lastReadAt': ebook.lastReadAt?.millisecondsSinceEpoch,
-                  'fileType': ebook.fileType,
+                (ebook) {
+                  return {
+                    'id': ebook.id,
+                    'title': ebook.title,
+                    'filePath': ebook.filePath,
+                    'createdAt': ebook.createdAt.millisecondsSinceEpoch,
+                    'tags': ebook.tags,
+                    'description': ebook.description,
+                    'currentPage': ebook.currentPage,
+                    'totalPages': ebook.totalPages,
+                    'lastReadAt': ebook.lastReadAt?.millisecondsSinceEpoch,
+                    'fileType': ebook.fileType,
+                  };
                 },
               )
               .toList();
@@ -758,11 +760,22 @@ class DataService extends ChangeNotifier {
           // Check if ebook file still exists
           final file = File(ebookData['filePath']);
           if (await file.exists()) {
+            // Fix fileType based on file extension for existing ebooks
+            String fileType = ebookData['fileType'] ?? 'pdf';
+            final filePath = ebookData['filePath'] as String;
+            
+            // Auto-correct fileType based on file extension
+            if (filePath.endsWith('.json')) {
+              if (fileType == 'json' || fileType == 'pdf' || fileType != 'json_delta') {
+                fileType = 'json_delta';
+              }
+            }
+            
             final ebook = EbookModel(
               id: ebookData['id'],
               title: ebookData['title'],
               filePath: ebookData['filePath'],
-              fileType: ebookData['fileType'] ?? 'pdf',
+              fileType: fileType,
               createdAt: DateTime.fromMillisecondsSinceEpoch(
                 ebookData['createdAt'],
               ),

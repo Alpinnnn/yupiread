@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import '../services/data_service.dart';
 import '../services/text_recognition_service.dart';
 import '../l10n/app_localizations.dart';
@@ -169,114 +170,41 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
     );
   }
 
-  Future<String> _convertTextToPdf(String text, String title) async {
+
+  Future<String> _convertTextToJson(String text, String title) async {
     try {
-      // Create PDF document
-      final PdfDocument document = PdfDocument();
+      // Create a Quill document from the text
+      final document = Document()..insert(0, text);
+      final delta = document.toDelta();
       
-      // Add page
-      final PdfPage page = document.pages.add();
-      PdfGraphics graphics = page.graphics;
+      // Create JSON structure compatible with TextEbookEditorScreen
+      final documentData = {
+        'title': title,
+        'delta': delta.toJson(),
+        'images': <String>[],
+        'createdAt': DateTime.now().toIso8601String(),
+        'lastModified': DateTime.now().toIso8601String(),
+        'version': '1.0',
+      };
       
-      // Set font
-      final PdfFont font = PdfStandardFont(PdfFontFamily.helvetica, 12);
-      final PdfFont titleFont = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
-      
-      // Page dimensions
-      const double margin = 40;
-      final double pageWidth = page.getClientSize().width;
-      final double pageHeight = page.getClientSize().height;
-      double yPosition = margin;
-      
-      // Draw title
-      graphics.drawString(
-        title,
-        titleFont,
-        bounds: Rect.fromLTWH(margin, yPosition, pageWidth - 2 * margin, 30),
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-      );
-      yPosition += 50;
-      
-      // Split text into lines that fit the page width
-      final List<String> lines = _splitTextIntoLines(text, font, pageWidth - 2 * margin);
-      const double lineHeight = 18;
-      
-      for (String line in lines) {
-        // Check if we need a new page
-        if (yPosition + lineHeight > pageHeight - margin) {
-          final PdfPage newPage = document.pages.add();
-          final PdfGraphics newGraphics = newPage.graphics;
-          graphics = newGraphics;
-          yPosition = margin;
-        }
-        
-        // Draw line
-        graphics.drawString(
-          line,
-          font,
-          bounds: Rect.fromLTWH(margin, yPosition, pageWidth - 2 * margin, lineHeight),
-          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        );
-        yPosition += lineHeight;
-      }
-      
-      // Save PDF directly to ebooks directory
+      // Save as JSON file
       final appDir = await getApplicationDocumentsDirectory();
       final ebookDir = Directory('${appDir.path}/ebooks');
       if (!await ebookDir.exists()) {
         await ebookDir.create(recursive: true);
       }
       
-      final String fileName = '${DateTime.now().millisecondsSinceEpoch}_text_ebook.pdf';
-      final String pdfPath = '${ebookDir.path}/$fileName';
+      final String fileName = '${DateTime.now().millisecondsSinceEpoch}_text_ebook.json';
+      final String filePath = '${ebookDir.path}/$fileName';
       
-      final File file = File(pdfPath);
-      await file.writeAsBytes(await document.save());
-      document.dispose();
+      final jsonString = jsonEncode(documentData);
+      final File file = File(filePath);
+      await file.writeAsString(jsonString);
       
-      return pdfPath;
+      return filePath;
     } catch (e) {
-      throw Exception('Failed to convert text to PDF: $e');
+      throw Exception('Failed to create JSON ebook: $e');
     }
-  }
-
-  List<String> _splitTextIntoLines(String text, PdfFont font, double maxWidth) {
-    final List<String> lines = [];
-    final List<String> paragraphs = text.split('\n');
-    
-    for (String paragraph in paragraphs) {
-      if (paragraph.trim().isEmpty) {
-        lines.add('');
-        continue;
-      }
-      
-      final List<String> words = paragraph.split(' ');
-      String currentLine = '';
-      
-      for (String word in words) {
-        final String testLine = currentLine.isEmpty ? word : '$currentLine $word';
-        final Size textSize = font.measureString(testLine);
-        
-        if (textSize.width <= maxWidth) {
-          currentLine = testLine;
-        } else {
-          if (currentLine.isNotEmpty) {
-            lines.add(currentLine);
-            currentLine = word;
-          } else {
-            // Word is too long, break it
-            lines.add(word);
-            currentLine = '';
-          }
-        }
-      }
-      
-      if (currentLine.isNotEmpty) {
-        lines.add(currentLine);
-      }
-    }
-    
-    return lines;
   }
 
   Future<void> _saveEbook() async {
@@ -295,8 +223,8 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
     });
 
     try {
-      // Convert text to PDF
-      final String pdfPath = await _convertTextToPdf(
+      // Convert text to JSON format
+      final String jsonPath = await _convertTextToJson(
         _textController.text.trim(),
         _titleController.text.trim(),
       );
@@ -304,9 +232,10 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
       // Save ebook to data service
       await _dataService.addEbook(
         title: _titleController.text.trim(),
-        filePath: pdfPath,
+        filePath: jsonPath,
         tags: _selectedTags,
         description: _descriptionController.text.trim(),
+        fileType: 'json_delta',
       );
 
       setState(() {

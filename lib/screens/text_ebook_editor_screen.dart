@@ -38,6 +38,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
   bool _isToolbarVisible = true;
   List<String> _insertedImages = [];
   bool _isEditingExisting = false;
+  List<String> _selectedTags = [];
 
   @override
   void initState() {
@@ -59,6 +60,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
     // Load existing document if editing
     if (_isEditingExisting) {
       _loadExistingDocument();
+      _loadExistingTags();
     }
     
     // Auto-hide toolbar when typing
@@ -98,31 +100,141 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
     
     try {
       final file = File(widget.existingFilePath!);
-      if (!await file.exists()) return;
-      
-      final jsonString = await file.readAsString();
-      final documentData = jsonDecode(jsonString) as Map<String, dynamic>;
-      
-      // Load images list
-      if (documentData['images'] != null) {
-        _insertedImages = List<String>.from(documentData['images']);
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        
+        // Try to parse as JSON first (for Delta format)
+        try {
+          final jsonData = jsonDecode(content);
+          if (jsonData is Map<String, dynamic> && jsonData.containsKey('delta')) {
+            // Load from Delta format
+            final deltaList = jsonData['delta'] as List<dynamic>;
+            final document = Document.fromJson(deltaList);
+            _quillController = QuillController(
+              document: document,
+              selection: const TextSelection.collapsed(offset: 0),
+            );
+            
+            // Load title if available
+            if (jsonData.containsKey('title')) {
+              _titleController.text = jsonData['title'] as String;
+            }
+          } else {
+            // Fallback to plain text
+            final document = Document()..insert(0, content);
+            _quillController = QuillController(
+              document: document,
+              selection: const TextSelection.collapsed(offset: 0),
+            );
+          }
+        } catch (jsonError) {
+          // If JSON parsing fails, treat as plain text
+          final document = Document()..insert(0, content);
+          _quillController = QuillController(
+            document: document,
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+        }
+        
+        setState(() {});
       }
-      
-      // Load delta and create new controller
-      final deltaJson = documentData['delta'] as List<dynamic>;
-      final document = Document.fromJson(deltaJson);
+    } catch (e) {
+      print('Error loading existing document: $e');
+    }
+  }
+
+  // Load existing tags when editing
+  void _loadExistingTags() {
+    if (widget.existingFilePath == null) return;
+    
+    try {
+      // Get ebook by file path to load existing tags
+      final ebooks = _dataService.ebooks;
+      final ebook = ebooks.firstWhere(
+        (e) => e.filePath == widget.existingFilePath,
+        orElse: () => throw Exception('Ebook not found'),
+      );
       
       setState(() {
-        _quillController.dispose();
-        _quillController = QuillController(
-          document: document,
-          selection: const TextSelection.collapsed(offset: 0),
-        );
+        _selectedTags = List.from(ebook.tags);
       });
-      
     } catch (e) {
-      _showErrorSnackBar('Gagal memuat dokumen: $e');
+      print('Error loading existing tags: $e');
     }
+  }
+  
+  // Show tags selection dialog
+  void _showTagsDialog() {
+    List<String> tempSelectedTags = List.from(_selectedTags);
+    final allTags = _dataService.availableTags;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Pilih Tags',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: allTags.map((tag) {
+                      final isSelected = tempSelectedTags.contains(tag);
+                      return FilterChip(
+                        label: Text(tag),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF2563EB).withOpacity(0.2),
+                        checkmarkColor: const Color(0xFF2563EB),
+                        backgroundColor: isDark ? Colors.grey[700] : Colors.grey[200],
+                        onSelected: (selected) {
+                          setDialogState(() {
+                            if (selected) {
+                              tempSelectedTags.add(tag);
+                            } else {
+                              tempSelectedTags.remove(tag);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedTags = tempSelectedTags;
+                    });
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   // Menyimpan dokumen dengan format Delta JSON (mempertahankan formatting)
@@ -165,15 +277,26 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
       
       // Update data service
       if (_isEditingExisting) {
-        // Update existing ebook title in data service
-        await _dataService.updateEbookTitle(filePath, _titleController.text.trim());
+        // Update existing ebook with title and tags
+        final ebooks = _dataService.ebooks;
+        final ebook = ebooks.firstWhere(
+          (e) => e.filePath == filePath,
+          orElse: () => throw Exception('Ebook not found'),
+        );
+        
+        _dataService.updateEbook(
+          id: ebook.id,
+          title: _titleController.text.trim(),
+          tags: _selectedTags,
+        );
       } else {
-        // Add new ebook to data service
+        // Save as new ebook
         _dataService.addEbook(
           title: _titleController.text.trim(),
+          description: '', // We can add description field later if needed
           filePath: filePath,
+          tags: _selectedTags,
           fileType: 'json_delta',
-          totalPages: 1,
         );
       }
       
@@ -503,45 +626,116 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
       backgroundColor: isDark ? Colors.grey[900] : Colors.white,
       body: Column(
         children: [
-          // Title input
+          // Title input with tags icon
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark ? Colors.grey[850] : Colors.grey[50],
             ),
-            child: TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                hintText: 'Judul Ebook',
-                hintStyle: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: isDark ? Colors.grey[600]! : Colors.grey[300]!,
+            child: Row(
+              children: [
+                // Tags icon button
+                Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  child: IconButton(
+                    onPressed: _showTagsDialog,
+                    icon: Icon(
+                      Icons.local_offer,
+                      color: _selectedTags.isNotEmpty 
+                          ? const Color(0xFF2563EB)
+                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                      size: 24,
+                    ),
+                    tooltip: 'Edit Tags',
+                    style: IconButton.styleFrom(
+                      backgroundColor: isDark ? Colors.grey[800] : Colors.white,
+                      side: BorderSide(
+                        color: isDark ? Colors.grey[600]! : Colors.grey[300]!,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: isDark ? Colors.grey[600]! : Colors.grey[300]!,
+                // Title input field
+                Expanded(
+                  child: TextField(
+                    controller: _titleController,
+                    decoration: InputDecoration(
+                      hintText: 'Judul Ebook',
+                      hintStyle: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[600]! : Colors.grey[300]!,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[600]! : Colors.grey[300]!,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.blue[400]! : const Color(0xFF2563EB),
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      filled: true,
+                      fillColor: isDark ? Colors.grey[800] : Colors.white,
+                    ),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
                   ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: isDark ? Colors.blue[400]! : const Color(0xFF2563EB),
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                filled: true,
-                fillColor: isDark ? Colors.grey[800] : Colors.white,
-              ),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
+              ],
             ),
           ),
+          
+          // Tags display
+          if (_selectedTags.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[850] : Colors.grey[50],
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
+                  ),
+                ),
+              ),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: _selectedTags.map((tag) {
+                  return Chip(
+                    label: Text(
+                      tag,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    backgroundColor: isDark ? Colors.grey[700] : Colors.grey[200],
+                    deleteIcon: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedTags.remove(tag);
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
           
           // QuillToolbar
           if (_isToolbarVisible)

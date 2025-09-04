@@ -1,15 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:extended_image/extended_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:extended_image/extended_image.dart';
+import 'package:path/path.dart' as path;
+import 'package:share_plus/share_plus.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
 import '../l10n/app_localizations.dart';
 import 'text_scanner_screen.dart';
-import 'package:path/path.dart' as path;
+import 'document_scanner_screen.dart';
 
 class PhotoPageViewScreen extends StatefulWidget {
   final String photoPageId;
@@ -27,11 +30,12 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   bool _showBottomBar = false;
   int _currentPhotoIndex = 0;
   late AnimationController _animationController;
+  late AnimationController _bottomMenuAnimationController;
+  late Animation<double> _bottomMenuAnimation;
   final PageController _pageController = PageController();
   final List<GlobalKey<ExtendedImageGestureState>> _gestureKeys = [];
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
-  DateTime? _lastSwipeTime;
   bool _isZoomed = false;
   final List<bool> _zoomStates = [];
 
@@ -43,6 +47,18 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
+    );
+
+    _bottomMenuAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _bottomMenuAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _bottomMenuAnimationController,
+        curve: Curves.easeInOutCubic,
+      ),
     );
 
     // Initialize gesture keys and zoom states for each photo
@@ -57,25 +73,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _bottomMenuAnimationController.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
-  void _toggleBottomBar() {
-    setState(() {
-      _showBottomBar = !_showBottomBar;
-      // Reset drag offset when opening bottom bar
-      if (_showBottomBar) {
-        _dragOffset = 0.0;
-      }
-    });
-
-    if (_showBottomBar) {
-      _animationController.forward();
-    } else {
-      _animationController.reverse();
-    }
-  }
 
   void _resetZoom() {
     if (_currentPhotoIndex < _gestureKeys.length) {
@@ -149,7 +151,23 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: _toggleBottomBar,
+            onPressed: () {
+              if (_showBottomBar) {
+                // Closing bottom bar with animation
+                _bottomMenuAnimationController.reverse().then((_) {
+                  setState(() {
+                    _showBottomBar = false;
+                  });
+                });
+              } else {
+                // Opening bottom bar with animation
+                setState(() {
+                  _showBottomBar = true;
+                  _dragOffset = 0.0; // Reset to default position when opening
+                });
+                _bottomMenuAnimationController.forward();
+              }
+            },
           ),
         ],
       ),
@@ -180,7 +198,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
         child: GestureDetector(
           onTap: () {
             if (_showBottomBar) {
-              _toggleBottomBar();
+              _bottomMenuAnimationController.reverse().then((_) {
+                setState(() {
+                  _showBottomBar = false;
+                });
+              });
             }
           },
           onDoubleTap: _handleDoubleTap,
@@ -194,13 +216,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                         ? const NeverScrollableScrollPhysics()
                         : _CustomPageScrollPhysics(),
                 onPageChanged: (index) {
-                  final now = DateTime.now();
-                  if (_lastSwipeTime != null &&
-                      now.difference(_lastSwipeTime!).inMilliseconds < 300) {
-                    return; // Ignore rapid swipes
-                  }
-                  _lastSwipeTime = now;
-
+                  // Always update the current photo index when page changes
                   setState(() {
                     _currentPhotoIndex = index;
                     _isZoomed = false; // Reset zoom state when changing pages
@@ -380,11 +396,14 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           child: GestureDetector(
                             onTap: () {
-                              _pageController.animateToPage(
-                                index,
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                              );
+                              // Only navigate if not already on this photo
+                              if (_currentPhotoIndex != index) {
+                                _pageController.animateToPage(
+                                  index,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
                             },
                             child: Stack(
                               children: [
@@ -481,7 +500,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                     onPanEnd: (details) {
                       if (_dragOffset < -_bottomBarHeight * 0.5) {
                         // Close if dragged more than 50%
-                        _toggleBottomBar();
+                        _bottomMenuAnimationController.reverse().then((_) {
+                          setState(() {
+                            _showBottomBar = false;
+                          });
+                        });
                       } else {
                         // Snap back to original position
                         setState(() {
@@ -489,25 +512,32 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                         });
                       }
                     },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[900],
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, -2),
-                            ),
-                          ],
+                    child: AnimatedBuilder(
+                      animation: _bottomMenuAnimation,
+                      builder: (context, child) => Transform.translate(
+                        offset: Offset(
+                          0,
+                          (1 - _bottomMenuAnimation.value) * _bottomBarHeight,
                         ),
-                        child: SafeArea(
-                          child: Column(
+                        child: Opacity(
+                          opacity: _bottomMenuAnimation.value,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[900],
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(20),
+                                topRight: Radius.circular(20),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, -2),
+                                ),
+                              ],
+                            ),
+                            child: SafeArea(
+                              child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               // Handle bar
@@ -642,6 +672,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                                 ),
                               ),
                             ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -661,24 +693,31 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
     required VoidCallback onTap,
     Color? color,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color ?? Colors.white, size: 20),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color ?? Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color ?? Colors.white, size: 20),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color ?? Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -852,73 +891,32 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   }
 
   void _addPhotoToPage() {
-    _showAddPhotoDialog();
+    _scanFromGallery();
   }
-
-  void _showAddPhotoDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Tambah Foto ke Halaman'),
-            content: const Text('Pilih sumber foto yang ingin ditambahkan:'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _pickPhotosFromCamera();
-                },
-                child: Text(AppLocalizations.of(context).cameraOption),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _pickPhotosFromGallery();
-                },
-                child: Text(AppLocalizations.of(context).galleryOption),
-              ),
-            ],
-          ),
+  
+  // Scan document from gallery - similar to gallery_screen.dart
+  void _scanFromGallery() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DocumentScannerScreen(
+          useGallery: true,
+          onDocumentsScanned: (List<String> scannedImagePaths) {
+            _handleScannedDocuments(scannedImagePaths);
+          },
+        ),
+      ),
     );
   }
-
-  Future<void> _pickPhotosFromCamera() async {
-    try {
-      final XFile? photo = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-        imageQuality: 80,
-      );
-
-      if (photo != null) {
-        await _addPhotosToPage([photo.path]);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal mengambil foto: $e')));
-    }
+  
+  // Handle scanned documents
+  void _handleScannedDocuments(List<String> imagePaths) {
+    if (imagePaths.isEmpty) return;
+    
+    // Add all scanned images to the photo page
+    _addPhotosToPage(imagePaths);
   }
 
-  Future<void> _pickPhotosFromGallery() async {
-    try {
-      final List<XFile> photos = await ImagePicker().pickMultiImage(
-        imageQuality: 80,
-      );
-
-      if (photos.isNotEmpty) {
-        final photoPaths = photos.map((photo) => photo.path).toList();
-        await _addPhotosToPage(photoPaths);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memilih foto: $e')));
-    }
-  }
 
   Future<void> _addPhotosToPage(List<String> newPhotoPaths) async {
     try {
@@ -937,7 +935,7 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       }
 
       // Update photo page with new photos
-      final updatedImagePaths = [...photoPage!.imagePaths, ...savedPhotoPaths];
+      final List<String> updatedImagePaths = [...photoPage!.imagePaths, ...savedPhotoPaths];
 
       _dataService.updatePhotoPage(
         id: photoPage!.id,
@@ -962,6 +960,67 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   }
 
   Future<void> _sharePhotoPage() async {
+    try {
+      // Show dialog to choose share format
+      _showShareDialog();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membagikan halaman foto: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showShareDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Bagikan Sebagai',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image, color: Color(0xFF3B82F6)),
+              title: const Text('Foto'),
+              subtitle: Text('Bagikan ${photoPage!.photoCount} foto sebagai file gambar'),
+              onTap: () {
+                Navigator.pop(context);
+                _shareAsPhotos();
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf, color: Color(0xFFEF4444)),
+              title: const Text('PDF'),
+              subtitle: Text('Konversi ${photoPage!.photoCount} foto ke PDF (1 foto / halaman)'),
+              onTap: () {
+                Navigator.pop(context);
+                _shareAsPdf();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareAsPhotos() async {
     try {
       final files = photoPage!.imagePaths.map((path) => XFile(path)).toList();
 
@@ -989,11 +1048,139 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal membagikan halaman foto: ${e.toString()}'),
+            content: Text('Gagal membagikan foto: $e'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
+    }
+  }
+
+  Future<void> _shareAsPdf() async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              Text('Mengkonversi ${photoPage!.photoCount} foto ke PDF...'),
+            ],
+          ),
+        ),
+      );
+
+      // Convert images to PDF
+      final pdfPath = await _convertImagesToPdf();
+      
+      // Close loading dialog
+      Navigator.pop(context);
+
+      if (pdfPath != null) {
+        // Create share text
+        String shareText = photoPage!.title;
+        if (photoPage!.description.isNotEmpty) {
+          shareText += '\n\n${photoPage!.description}';
+        }
+        shareText += '\n\nDibagikan dari Yupiread sebagai PDF (${photoPage!.photoCount} foto)';
+
+        // Create XFile for sharing
+        final xFile = XFile(
+          pdfPath,
+          name: '${photoPage!.title}.pdf',
+          mimeType: 'application/pdf',
+        );
+
+        await Share.shareXFiles(
+          [xFile],
+          text: shareText,
+          subject: '${photoPage!.title} - PDF',
+        );
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('PDF berhasil dibagikan'),
+              backgroundColor: Color(0xFF10B981),
+            ),
+          );
+        }
+      } else {
+        throw Exception('Gagal mengkonversi gambar ke PDF');
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membagikan sebagai PDF: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<String?> _convertImagesToPdf() async {
+    try {
+      final pdf = pw.Document();
+      
+      // Add each image as a separate page
+      for (final imagePath in photoPage!.imagePaths) {
+        final imageFile = File(imagePath);
+        final imageBytes = await imageFile.readAsBytes();
+        
+        pdf.addPage(
+          pw.Page(
+            build: (pw.Context context) {
+              return pw.Center(
+                child: pw.Image(
+                  pw.MemoryImage(imageBytes),
+                  fit: pw.BoxFit.contain,
+                ),
+              );
+            },
+          ),
+        );
+      }
+
+      // Save PDF to external storage /Documents/Yupiread/
+      Directory? externalDir;
+      try {
+        externalDir = Directory('/storage/emulated/0/Documents');
+        if (!await externalDir.exists()) {
+          externalDir = Directory('/storage/emulated/0/Download');
+        }
+      } catch (e) {
+        externalDir = await getExternalStorageDirectory();
+      }
+
+      if (externalDir == null) {
+        throw Exception('Could not access external storage');
+      }
+
+      final yupireadDir = Directory('${externalDir.path}/Yupiread');
+      if (!await yupireadDir.exists()) {
+        await yupireadDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final outputPath = '${yupireadDir.path}/${photoPage!.title}_$timestamp.pdf';
+      
+      final file = File(outputPath);
+      await file.writeAsBytes(await pdf.save());
+
+      return outputPath;
+    } catch (e) {
+      return null;
     }
   }
 

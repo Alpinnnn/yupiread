@@ -9,7 +9,8 @@ import 'tag_settings_screen.dart';
 import 'gallery_settings_screen.dart';
 import 'ebook_settings_screen.dart';
 import '../screens/activity_settings_screen.dart';
-import '../screens/language_settings_screen.dart';
+import '../widgets/language_selection_dialog.dart';
+import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final DataService _dataService = DataService.instance;
   final ImagePicker _picker = ImagePicker();
   late theme_service.ThemeService _themeService;
+  final LanguageService _languageService = LanguageService.instance;
   bool _isManagementExpanded = false;
   bool _isAppSettingExpanded = false;
 
@@ -255,7 +257,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 24),
             // Management Settings Section
             _buildSettingsCategory(
-              title: 'Management Setting',
+              title: AppLocalizations.of(context).managementSetting,
               icon: Icons.settings,
               isExpanded: _isManagementExpanded,
               onToggle:
@@ -265,7 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 _buildSettingItem(
                   icon: Icons.local_offer,
-                  title: 'Tag Setting',
+                  title: AppLocalizations.of(context).tagSetting,
                   color: const Color(0xFF10B981),
                   onTap: () {
                     Navigator.push(
@@ -279,7 +281,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 12),
                 _buildSettingItem(
                   icon: Icons.photo_library,
-                  title: 'Gallery Setting',
+                  title: AppLocalizations.of(context).gallerySetting,
                   color: const Color(0xFF8B5CF6),
                   onTap: () {
                     Navigator.push(
@@ -293,7 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 12),
                 _buildSettingItem(
                   icon: Icons.menu_book,
-                  title: 'Ebook Setting',
+                  title: AppLocalizations.of(context).ebookSetting,
                   color: const Color(0xFFF59E0B),
                   onTap: () {
                     Navigator.push(
@@ -309,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             // App Settings Section
             _buildSettingsCategory(
-              title: 'App Setting',
+              title: AppLocalizations.of(context).appSetting,
               icon: Icons.tune,
               isExpanded: _isAppSettingExpanded,
               onToggle:
@@ -319,28 +321,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 _buildSettingItem(
                   icon: Icons.language,
-                  title: 'Language Settings',
+                  title: AppLocalizations.of(context).languageSettingsProfile,
                   color: const Color(0xFF10B981),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LanguageSettingsScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () => _showLanguageDialog(),
                 ),
                 const SizedBox(height: 12),
                 _buildSettingItem(
                   icon: _themeService.themeModeIcon,
-                  title: 'Theme Setting',
+                  title: AppLocalizations.of(context).themeSetting,
                   color: const Color(0xFF6366F1),
                   onTap: _showThemeSelectionDialog,
                 ),
                 const SizedBox(height: 12),
                 _buildSettingItem(
                   icon: Icons.history,
-                  title: 'Activity Settings',
+                  title: AppLocalizations.of(context).activitySettingsProfile,
                   color: const Color(0xFFF59E0B),
                   onTap: () {
                     Navigator.push(
@@ -361,7 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 12),
                 _buildSettingItem(
                   icon: Icons.delete_forever,
-                  title: 'Remove Data',
+                  title: AppLocalizations.of(context).removeData,
                   color: const Color(0xFFEF4444),
                   onTap: _showRemoveDataDialog,
                 ),
@@ -560,7 +555,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
+                child: Text(AppLocalizations.of(context).cancel),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -615,7 +610,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           maxHeight: 512,
           uiSettings: [
             AndroidUiSettings(
-              toolbarTitle: 'Crop Foto Profil',
+              toolbarTitle: AppLocalizations.of(context).cropProfilePhoto,
               toolbarColor: Theme.of(context).colorScheme.primary,
               toolbarWidgetColor: Colors.white,
               initAspectRatio: CropAspectRatioPreset.square,
@@ -632,9 +627,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Navigator.pop(context);
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Foto profil berhasil diperbarui'),
-              backgroundColor: Color(0xFF10B981),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).profilePhotoUpdatedSuccess),
+              backgroundColor: const Color(0xFF10B981),
             ),
           );
         }
@@ -642,11 +637,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengubah foto profil: ${e.toString()}'),
+          content: Text('${AppLocalizations.of(context).failedToUpdateProfilePhoto}: ${e.toString()}'),
           backgroundColor: const Color(0xFFEF4444),
         ),
       );
     }
+  }
+
+  void _showLanguageDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => LanguageSelectionDialog(
+        currentLanguage: _languageService.currentLanguage,
+        onLanguageChanged: (language) {
+          _languageService.setLanguage(language);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).languageChangedSuccess),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          _showRestartDialog();
+        },
+      ),
+    );
+  }
+
+  void _showRestartDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              AppLocalizations.of(context).languageChangedTitle,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          AppLocalizations.of(context).restartAppRequired,
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(AppLocalizations.of(context).ok),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showThemeSelectionDialog() {
@@ -662,7 +724,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Tema berhasil diubah ke ${_themeService.getThemeModeString(context)}',
+                    '${AppLocalizations.of(context).themeChangedTo} ${_themeService.getThemeModeString(context)}',
                   ),
                   backgroundColor: const Color(0xFF10B981),
                 ),
@@ -701,8 +763,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SnackBar(
                     content: Text(
                       value 
-                        ? 'Tools section enabled' 
-                        : 'Tools section disabled',
+                        ? AppLocalizations.of(context).toolsSectionEnabled
+                        : AppLocalizations.of(context).toolsSectionDisabled,
                     ),
                     backgroundColor: const Color(0xFF10B981),
                   ),
@@ -734,26 +796,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(Icons.warning, color: const Color(0xFFEF4444), size: 24),
                 const SizedBox(width: 12),
-                const Text(
-                  'Hapus Semua Data',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                Text(
+                  AppLocalizations.of(context).removeAllData,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
-            content: const Text(
-              'Apakah Anda yakin ingin menghapus semua data aplikasi? '
-              'Tindakan ini tidak dapat dibatalkan dan akan menghapus:\n\n'
-              '• Semua foto dan catatan\n'
-              '• Semua ebook dan progress membaca\n'
-              '• Riwayat aktivitas\n'
-              '• Pengaturan profil\n'
-              '• Tag kustom\n\n'
-              'Aplikasi akan dimulai dari awal.',
+            content: Text(
+              AppLocalizations.of(context).removeDataConfirmation,
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
+                child: Text(AppLocalizations.of(context).cancel),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -764,7 +819,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundColor: const Color(0xFFEF4444),
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Hapus Semua'),
+                child: Text(AppLocalizations.of(context).removeAll),
               ),
             ],
           ),
@@ -778,12 +833,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         context: context,
         barrierDismissible: false,
         builder:
-            (context) => const AlertDialog(
+            (context) => AlertDialog(
               content: Row(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 16),
-                  Text('Menghapus data...'),
+                  const CircularProgressIndicator(),
+                  const SizedBox(width: 16),
+                  Text(AppLocalizations.of(context).removingData),
                 ],
               ),
             ),
@@ -797,9 +852,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Semua data berhasil dihapus'),
-          backgroundColor: Color(0xFF10B981),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).allDataRemoved),
+          backgroundColor: const Color(0xFF10B981),
         ),
       );
 
@@ -812,7 +867,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal menghapus data: ${e.toString()}'),
+          content: Text('${AppLocalizations.of(context).failedToRemoveData}: ${e.toString()}'),
           backgroundColor: const Color(0xFFEF4444),
         ),
       );

@@ -29,7 +29,7 @@ class WordFormatting {
   bool isUnderline;
   PdfColor? color;
   PdfColor? backgroundColor;
-  
+
   WordFormatting({
     this.bold = false,
     this.italic = false,
@@ -51,7 +51,7 @@ class WordElement {
   bool isHeader;
   int headerLevel;
   String? imageId;
-  
+
   WordElement({
     required this.type,
     this.text = '',
@@ -66,7 +66,7 @@ class WordDocumentData {
   List<WordElement> elements;
   Map<String, String> relationships;
   Map<String, Uint8List> images;
-  
+
   WordDocumentData({
     List<WordElement>? elements,
     Map<String, String>? relationships,
@@ -104,7 +104,7 @@ class _EbookScreenState extends State<EbookScreen> {
 
   void _openEbook(EbookModel ebook) {
     Widget readerScreen;
-    
+
     if (ebook.fileType == 'json_delta') {
       readerScreen = JsonEbookReaderScreen(ebook: ebook);
     } else if (ebook.fileType == 'txt') {
@@ -112,7 +112,7 @@ class _EbookScreenState extends State<EbookScreen> {
     } else {
       readerScreen = EbookReaderScreen(ebookId: ebook.id);
     }
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => readerScreen),
@@ -122,7 +122,7 @@ class _EbookScreenState extends State<EbookScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -157,7 +157,9 @@ class _EbookScreenState extends State<EbookScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+                              color:
+                                  Theme.of(context).cardTheme.shadowColor ??
+                                  Colors.black.withOpacity(0.04),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -210,7 +212,9 @@ class _EbookScreenState extends State<EbookScreen> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.2),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -279,7 +283,7 @@ class _EbookScreenState extends State<EbookScreen> {
           Text(
             AppLocalizations.of(context).importPdfOrWord,
             style: TextStyle(
-              fontSize: 14, 
+              fontSize: 14,
               color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
             textAlign: TextAlign.center,
@@ -325,7 +329,9 @@ class _EbookScreenState extends State<EbookScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+              color:
+                  Theme.of(context).cardTheme.shadowColor ??
+                  Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -374,35 +380,15 @@ class _EbookScreenState extends State<EbookScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '${ebook.totalPages} halaman',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      if (ebook.tags.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: categoryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            ebook.tags.first,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: categoryColor,
-                            ),
-                          ),
+                      Text(
+                        '${ebook.totalPages} halaman',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
+                      ),
                       const Spacer(),
                       Icon(
                         Icons.access_time,
@@ -413,18 +399,42 @@ class _EbookScreenState extends State<EbookScreen> {
                       Text(
                         ebook.timeAgo,
                         style: TextStyle(
-                          fontSize: 12, 
+                          fontSize: 12,
                           color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
+                  if (ebook.tags.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: categoryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        ebook.tags.first,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: categoryColor,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: ebook.progress,
-                    backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                        ? Theme.of(context).cardTheme.color?.withOpacity(0.3) ?? Colors.grey[800]
-                        : Theme.of(context).colorScheme.surfaceVariant,
+                    backgroundColor:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(
+                                  context,
+                                ).cardTheme.color?.withOpacity(0.3) ??
+                                Colors.grey[800]
+                            : Theme.of(context).colorScheme.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
                     minHeight: 3,
                   ),
@@ -486,7 +496,8 @@ class _EbookScreenState extends State<EbookScreen> {
                       child: _buildImportOption(
                         icon: Icons.picture_as_pdf,
                         title: AppLocalizations.of(context).pdfFile,
-                        subtitle: AppLocalizations.of(context).importPdfDocument,
+                        subtitle:
+                            AppLocalizations.of(context).importPdfDocument,
                         onTap: () {
                           Navigator.pop(context);
                           _importPdfFile();
@@ -498,7 +509,8 @@ class _EbookScreenState extends State<EbookScreen> {
                       child: _buildImportOption(
                         icon: Icons.description,
                         title: AppLocalizations.of(context).wordFile,
-                        subtitle: AppLocalizations.of(context).importWordDocument,
+                        subtitle:
+                            AppLocalizations.of(context).importWordDocument,
                         onTap: () {
                           Navigator.pop(context);
                           _importWordFile();
@@ -554,7 +566,7 @@ class _EbookScreenState extends State<EbookScreen> {
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12, 
+                fontSize: 12,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
               textAlign: TextAlign.center,
@@ -583,13 +595,20 @@ class _EbookScreenState extends State<EbookScreen> {
         int totalPages = await _getPdfPageCount(savedPath);
 
         // Show dialog to add metadata
-        _showAddEbookDialog(fileName.replaceAll('.pdf', ''), savedPath, 'pdf', totalPages);
+        _showAddEbookDialog(
+          fileName.replaceAll('.pdf', ''),
+          savedPath,
+          'pdf',
+          totalPages,
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context).failedToImportPdf}: ${e.toString()}'),
+            content: Text(
+              '${AppLocalizations.of(context).failedToImportPdf}: ${e.toString()}',
+            ),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -613,7 +632,9 @@ class _EbookScreenState extends State<EbookScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Saat ini hanya mendukung file .docx. File .doc belum didukung.'),
+                content: Text(
+                  'Saat ini hanya mendukung file .docx. File .doc belum didukung.',
+                ),
                 backgroundColor: Color(0xFFF59E0B),
               ),
             );
@@ -626,21 +647,22 @@ class _EbookScreenState extends State<EbookScreen> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              content: Row(
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(width: 20),
-                  Text(AppLocalizations.of(context).convertingWordToPdf),
-                ],
-              ),
-            ),
+            builder:
+                (context) => AlertDialog(
+                  content: Row(
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(width: 20),
+                      Text(AppLocalizations.of(context).convertingWordToPdf),
+                    ],
+                  ),
+                ),
           );
         }
 
         // Convert Word to PDF
         final pdfPath = await _convertWordToPdf(filePath, fileName);
-        
+
         // Close loading dialog
         if (mounted) {
           Navigator.pop(context);
@@ -651,7 +673,12 @@ class _EbookScreenState extends State<EbookScreen> {
           int totalPages = await _getPdfPageCount(pdfPath);
 
           // Show dialog to add metadata
-          _showAddEbookDialog(fileName.replaceAll('.docx', ''), pdfPath, 'pdf', totalPages);
+          _showAddEbookDialog(
+            fileName.replaceAll('.docx', ''),
+            pdfPath,
+            'pdf',
+            totalPages,
+          );
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -668,11 +695,13 @@ class _EbookScreenState extends State<EbookScreen> {
       if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context).failedToImportWord}: ${e.toString()}'),
+            content: Text(
+              '${AppLocalizations.of(context).failedToImportWord}: ${e.toString()}',
+            ),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -687,12 +716,12 @@ class _EbookScreenState extends State<EbookScreen> {
       if (!await file.exists()) {
         return 1; // Default fallback
       }
-      
+
       // Use Syncfusion to get page count
       final document = PdfDocument(inputBytes: await file.readAsBytes());
       final pageCount = document.pages.count;
       document.dispose();
-      
+
       return pageCount > 0 ? pageCount : 1;
     } catch (e) {
       // Fallback to 1 if unable to read PDF
@@ -701,7 +730,10 @@ class _EbookScreenState extends State<EbookScreen> {
   }
 
   // Convert Word document to PDF with advanced formatting and image preservation
-  Future<String?> _convertWordToPdf(String wordFilePath, String fileName) async {
+  Future<String?> _convertWordToPdf(
+    String wordFilePath,
+    String fileName,
+  ) async {
     try {
       final file = File(wordFilePath);
       if (!await file.exists()) {
@@ -711,35 +743,35 @@ class _EbookScreenState extends State<EbookScreen> {
       // Extract Word document structure
       final bytes = await file.readAsBytes();
       final wordData = await _extractWordData(bytes);
-      
+
       // Create PDF with enhanced formatting
       final PdfDocument document = PdfDocument();
-      
+
       // Set up document properties
       document.documentInformation.title = fileName.replaceAll('.docx', '');
       document.documentInformation.creator = 'Yupiread';
-      
+
       // Create pages with formatted content and images
       await _createAdvancedPdfPages(document, wordData);
-      
+
       // Save PDF to app directory
       final appDir = await getApplicationDocumentsDirectory();
       final pdfFileName = fileName.replaceAll('.docx', '.pdf');
       final pdfPath = path.join(appDir.path, 'ebooks', pdfFileName);
-      
+
       // Ensure directory exists
       final pdfDir = Directory(path.dirname(pdfPath));
       if (!await pdfDir.exists()) {
         await pdfDir.create(recursive: true);
       }
-      
+
       // Save the PDF
       final List<int> pdfBytes = await document.save();
       document.dispose();
-      
+
       final pdfFile = File(pdfPath);
       await pdfFile.writeAsBytes(pdfBytes);
-      
+
       return pdfPath;
     } catch (e) {
       print('Error converting Word to PDF: $e');
@@ -752,7 +784,7 @@ class _EbookScreenState extends State<EbookScreen> {
     try {
       final archive = ZipDecoder().decodeBytes(Uint8List.fromList(bytes));
       final wordData = WordDocumentData();
-      
+
       // Extract document.xml for text and formatting
       final documentXml = archive.findFile('word/document.xml');
       if (documentXml != null) {
@@ -761,18 +793,22 @@ class _EbookScreenState extends State<EbookScreen> {
         final document = XmlDocument.parse(xmlContent);
         wordData.elements = _parseDocumentElements(document);
       }
-      
+
       // Extract images from media folder
-      final mediaFiles = archive.files.where((file) => 
-          file.name.startsWith('word/media/') && 
-          (file.name.endsWith('.png') || file.name.endsWith('.jpg') || 
-           file.name.endsWith('.jpeg') || file.name.endsWith('.gif')));
-      
+      final mediaFiles = archive.files.where(
+        (file) =>
+            file.name.startsWith('word/media/') &&
+            (file.name.endsWith('.png') ||
+                file.name.endsWith('.jpg') ||
+                file.name.endsWith('.jpeg') ||
+                file.name.endsWith('.gif')),
+      );
+
       for (final mediaFile in mediaFiles) {
         final imageName = path.basename(mediaFile.name);
         wordData.images[imageName] = mediaFile.content;
       }
-      
+
       // Extract relationships for image mapping
       final relsFile = archive.findFile('word/_rels/document.xml.rels');
       if (relsFile != null) {
@@ -781,59 +817,72 @@ class _EbookScreenState extends State<EbookScreen> {
         final relsDoc = XmlDocument.parse(relsContent);
         wordData.relationships = _parseRelationships(relsDoc);
       }
-      
+
       return wordData;
     } catch (e) {
       print('Error extracting Word data: $e');
       // Fallback to simple text extraction
       final text = docxToText(Uint8List.fromList(bytes));
       return WordDocumentData()
-        ..elements = [WordElement(type: 'paragraph', text: text, formatting: WordFormatting())];
+        ..elements = [
+          WordElement(
+            type: 'paragraph',
+            text: text,
+            formatting: WordFormatting(),
+          ),
+        ];
     }
   }
-  
+
   // Parse document elements with formatting
   List<WordElement> _parseDocumentElements(XmlDocument document) {
     final elements = <WordElement>[];
-    
+
     final paragraphs = document.findAllElements('w:p');
     for (final paragraph in paragraphs) {
-      final element = WordElement(type: 'paragraph', formatting: WordFormatting());
-      
+      final element = WordElement(
+        type: 'paragraph',
+        formatting: WordFormatting(),
+      );
+
       // Parse paragraph properties for header detection
       final paragraphProps = paragraph.findElements('w:pPr').firstOrNull;
       if (paragraphProps != null) {
-        final styleElement = paragraphProps.findElements('w:pStyle').firstOrNull;
+        final styleElement =
+            paragraphProps.findElements('w:pStyle').firstOrNull;
         if (styleElement != null) {
           final styleVal = styleElement.getAttribute('w:val');
-          if (styleVal != null && (styleVal.toLowerCase().contains('heading') || 
-              styleVal.toLowerCase().contains('title'))) {
+          if (styleVal != null &&
+              (styleVal.toLowerCase().contains('heading') ||
+                  styleVal.toLowerCase().contains('title'))) {
             element.isHeader = true;
             element.headerLevel = _extractHeaderLevel(styleVal);
           }
         }
       }
-      
+
       final textRuns = paragraph.findAllElements('w:r');
-      
+
       for (final run in textRuns) {
         final runProps = run.findElements('w:rPr').firstOrNull;
         final formatting = _parseRunFormatting(runProps);
-        
+
         // Check for images
         final drawings = run.findAllElements('w:drawing');
         if (drawings.isNotEmpty) {
           final imageId = _extractImageId(drawings.first);
           if (imageId != null) {
-            elements.add(WordElement(
-              type: 'image',
-              imageId: imageId,
-              formatting: formatting,
-            ));
+            elements.add(
+              WordElement(
+                type: 'image',
+                imageId: imageId,
+                formatting: formatting,
+              ),
+            );
             continue;
           }
         }
-        
+
         // Extract text with proper space handling
         final textElements = run.findAllElements('w:t');
         for (final textElement in textElements) {
@@ -846,50 +895,54 @@ class _EbookScreenState extends State<EbookScreen> {
               text = text.replaceAll(RegExp(r'\s+'), ' ');
             }
             element.text += text;
-            element.formatting = _mergeFormatting(element.formatting, formatting);
+            element.formatting = _mergeFormatting(
+              element.formatting,
+              formatting,
+            );
           }
         }
-        
+
         // Handle tab elements
         final tabElements = run.findAllElements('w:tab');
         for (final _ in tabElements) {
           element.text += '\t';
         }
-        
+
         // Handle break elements (line breaks)
         final breakElements = run.findAllElements('w:br');
         for (final _ in breakElements) {
           element.text += '\n';
         }
       }
-      
+
       if (element.text.isNotEmpty || element.imageId != null) {
         elements.add(element);
       }
     }
-    
+
     return elements;
   }
-  
+
   // Parse run formatting properties with enhanced support
   WordFormatting _parseRunFormatting(XmlElement? runProps) {
     final formatting = WordFormatting();
-    
+
     if (runProps != null) {
       formatting.isBold = runProps.findElements('w:b').isNotEmpty;
       formatting.isItalic = runProps.findElements('w:i').isNotEmpty;
       formatting.isUnderline = runProps.findElements('w:u').isNotEmpty;
-      
+
       // Parse font size
       final sizeElement = runProps.findElements('w:sz').firstOrNull;
       if (sizeElement != null) {
         final sizeValue = sizeElement.getAttribute('w:val');
         if (sizeValue != null) {
-          formatting.fontSize = double.tryParse(sizeValue) ?? 22.0; // Word uses half-points
+          formatting.fontSize =
+              double.tryParse(sizeValue) ?? 22.0; // Word uses half-points
           formatting.fontSize = formatting.fontSize / 2; // Convert to points
         }
       }
-      
+
       // Parse text color
       final colorElement = runProps.findElements('w:color').firstOrNull;
       if (colorElement != null) {
@@ -898,7 +951,7 @@ class _EbookScreenState extends State<EbookScreen> {
           formatting.color = _parseHexColor(colorValue);
         }
       }
-      
+
       // Parse highlight/background color
       final highlightElement = runProps.findElements('w:highlight').firstOrNull;
       if (highlightElement != null) {
@@ -907,7 +960,7 @@ class _EbookScreenState extends State<EbookScreen> {
           formatting.backgroundColor = _parseNamedColor(highlightValue);
         }
       }
-      
+
       // Parse shading (background color)
       final shadingElement = runProps.findElements('w:shd').firstOrNull;
       if (shadingElement != null) {
@@ -917,10 +970,10 @@ class _EbookScreenState extends State<EbookScreen> {
         }
       }
     }
-    
+
     return formatting;
   }
-  
+
   // Parse hex color to PdfColor
   PdfColor _parseHexColor(String hex) {
     try {
@@ -932,28 +985,43 @@ class _EbookScreenState extends State<EbookScreen> {
       return PdfColor(0, 0, 0); // Default to black
     }
   }
-  
+
   // Parse named colors (Word highlight colors)
   PdfColor _parseNamedColor(String colorName) {
     switch (colorName.toLowerCase()) {
-      case 'yellow': return PdfColor(255, 255, 0);
-      case 'green': return PdfColor(0, 255, 0);
-      case 'cyan': return PdfColor(0, 255, 255);
-      case 'magenta': return PdfColor(255, 0, 255);
-      case 'blue': return PdfColor(0, 0, 255);
-      case 'red': return PdfColor(255, 0, 0);
-      case 'darkblue': return PdfColor(0, 0, 139);
-      case 'darkcyan': return PdfColor(0, 139, 139);
-      case 'darkgreen': return PdfColor(0, 100, 0);
-      case 'darkmagenta': return PdfColor(139, 0, 139);
-      case 'darkred': return PdfColor(139, 0, 0);
-      case 'darkyellow': return PdfColor(139, 139, 0);
-      case 'darkgray': return PdfColor(169, 169, 169);
-      case 'lightgray': return PdfColor(211, 211, 211);
-      default: return PdfColor(255, 255, 0); // Default to yellow
+      case 'yellow':
+        return PdfColor(255, 255, 0);
+      case 'green':
+        return PdfColor(0, 255, 0);
+      case 'cyan':
+        return PdfColor(0, 255, 255);
+      case 'magenta':
+        return PdfColor(255, 0, 255);
+      case 'blue':
+        return PdfColor(0, 0, 255);
+      case 'red':
+        return PdfColor(255, 0, 0);
+      case 'darkblue':
+        return PdfColor(0, 0, 139);
+      case 'darkcyan':
+        return PdfColor(0, 139, 139);
+      case 'darkgreen':
+        return PdfColor(0, 100, 0);
+      case 'darkmagenta':
+        return PdfColor(139, 0, 139);
+      case 'darkred':
+        return PdfColor(139, 0, 0);
+      case 'darkyellow':
+        return PdfColor(139, 139, 0);
+      case 'darkgray':
+        return PdfColor(169, 169, 169);
+      case 'lightgray':
+        return PdfColor(211, 211, 211);
+      default:
+        return PdfColor(255, 255, 0); // Default to yellow
     }
   }
-  
+
   // Extract header level from style name
   int _extractHeaderLevel(String styleName) {
     final match = RegExp(r'(\d+)').firstMatch(styleName);
@@ -962,7 +1030,7 @@ class _EbookScreenState extends State<EbookScreen> {
     }
     return 1; // Default to level 1
   }
-  
+
   // Extract image ID from drawing element
   String? _extractImageId(XmlElement drawing) {
     final blips = drawing.findAllElements('a:blip');
@@ -974,11 +1042,11 @@ class _EbookScreenState extends State<EbookScreen> {
     }
     return null;
   }
-  
+
   // Parse relationships for image mapping
   Map<String, String> _parseRelationships(XmlDocument relsDoc) {
     final relationships = <String, String>{};
-    
+
     final rels = relsDoc.findAllElements('Relationship');
     for (final rel in rels) {
       final id = rel.getAttribute('Id');
@@ -987,10 +1055,10 @@ class _EbookScreenState extends State<EbookScreen> {
         relationships[id] = target;
       }
     }
-    
+
     return relationships;
   }
-  
+
   // Merge formatting properties
   WordFormatting _mergeFormatting(WordFormatting base, WordFormatting overlay) {
     return WordFormatting()
@@ -1003,53 +1071,77 @@ class _EbookScreenState extends State<EbookScreen> {
   }
 
   // Create advanced PDF pages with formatting and images
-  Future<void> _createAdvancedPdfPages(PdfDocument document, WordDocumentData wordData) async {
+  Future<void> _createAdvancedPdfPages(
+    PdfDocument document,
+    WordDocumentData wordData,
+  ) async {
     // Set up fonts and formatting
     final Map<String, PdfFont> fonts = {
       'normal': PdfStandardFont(PdfFontFamily.helvetica, 11),
-      'bold': PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.bold),
-      'italic': PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.italic),
-      'boldItalic': PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.bold),
-      'title': PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold),
-      'header': PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
+      'bold': PdfStandardFont(
+        PdfFontFamily.helvetica,
+        11,
+        style: PdfFontStyle.bold,
+      ),
+      'italic': PdfStandardFont(
+        PdfFontFamily.helvetica,
+        11,
+        style: PdfFontStyle.italic,
+      ),
+      'boldItalic': PdfStandardFont(
+        PdfFontFamily.helvetica,
+        11,
+        style: PdfFontStyle.bold,
+      ),
+      'title': PdfStandardFont(
+        PdfFontFamily.helvetica,
+        16,
+        style: PdfFontStyle.bold,
+      ),
+      'header': PdfStandardFont(
+        PdfFontFamily.helvetica,
+        14,
+        style: PdfFontStyle.bold,
+      ),
     };
-    
+
     // Page layout settings
     const double margin = 50;
     const double paragraphSpacing = 12;
-    
+
     // Create pages
     PdfPage currentPage = document.pages.add();
     double yPosition = margin;
     final double pageWidth = currentPage.getClientSize().width - (margin * 2);
     final double pageHeight = currentPage.getClientSize().height - margin;
-    
+
     for (final element in wordData.elements) {
       // Check if we need a new page
       if (yPosition > pageHeight - 100) {
         currentPage = document.pages.add();
         yPosition = margin;
       }
-      
+
       if (element.type == 'image' && element.imageId != null) {
         // Handle image
         final imagePath = wordData.relationships[element.imageId];
         if (imagePath != null) {
           final imageName = path.basename(imagePath);
           final imageBytes = wordData.images[imageName];
-          
+
           if (imageBytes != null) {
             try {
               final pdfImage = PdfBitmap(imageBytes);
               final imageWidth = pageWidth * 0.8; // 80% of page width
-              final imageHeight = (pdfImage.height * imageWidth) / pdfImage.width;
-              
+              final imageHeight =
+                  (pdfImage.height * imageWidth) / pdfImage.width;
+
               // Check if image fits on current page
               if (yPosition + imageHeight > pageHeight - margin) {
                 currentPage = document.pages.add();
                 yPosition = margin;
               }
-              
+
               currentPage.graphics.drawImage(
                 pdfImage,
                 Rect.fromLTWH(
@@ -1059,21 +1151,21 @@ class _EbookScreenState extends State<EbookScreen> {
                   imageHeight,
                 ),
               );
-              
+
               yPosition += imageHeight + paragraphSpacing;
             } catch (e) {
               print('Error adding image to PDF: $e');
               // Add placeholder text for failed images
               final font = fonts['normal']!;
               final brush = PdfSolidBrush(PdfColor(100, 100, 100));
-              
+
               currentPage.graphics.drawString(
                 '[Gambar tidak dapat dimuat]',
                 font,
                 brush: brush,
                 bounds: Rect.fromLTWH(margin, yPosition, pageWidth, 20),
               );
-              
+
               yPosition += 20 + paragraphSpacing;
             }
           }
@@ -1081,11 +1173,14 @@ class _EbookScreenState extends State<EbookScreen> {
       } else if (element.type == 'paragraph' && element.text.isNotEmpty) {
         // Handle text paragraph with formatting
         final formatting = element.formatting;
-        
+
         // Determine font based on formatting and header status
         PdfFont font;
-        double fontSize = formatting.fontSize > 0 ? formatting.fontSize.clamp(8.0, 24.0) : 11.0;
-        
+        double fontSize =
+            formatting.fontSize > 0
+                ? formatting.fontSize.clamp(8.0, 24.0)
+                : 11.0;
+
         // Apply header-specific formatting
         if (element.isHeader) {
           switch (element.headerLevel) {
@@ -1104,61 +1199,72 @@ class _EbookScreenState extends State<EbookScreen> {
           // Headers are typically bold
           formatting.isBold = true;
         }
-        
+
         // Create font with proper style
         if (formatting.isBold && formatting.isItalic) {
-          font = PdfStandardFont(PdfFontFamily.helvetica, fontSize, style: PdfFontStyle.bold);
+          font = PdfStandardFont(
+            PdfFontFamily.helvetica,
+            fontSize,
+            style: PdfFontStyle.bold,
+          );
         } else if (formatting.isBold) {
-          font = PdfStandardFont(PdfFontFamily.helvetica, fontSize, style: PdfFontStyle.bold);
+          font = PdfStandardFont(
+            PdfFontFamily.helvetica,
+            fontSize,
+            style: PdfFontStyle.bold,
+          );
         } else if (formatting.isItalic) {
-          font = PdfStandardFont(PdfFontFamily.helvetica, fontSize, style: PdfFontStyle.italic);
+          font = PdfStandardFont(
+            PdfFontFamily.helvetica,
+            fontSize,
+            style: PdfFontStyle.italic,
+          );
         } else {
           font = PdfStandardFont(PdfFontFamily.helvetica, fontSize);
         }
-        
+
         // Determine text color
         final textBrush = PdfSolidBrush(formatting.color ?? PdfColor(0, 0, 0));
-        
+
         // Handle background color if present
         if (formatting.backgroundColor != null) {
           // Draw background rectangle first
           final backgroundBrush = PdfSolidBrush(formatting.backgroundColor!);
-          
+
           // Measure text to get background size
           final textSize = font.measureString(element.text);
           final backgroundRect = Rect.fromLTWH(
-            margin - 2, 
-            yPosition - 2, 
-            textSize.width + 4, 
-            textSize.height + 4
+            margin - 2,
+            yPosition - 2,
+            textSize.width + 4,
+            textSize.height + 4,
           );
-          
+
           currentPage.graphics.drawRectangle(
             brush: backgroundBrush,
             bounds: backgroundRect,
           );
         }
-        
+
         // Create text element with formatting
         final textElement = PdfTextElement(
           text: element.text,
           font: font,
           brush: textBrush,
         );
-        
+
         // Draw text with pagination
-        final result = textElement.draw(
-          page: currentPage,
-          bounds: Rect.fromLTWH(margin, yPosition, pageWidth, 0),
-          format: PdfLayoutFormat(
-            layoutType: PdfLayoutType.paginate,
-          ),
-        )!;
-        
+        final result =
+            textElement.draw(
+              page: currentPage,
+              bounds: Rect.fromLTWH(margin, yPosition, pageWidth, 0),
+              format: PdfLayoutFormat(layoutType: PdfLayoutType.paginate),
+            )!;
+
         // Add extra spacing for headers
         final extraSpacing = element.isHeader ? paragraphSpacing * 1.5 : 0;
         yPosition = result.bounds.bottom + paragraphSpacing + extraSpacing;
-        
+
         // Update current page if text flowed to next page
         if (result.page != currentPage) {
           currentPage = result.page;
@@ -1167,7 +1273,6 @@ class _EbookScreenState extends State<EbookScreen> {
       }
     }
   }
-
 
   void _showAddEbookDialog(
     String defaultTitle,
@@ -1305,9 +1410,7 @@ class _EbookScreenState extends State<EbookScreen> {
   void _navigateToTextEditor() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const TextEbookEditorScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const TextEbookEditorScreen()),
     ).then((_) => _updateFilteredEbooks());
   }
 
@@ -1403,5 +1506,4 @@ class _EbookScreenState extends State<EbookScreen> {
           ),
     );
   }
-
 }

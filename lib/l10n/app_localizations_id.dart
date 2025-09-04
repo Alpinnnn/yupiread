@@ -801,7 +801,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get merge => 'Gabung';
 
   @override
-  String get pdfTools => 'Tools PDF';
+  String get pdfTools => 'Tools';
 
   @override
   String pdfsSelected(int count) => '$count PDF dipilih';
@@ -810,5 +810,170 @@ class AppLocalizationsId extends AppLocalizations {
   String get selectAll => 'Pilih Semua';
 
   @override
-  String get deselectAll => 'Batal Pilih Semua';
+  String get deselectAll => 'Batalkan Semua';
+
+  // Language Selection Dialog
+  @override
+  String get selectLanguageTitle => 'Pilih Bahasa';
+  
+  @override
+  String get indonesianLanguage => 'Bahasa Indonesia';
+  
+  @override
+  String get englishLanguage => 'English';
+  
+  @override
+  String get indonesianLanguageDesc => 'Gunakan bahasa Indonesia untuk aplikasi';
+  
+  @override
+  String get englishLanguageDesc => 'Use English language for the app';
+  
+  @override
+  String get languageChangedSuccess => 'Bahasa berhasil diubah';
+  
+  @override
+  String get languageChangedTitle => 'Bahasa Berhasil Diubah';
+  
+  @override
+  String get restartAppRequired => 'Aplikasi perlu dimulai ulang untuk menerapkan perubahan bahasa.';
+
+  // Profile Screen
+  @override
+  String get managementSetting => 'Pengaturan Manajemen';
+  
+  @override
+  String get appSetting => 'Pengaturan Aplikasi';
+  
+  @override
+  String get tagSetting => 'Pengaturan Tag';
+  
+  @override
+  String get gallerySetting => 'Pengaturan Galeri';
+  
+  @override
+  String get ebookSetting => 'Pengaturan Ebook';
+  
+  @override
+  String get languageSettingsProfile => 'Pengaturan Bahasa';
+  
+  @override
+  String get themeSetting => 'Pengaturan Tema';
+  
+  @override
+  String get activitySettingsProfile => 'Pengaturan Aktivitas';
+  
+  @override
+  String get removeData => 'Hapus Data';
+  
+  @override
+  String get cropProfilePhoto => 'Crop Foto Profil';
+  
+  @override
+  String get profilePhotoUpdatedSuccess => 'Foto profil berhasil diperbarui';
+  
+  @override
+  String get failedToUpdateProfilePhoto => 'Gagal mengubah foto profil';
+  
+  @override
+  String get themeChangedTo => 'Tema berhasil diubah ke';
+  
+  @override
+  String get toolsSectionEnabled => 'Bagian tools diaktifkan';
+  
+  @override
+  String get toolsSectionDisabled => 'Bagian tools dinonaktifkan';
+  
+  @override
+  String get removeAllData => 'Hapus Semua Data';
+  
+  @override
+  String get removeDataConfirmation => 'Apakah Anda yakin ingin menghapus semua data aplikasi? Tindakan ini tidak dapat dibatalkan dan akan menghapus:\n\n• Semua foto dan catatan\n• Semua ebook dan progress membaca\n• Riwayat aktivitas\n• Pengaturan profil\n• Tag kustom\n\nAplikasi akan dimulai dari awal.';
+  
+  @override
+  String get removeAll => 'Hapus Semua';
+  
+  @override
+  String get removingData => 'Menghapus data...';
+  
+  @override
+  String get allDataRemoved => 'Semua data berhasil dihapus';
+  
+  @override
+  String get failedToRemoveData => 'Gagal menghapus data';
+
+  // Gallery Screen Additional Localization
+  @override
+  String get failedToSelectPhoto => 'Gagal memilih foto';
+  
+  @override
+  String get selectAddMethod => 'Pilih Cara Menambahkan';
+  
+  @override
+  String youSelected(int count) => 'Anda memilih $count foto. Bagaimana Anda ingin menambahkannya?';
+  
+  @override
+  String get separatePhotos => 'Foto Terpisah';
+  
+  @override
+  String get separatePhotosDesc => 'Setiap foto sebagai item terpisah di galeri';
+  
+  @override
+  String get multiPhoto => 'Multi-Photo';
+  
+  @override
+  String addPhotosCount(int count) => 'Tambah $count Foto';
+  
+  @override
+  String get titlePrefix => 'Prefix Judul (akan ditambah nomor)';
+  
+  @override
+  String get descriptionOptionalShort => 'Deskripsi (opsional)';
+  
+  @override
+  String get tagsOptional => 'Tag (opsional):';
+  
+  @override
+  String get newTagsComma => 'Tag baru (pisahkan dengan koma)';
+  
+  @override
+  String get saveAll => 'Simpan Semua';
+  
+  @override
+  String get createPhotoPageTitle => 'Buat Halaman Foto';
+  
+  @override
+  String photosSelected(int count) => '$count foto dipilih';
+  
+  @override
+  String get pageTitle => 'Judul Halaman';
+  
+  @override
+  String get createPage => 'Buat Halaman';
+  
+  @override
+  String photosAddedSuccessfully(int count) => '$count foto berhasil ditambahkan';
+  
+  @override
+  String photoPageCreatedSuccess(String title, int count) => 'Halaman foto "$title" berhasil dibuat dengan $count foto';
+  
+  @override
+  String photoDeletedSuccess(String title) => 'Foto "$title" berhasil dihapus';
+  
+  @override
+  String failedToSavePhotoError(String error) => 'Gagal menyimpan foto: $error';
+  
+  @override
+  String failedToSelectPhotoError(String error) => 'Gagal memilih foto: $error';
+  
+  @override
+  String failedToAddPhotosError(String error) => 'Gagal menambahkan foto: $error';
+  
+  @override
+  String get multiPhotoPageTitle => 'Halaman Multi-Foto';
+  
+  @override
+  String get multiPhotoPageDesc => 'Semua foto dalam satu halaman yang bisa di-swipe';
+  
+  @override
+  String get photoPage => 'Halaman Foto';
 }
