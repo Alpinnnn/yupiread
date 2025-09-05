@@ -976,4 +976,137 @@ class AppLocalizationsId extends AppLocalizations {
   
   @override
   String get photoPage => 'Halaman Foto';
+
+  // Backup & Restore
+  @override
+  String get backupRestore => 'Backup & Restore';
+
+  @override
+  String get backup => 'Backup';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get googleDrive => 'Google Drive';
+
+  @override
+  String get signInToGoogleDrive => 'Masuk ke Google Drive';
+
+  @override
+  String get signOutFromGoogleDrive => 'Keluar dari Google Drive';
+
+  @override
+  String get connectedAs => 'Terhubung sebagai';
+
+  @override
+  String get notConnectedToGoogleDrive => 'Belum terhubung ke Google Drive';
+
+  @override
+  String get createBackup => 'Buat Backup';
+
+  @override
+  String get backupList => 'Daftar Backup';
+
+  @override
+  String get noBackupsYet => 'Belum ada backup';
+
+  @override
+  String get createFirstBackup => 'Buat backup pertama Anda';
+
+  @override
+  String get backupSuccessful => 'Backup berhasil';
+
+  @override
+  String get backupFailed => 'Backup gagal';
+
+  @override
+  String get restoreSuccessful => 'Restore berhasil';
+
+  @override
+  String get restoreFailed => 'Restore gagal';
+
+  @override
+  String get deleteBackup => 'Hapus Backup';
+
+  @override
+  String get confirmRestore => 'Konfirmasi Restore';
+
+  @override
+  String get confirmRestoreMessage => 'Apakah Anda yakin ingin mengembalikan data dari backup ini?\n\nSemua data saat ini akan diganti dengan data dari backup.';
+
+  @override
+  String get confirmDeleteBackup => 'Apakah Anda yakin ingin menghapus backup ini?';
+
+  @override
+  String get backupDeleted => 'Backup berhasil dihapus';
+
+  @override
+  String get failedToDeleteBackup => 'Gagal menghapus backup';
+
+  @override
+  String get failedToLoadBackups => 'Gagal memuat daftar backup';
+
+  @override
+  String get signInSuccessful => 'Berhasil masuk ke Google Drive';
+
+  @override
+  String get signInFailed => 'Gagal masuk ke Google Drive';
+
+  @override
+  String get signOutSuccessful => 'Berhasil keluar dari Google Drive';
+
+  @override
+  String get pleaseSignInFirst => 'Silakan masuk ke Google Drive terlebih dahulu';
+
+  @override
+  String get refreshing => 'Memperbarui...';
+
+  @override
+  String get autoBackup => 'Auto Backup';
+
+  @override
+  String get autoBackupInterval => 'Interval Auto Backup';
+
+  @override
+  String get enableAutoBackup => 'Aktifkan Auto Backup';
+
+  @override
+  String get selectInterval => 'Pilih Interval';
+
+  @override
+  String get daily => 'Harian';
+
+  @override
+  String get weekly => 'Mingguan';
+
+  @override
+  String get monthly => 'Bulanan';
+
+  @override
+  String get autoBackupEnabled => 'Auto backup diaktifkan';
+
+  @override
+  String get autoBackupDisabled => 'Auto backup dinonaktifkan';
+
+  @override
+  String get daysAgo => 'hari lalu';
+
+  @override
+  String get hoursAgo => 'jam lalu';
+
+  @override
+  String get minutesAgo => 'menit lalu';
+
+  @override
+  String get justNow => 'Baru saja';
+
+  @override
+  String get signInToViewBackups => 'Masuk ke Google Drive untuk melihat backup';
+
+  @override
+  String get backingUp => 'Backup...';
+
+  @override
+  String get signOut => 'Keluar';
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/backup_service.dart';
+import '../l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -47,7 +49,7 @@ class _BackupScreenState extends State<BackupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat daftar backup: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context).failedToLoadBackups}: $e')),
         );
       }
     } finally {
@@ -63,13 +65,13 @@ class _BackupScreenState extends State<BackupScreen> {
       await _loadBackupFiles();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Berhasil masuk ke Google Drive')),
+          SnackBar(content: Text(AppLocalizations.of(context).signInSuccessful)),
         );
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal masuk ke Google Drive')),
+          SnackBar(content: Text(AppLocalizations.of(context).signInFailed)),
         );
       }
     }
@@ -82,7 +84,7 @@ class _BackupScreenState extends State<BackupScreen> {
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Berhasil keluar dari Google Drive')),
+        SnackBar(content: Text(AppLocalizations.of(context).signOutSuccessful)),
       );
     }
   }
@@ -90,7 +92,7 @@ class _BackupScreenState extends State<BackupScreen> {
   Future<void> _createBackup() async {
     if (!_backupService.isSignedInToGoogleDrive) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Silakan masuk ke Google Drive terlebih dahulu')),
+        SnackBar(content: Text(AppLocalizations.of(context).pleaseSignInFirst)),
       );
       return;
     }
@@ -100,13 +102,13 @@ class _BackupScreenState extends State<BackupScreen> {
       await _loadBackupFiles();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup berhasil dibuat')),
+          SnackBar(content: Text(AppLocalizations.of(context).backupSuccessful)),
         );
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup gagal: ${_backupService.backupStatus}')),
+          SnackBar(content: Text('${AppLocalizations.of(context).backupFailed}: ${_backupService.backupStatus}')),
         );
       }
     }
@@ -116,19 +118,18 @@ class _BackupScreenState extends State<BackupScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Restore'),
+        title: Text(AppLocalizations.of(context).confirmRestore),
         content: Text(
-          'Apakah Anda yakin ingin mengembalikan data dari backup "${backupFile.name}"?\n\n'
-          'Semua data saat ini akan diganti dengan data dari backup.',
+          '${AppLocalizations.of(context).confirmRestoreMessage.replaceAll('backup ini', 'backup "${backupFile.name}"')}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Restore'),
+            child: Text(AppLocalizations.of(context).restore),
           ),
         ],
       ),
@@ -139,7 +140,7 @@ class _BackupScreenState extends State<BackupScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? 'Restore berhasil' : 'Restore gagal: ${_backupService.restoreStatus}'),
+            content: Text(success ? AppLocalizations.of(context).restoreSuccessful : '${AppLocalizations.of(context).restoreFailed}: ${_backupService.restoreStatus}'),
           ),
         );
       }
@@ -150,16 +151,16 @@ class _BackupScreenState extends State<BackupScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Backup'),
-        content: Text('Apakah Anda yakin ingin menghapus backup "${backupFile.name}"?'),
+        title: Text(AppLocalizations.of(context).deleteBackup),
+        content: Text(AppLocalizations.of(context).confirmDeleteBackup.replaceAll('backup ini', 'backup "${backupFile.name}"')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Hapus'),
+            child: Text(AppLocalizations.of(context).delete),
           ),
         ],
       ),
@@ -171,15 +172,46 @@ class _BackupScreenState extends State<BackupScreen> {
         await _loadBackupFiles();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Backup berhasil dihapus')),
+            SnackBar(content: Text(AppLocalizations.of(context).backupDeleted)),
           );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menghapus backup')),
+            SnackBar(content: Text(AppLocalizations.of(context).failedToDeleteBackup)),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _showAutoBackupDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool isAutoBackupEnabled = prefs.getBool('auto_backup_enabled') ?? false;
+    String currentInterval = prefs.getString('auto_backup_interval') ?? 'weekly';
+
+    if (!mounted) return;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _AutoBackupDialog(
+        isEnabled: isAutoBackupEnabled,
+        currentInterval: currentInterval,
+      ),
+    );
+
+    if (result != null) {
+      await prefs.setBool('auto_backup_enabled', result['enabled']);
+      await prefs.setString('auto_backup_interval', result['interval']);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['enabled'] 
+              ? AppLocalizations.of(context).autoBackupEnabled 
+              : AppLocalizations.of(context).autoBackupDisabled),
+          ),
+        );
       }
     }
   }
@@ -188,8 +220,15 @@ class _BackupScreenState extends State<BackupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Backup & Restore'),
+        title: Text(AppLocalizations.of(context).backupRestore),
         elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: _showAutoBackupDialog,
+            icon: const Icon(Icons.schedule),
+            tooltip: AppLocalizations.of(context).autoBackup,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -221,7 +260,7 @@ class _BackupScreenState extends State<BackupScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Google Drive',
+                      AppLocalizations.of(context).googleDrive,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -231,7 +270,7 @@ class _BackupScreenState extends State<BackupScreen> {
                 const SizedBox(height: 8),
                 if (_backupService.isSignedInToGoogleDrive) ...[
                   Text(
-                    'Terhubung sebagai: ${_backupService.currentUserEmail}',
+                    '${AppLocalizations.of(context).connectedAs}: ${_backupService.currentUserEmail}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.green,
                     ),
@@ -249,19 +288,19 @@ class _BackupScreenState extends State<BackupScreen> {
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.backup),
-                          label: Text(_backupService.isBackingUp ? 'Backup...' : 'Buat Backup'),
+                          label: Text(_backupService.isBackingUp ? AppLocalizations.of(context).backingUp : AppLocalizations.of(context).createBackup),
                         ),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton(
                         onPressed: _signOutFromGoogleDrive,
-                        child: const Text('Keluar'),
+                        child: Text(AppLocalizations.of(context).signOut),
                       ),
                     ],
                   ),
                 ] else ...[
                   Text(
-                    'Belum terhubung ke Google Drive',
+                    AppLocalizations.of(context).notConnectedToGoogleDrive,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey,
                     ),
@@ -272,7 +311,7 @@ class _BackupScreenState extends State<BackupScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _signInToGoogleDrive,
                       icon: const Icon(Icons.login),
-                      label: const Text('Masuk ke Google Drive'),
+                      label: Text(AppLocalizations.of(context).signInToGoogleDrive),
                     ),
                   ),
                 ],
@@ -333,7 +372,7 @@ class _BackupScreenState extends State<BackupScreen> {
                     child: Row(
                       children: [
                         Text(
-                          'Daftar Backup',
+                          AppLocalizations.of(context).backupList,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -369,18 +408,18 @@ class _BackupScreenState extends State<BackupScreen> {
 
   Widget _buildBackupFilesList() {
     if (!_backupService.isSignedInToGoogleDrive) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
+              const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
               Text(
-                'Masuk ke Google Drive untuk melihat backup',
+                AppLocalizations.of(context).signInToViewBackups,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: const TextStyle(color: Colors.grey),
               ),
             ],
           ),
@@ -395,18 +434,18 @@ class _BackupScreenState extends State<BackupScreen> {
     }
 
     if (_backupFiles.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.backup, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
+              const Icon(Icons.backup, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
               Text(
-                'Belum ada backup\nBuat backup pertama Anda',
+                '${AppLocalizations.of(context).noBackupsYet}\n${AppLocalizations.of(context).createFirstBackup}',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: const TextStyle(color: Colors.grey),
               ),
             ],
           ),
@@ -441,23 +480,23 @@ class _BackupScreenState extends State<BackupScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'restore',
                 child: Row(
                   children: [
-                    Icon(Icons.restore),
-                    SizedBox(width: 8),
-                    Text('Restore'),
+                    const Icon(Icons.restore),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context).restore),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'delete',
                 child: Row(
                   children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Hapus', style: TextStyle(color: Colors.red)),
+                    const Icon(Icons.delete, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context).delete, style: const TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
@@ -465,6 +504,106 @@ class _BackupScreenState extends State<BackupScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _AutoBackupDialog extends StatefulWidget {
+  final bool isEnabled;
+  final String currentInterval;
+
+  const _AutoBackupDialog({
+    required this.isEnabled,
+    required this.currentInterval,
+  });
+
+  @override
+  State<_AutoBackupDialog> createState() => _AutoBackupDialogState();
+}
+
+class _AutoBackupDialogState extends State<_AutoBackupDialog> {
+  late bool _isEnabled;
+  late String _selectedInterval;
+
+  @override
+  void initState() {
+    super.initState();
+    _isEnabled = widget.isEnabled;
+    _selectedInterval = widget.currentInterval;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(AppLocalizations.of(context).autoBackup),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            title: Text(AppLocalizations.of(context).enableAutoBackup),
+            value: _isEnabled,
+            onChanged: (value) {
+              setState(() {
+                _isEnabled = value;
+              });
+            },
+          ),
+          if (_isEnabled) ...[
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context).selectInterval,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            RadioListTile<String>(
+              title: Text(AppLocalizations.of(context).daily),
+              value: 'daily',
+              groupValue: _selectedInterval,
+              onChanged: (value) {
+                setState(() {
+                  _selectedInterval = value!;
+                });
+              },
+            ),
+            RadioListTile<String>(
+              title: Text(AppLocalizations.of(context).weekly),
+              value: 'weekly',
+              groupValue: _selectedInterval,
+              onChanged: (value) {
+                setState(() {
+                  _selectedInterval = value!;
+                });
+              },
+            ),
+            RadioListTile<String>(
+              title: Text(AppLocalizations.of(context).monthly),
+              value: 'monthly',
+              groupValue: _selectedInterval,
+              onChanged: (value) {
+                setState(() {
+                  _selectedInterval = value!;
+                });
+              },
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(AppLocalizations.of(context).cancel),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop({
+              'enabled': _isEnabled,
+              'interval': _selectedInterval,
+            });
+          },
+          child: Text(AppLocalizations.of(context).save),
+        ),
+      ],
     );
   }
 }

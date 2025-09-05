@@ -221,7 +221,7 @@ class BackupService extends ChangeNotifier {
       return fileList.files?.map((file) => BackupFileInfo(
         id: file.id!,
         name: file.name!,
-        size: file.size != null ? int.parse(file.size!) : 0,
+        size: file.size != null ? int.tryParse(file.size!) ?? 0 : 0,
         createdTime: file.createdTime ?? DateTime.now(),
       )).toList() ?? [];
     } catch (e) {

@@ -977,4 +977,137 @@ class AppLocalizationsEn extends AppLocalizations {
   
   @override
   String get photoPage => 'Photo Page';
+
+  // Backup & Restore
+  @override
+  String get backupRestore => 'Backup & Restore';
+
+  @override
+  String get backup => 'Backup';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get googleDrive => 'Google Drive';
+
+  @override
+  String get signInToGoogleDrive => 'Sign In to Google Drive';
+
+  @override
+  String get signOutFromGoogleDrive => 'Sign Out from Google Drive';
+
+  @override
+  String get connectedAs => 'Connected as';
+
+  @override
+  String get notConnectedToGoogleDrive => 'Not connected to Google Drive';
+
+  @override
+  String get createBackup => 'Create Backup';
+
+  @override
+  String get backupList => 'Backup List';
+
+  @override
+  String get noBackupsYet => 'No backups yet';
+
+  @override
+  String get createFirstBackup => 'Create your first backup';
+
+  @override
+  String get backupSuccessful => 'Backup successful';
+
+  @override
+  String get backupFailed => 'Backup failed';
+
+  @override
+  String get restoreSuccessful => 'Restore successful';
+
+  @override
+  String get restoreFailed => 'Restore failed';
+
+  @override
+  String get deleteBackup => 'Delete Backup';
+
+  @override
+  String get confirmRestore => 'Confirm Restore';
+
+  @override
+  String get confirmRestoreMessage => 'Are you sure you want to restore data from this backup?\n\nAll current data will be replaced with backup data.';
+
+  @override
+  String get confirmDeleteBackup => 'Are you sure you want to delete this backup?';
+
+  @override
+  String get backupDeleted => 'Backup successfully deleted';
+
+  @override
+  String get failedToDeleteBackup => 'Failed to delete backup';
+
+  @override
+  String get failedToLoadBackups => 'Failed to load backup list';
+
+  @override
+  String get signInSuccessful => 'Successfully signed in to Google Drive';
+
+  @override
+  String get signInFailed => 'Failed to sign in to Google Drive';
+
+  @override
+  String get signOutSuccessful => 'Successfully signed out from Google Drive';
+
+  @override
+  String get pleaseSignInFirst => 'Please sign in to Google Drive first';
+
+  @override
+  String get refreshing => 'Refreshing...';
+
+  @override
+  String get autoBackup => 'Auto Backup';
+
+  @override
+  String get autoBackupInterval => 'Auto Backup Interval';
+
+  @override
+  String get enableAutoBackup => 'Enable Auto Backup';
+
+  @override
+  String get selectInterval => 'Select Interval';
+
+  @override
+  String get daily => 'Daily';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get monthly => 'Monthly';
+
+  @override
+  String get autoBackupEnabled => 'Auto backup enabled';
+
+  @override
+  String get autoBackupDisabled => 'Auto backup disabled';
+
+  @override
+  String get daysAgo => 'days ago';
+
+  @override
+  String get hoursAgo => 'hours ago';
+
+  @override
+  String get minutesAgo => 'minutes ago';
+
+  @override
+  String get justNow => 'Just now';
+
+  @override
+  String get signInToViewBackups => 'Sign in to Google Drive to view backups';
+
+  @override
+  String get backingUp => 'Backing up...';
+
+  @override
+  String get signOut => 'Sign Out';
 }
