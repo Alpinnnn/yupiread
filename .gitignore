@@ -43,3 +43,26 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Security - Sensitive files that should NEVER be committed
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
+key.properties
+upload-keystore.jks
+android/key.properties
+android/app/upload-keystore.jks
+
+# API Keys and secrets
+**/secrets/
+**/keys/
+**/*secret*
+**/*key*.json
+**/*credentials*.json
+
+# Local configuration
+local.properties
+android/local.properties

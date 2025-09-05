@@ -9,6 +9,7 @@ import 'tag_settings_screen.dart';
 import 'gallery_settings_screen.dart';
 import 'ebook_settings_screen.dart';
 import '../screens/activity_settings_screen.dart';
+import '../screens/backup_screen.dart';
 import '../widgets/language_selection_dialog.dart';
 import '../services/language_service.dart';
 import '../l10n/app_localizations.dart';
@@ -352,6 +353,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: l10n.toolsSettings,
                   color: const Color(0xFF8B5CF6),
                   onTap: _showToolsSettingDialog,
+                ),
+                const SizedBox(height: 12),
+                _buildSettingItem(
+                  icon: Icons.backup,
+                  title: 'Backup & Restore',
+                  color: const Color(0xFF06B6D4),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BackupScreen(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 _buildSettingItem(

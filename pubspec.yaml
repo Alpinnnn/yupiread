@@ -29,6 +29,9 @@ dependencies:
   flutter_quill_extensions: ^11.0.0-dev.0
   pdf_combiner: ^4.3.8
   pdf: ^3.10.4
+  google_sign_in: ^6.2.1
+  googleapis: ^13.2.0
+  http: ^1.2.1
 
 dev_dependencies:
   flutter_test:
