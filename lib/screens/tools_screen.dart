@@ -32,12 +32,12 @@ class _ToolsScreenState extends State<ToolsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tools',
+                        l10n.tools,
                         style: Theme.of(context).textTheme.headlineLarge,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Plus Exclusive',
+                        l10n.plusExclusive,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -86,8 +86,8 @@ class _ToolsScreenState extends State<ToolsScreen> {
                       },
                       {
                         'icon': Icons.picture_as_pdf,
-                        'title': 'Convert to PDF',
-                        'description': 'Convert images to PDF files',
+                        'title': l10n.convertToPdf,
+                        'description': l10n.convertImagesToPdf,
                         'color': const Color(0xFFEF4444),
                         'onTap': () {
                           Navigator.push(

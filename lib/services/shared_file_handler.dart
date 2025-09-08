@@ -122,6 +122,8 @@ class SharedFileHandler {
 
   static Future<void> _addImageToGallery(BuildContext context, File imageFile) async {
     try {
+      final l10n = AppLocalizations.of(context);
+      
       // Copy image to app directory
       final Directory appDir = await getApplicationDocumentsDirectory();
       final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(imageFile.path)}';
@@ -142,8 +144,8 @@ class SharedFileHandler {
       
       await _dataService.addPhoto(
         imagePath: newFile.path,
-        title: 'Shared Image',
-        description: 'Image shared from external app',
+        title: l10n.sharedImage,
+        description: l10n.sharedImageDescription,
         tags: [defaultTag],
       );
 
@@ -186,6 +188,7 @@ class SharedFileHandler {
 
   static Future<void> _handleSharedDocument(BuildContext context, File documentFile, String mimeType, bool isOpenWith) async {
     try {
+      final l10n = AppLocalizations.of(context);
       final Directory appDir = await getApplicationDocumentsDirectory();
       final Directory ebooksDir = Directory(path.join(appDir.path, 'ebooks'));
       if (!await ebooksDir.exists()) {
@@ -225,7 +228,7 @@ class SharedFileHandler {
       final ebook = await _dataService.addEbook(
         title: title,
         filePath: finalFilePath,
-        description: 'Document shared from external app',
+        description: l10n.sharedDocumentDescription,
         tags: [defaultTag],
         fileType: fileType,
       );
@@ -338,7 +341,7 @@ class SharedFileHandler {
       
       return pdfPath;
     } catch (e) {
-      throw Exception('Gagal mengkonversi Word ke PDF: $e');
+      throw Exception('Failed to convert Word to PDF: $e');
     }
   }
 }

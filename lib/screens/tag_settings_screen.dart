@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/data_service.dart';
+import '../l10n/app_localizations.dart';
 
 class TagSettingsScreen extends StatefulWidget {
   const TagSettingsScreen({super.key});
@@ -25,7 +26,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'Tag Settings',
+          AppLocalizations.of(context).tagSettings,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: Theme.of(context).appBarTheme.foregroundColor,
@@ -59,11 +60,11 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Tambah Tag Baru',
+                    AppLocalizations.of(context).addNewTag,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.headlineMedium?.color,
+                      color: Theme.of(context).textTheme.headlineSmall?.color,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -97,9 +98,9 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Tambah',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        child: Text(
+                          AppLocalizations.of(context).addTag,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -110,7 +111,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
             const SizedBox(height: 24),
             // Tags List Section
             Text(
-              'Daftar Tag',
+              AppLocalizations.of(context).tagList,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -138,7 +139,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                   children: [
                     // Available Tags Section
                     Text(
-                      'Available Tags',
+                      AppLocalizations.of(context).availableTags,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -159,7 +160,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    'Belum ada tag tersedia',
+                                    AppLocalizations.of(context).noTagsAvailable,
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Theme.of(context).textTheme.bodyLarge?.color,
@@ -167,7 +168,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Tambahkan tag untuk mengorganisir foto dan ebook Anda',
+                                    AppLocalizations.of(context).addTagsToOrganize,
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -284,9 +285,9 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
     final tagName = _tagController.text.trim();
     if (tagName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nama tag tidak boleh kosong'),
-          backgroundColor: Color(0xFFEF4444),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).tagNameEmpty),
+          backgroundColor: const Color(0xFFEF4444),
         ),
       );
       return;
@@ -298,14 +299,14 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tag "$tagName" berhasil ditambahkan'),
+          content: Text(AppLocalizations.of(context).tagAddedSuccessfully(tagName)),
           backgroundColor: const Color(0xFF10B981),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Tag "$tagName" sudah ada atau tidak valid'),
+          content: Text(AppLocalizations.of(context).tagAlreadyExists(tagName)),
           backgroundColor: const Color(0xFFEF4444),
         ),
       );
@@ -320,15 +321,15 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            title: const Text(
-              'Hapus Tag',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            title: Text(
+              AppLocalizations.of(context).deleteTag,
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            content: Text('Apakah Anda yakin ingin menghapus tag "$tag"?'),
+            content: Text(AppLocalizations.of(context).confirmDeleteTag(tag)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
+                child: Text(AppLocalizations.of(context).cancel),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -341,15 +342,15 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Tag "$tag" berhasil dihapus'),
+                        content: Text(AppLocalizations.of(context).tagDeletedSuccessfully(tag)),
                         backgroundColor: const Color(0xFF10B981),
                       ),
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Gagal menghapus tag'),
-                        backgroundColor: Color(0xFFEF4444),
+                      SnackBar(
+                        content: Text(AppLocalizations.of(context).failedToDeleteTag),
+                        backgroundColor: const Color(0xFFEF4444),
                       ),
                     );
                   }
@@ -358,7 +359,7 @@ class _TagSettingsScreenState extends State<TagSettingsScreen> {
                   backgroundColor: const Color(0xFFEF4444),
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Hapus'),
+                child: Text(AppLocalizations.of(context).delete),
               ),
             ],
           ),

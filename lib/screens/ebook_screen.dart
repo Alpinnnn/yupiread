@@ -1344,10 +1344,12 @@ class _EbookScreenState extends State<EbookScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
+                                  selectedColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
+                                      : const Color(0xFF2563EB).withOpacity(0.2),
+                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF60A5FA)
+                                      : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),
@@ -1464,10 +1466,12 @@ class _EbookScreenState extends State<EbookScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
+                                  selectedColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
+                                      : const Color(0xFF2563EB).withOpacity(0.2),
+                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF60A5FA)
+                                      : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),

@@ -126,10 +126,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get editScannedText => 'Edit scanned text...';
 
-  @override
-  String get imageAndTextSaved => 'Image and text successfully saved to gallery';
+  String get imageAndTextSaved =>
+      'Image and text successfully saved to gallery';
 
-  @override
   String get failedToSaveToGallery => 'Failed to save to gallery';
 
   @override
@@ -225,51 +224,55 @@ class AppLocalizationsEn extends AppLocalizations {
   // Gallery Screen Specific
   @override
   String get photoTitle => 'Photo Title';
-  
+
   @override
   String get descriptionOptional => 'Description (Optional)';
-  
+
   @override
   String get selectTagsOptional => 'Select Tags (Optional):';
-  
+
   @override
   String get failedToSavePhoto => 'Failed to save photo';
-  
+
   @override
-  String photoAddedSuccessfully(String title) => 'Photo "$title" successfully added';
-  
+  String photoAddedSuccessfully(String title) =>
+      'Photo "$title" successfully added';
+
   @override
   String get selectSaveMethod => 'Select Save Method';
-  
+
   @override
-  String documentsScannedCount(int count) => '$count documents successfully scanned.';
-  
+  String documentsScannedCount(int count) =>
+      '$count documents successfully scanned.';
+
   @override
   String get multiDocumentPage => 'Multi-Document Page';
-  
+
   @override
   String get multiDocumentPageDesc => 'All documents in one swipeable page';
-  
+
   @override
   String get separateDocuments => 'Separate Documents';
-  
+
   @override
-  String get separateDocumentsDesc => 'Each document as separate item in gallery';
-  
+  String get separateDocumentsDesc =>
+      'Each document as separate item in gallery';
+
   @override
   String get noTagsAvailableForFilter => 'No tags available for filter yet';
-  
+
   @override
   String get filterByTags => 'Filter by Tags';
-  
+
   @override
   String get reset => 'Reset';
-  
+
   @override
   String get deletePhotoTitle => 'Delete Photo';
-  
+
   @override
-  String deletePhotoMessage(String title) => 'Are you sure you want to delete "$title"?';
+  String deletePhotoMessage(String title) =>
+      'Are you sure you want to delete "$title"?';
 
   // Ebooksverride
   String get myEbooks => 'My Ebooks';
@@ -341,7 +344,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageChanged => 'Language Changed';
 
   @override
-  String get restartAppMessage => 'Please restart the app to apply the new language setting';
+  String get restartAppMessage =>
+      'Please restart the app to apply the new language setting';
 
   @override
   String get ok => 'OK';
@@ -429,7 +433,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get photoDeletedDesc => 'Photo note has been deleted from gallery';
 
   @override
-  String photoRenamed(String oldTitle, String newTitle) => 'Photo "$oldTitle" renamed to "$newTitle"';
+  String photoRenamed(String oldTitle, String newTitle) =>
+      'Photo "$oldTitle" renamed to "$newTitle"';
 
   @override
   String get photoRenamedDesc => 'Photo name successfully updated';
@@ -453,7 +458,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebookDeletedDesc => 'Ebook note has been deleted from gallery';
 
   @override
-  String ebookRenamed(String oldTitle, String newTitle) => 'Ebook "$oldTitle" renamed to "$newTitle"';
+  String ebookRenamed(String oldTitle, String newTitle) =>
+      'Ebook "$oldTitle" renamed to "$newTitle"';
 
   @override
   String get ebookRenamedDesc => 'Ebook name successfully updated';
@@ -468,16 +474,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String photoPageAdded(String title) => 'Photo page "$title" added';
 
   @override
-  String photoPageAddedDesc(int count) => 'Photo page with $count photos successfully saved';
+  String photoPageAddedDesc(int count) =>
+      'Photo page with $count photos successfully saved';
 
   @override
   String photoPageDeleted(String title) => 'Photo page "$title" deleted';
 
   @override
-  String get photoPageDeletedDesc => 'Photo page note has been deleted from gallery';
+  String get photoPageDeletedDesc =>
+      'Photo page note has been deleted from gallery';
 
   @override
-  String photoPageRenamed(String oldTitle, String newTitle) => 'Photo page "$oldTitle" renamed to "$newTitle"';
+  String photoPageRenamed(String oldTitle, String newTitle) =>
+      'Photo page "$oldTitle" renamed to "$newTitle"';
 
   @override
   String get photoPageRenamedDesc => 'Photo page name successfully updated';
@@ -551,10 +560,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteConfirmation => 'Are you sure you want to delete';
 
   @override
-  String get deletePhotoConfirmation => 'Are you sure you want to delete this photo?';
+  String get deletePhotoConfirmation =>
+      'Are you sure you want to delete this photo?';
 
   @override
-  String get deletePhotoPageConfirmation => 'Are you sure you want to delete this photo page?';
+  String get deletePhotoPageConfirmation =>
+      'Are you sure you want to delete this photo page?';
 
   // Theme Settings
   @override
@@ -680,13 +691,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebookFromText => 'Ebook from Text';
 
   @override
-  String extractingTextFromImages(int count) => 'Extracting text from $count images...';
+  String extractingTextFromImages(int count) =>
+      'Extracting text from $count images...';
 
   @override
-  String get noTextExtracted => 'No text was successfully extracted from images';
+  String get noTextExtracted =>
+      'No text was successfully extracted from images';
 
   @override
-  String get textExtractedSuccess => 'Text successfully extracted! You can edit it before saving.';
+  String get textExtractedSuccess =>
+      'Text successfully extracted! You can edit it before saving.';
 
   @override
   String extractionFailed(String error) => 'Failed to extract text: $error';
@@ -816,165 +830,172 @@ class AppLocalizationsEn extends AppLocalizations {
   // Language Selection Dialog
   @override
   String get selectLanguageTitle => 'Select Language';
-  
+
   @override
   String get indonesianLanguage => 'Bahasa Indonesia';
-  
+
   @override
   String get englishLanguage => 'English';
-  
+
   @override
   String get indonesianLanguageDesc => 'Use Indonesian language for the app';
-  
+
   @override
   String get englishLanguageDesc => 'Use English language for the app';
-  
+
   @override
   String get languageChangedSuccess => 'Language changed successfully';
-  
+
   @override
   String get languageChangedTitle => 'Language Changed Successfully';
-  
+
   @override
-  String get restartAppRequired => 'The app needs to be restarted to apply the language changes.';
+  String get restartAppRequired =>
+      'The app needs to be restarted to apply the language changes.';
 
   // Profile Screen
   @override
   String get managementSetting => 'Management Setting';
-  
+
   @override
   String get appSetting => 'App Setting';
-  
+
   @override
   String get tagSetting => 'Tag Setting';
-  
+
   @override
   String get gallerySetting => 'Gallery Setting';
-  
+
   @override
   String get ebookSetting => 'Ebook Setting';
-  
+
   @override
   String get languageSettingsProfile => 'Language Settings';
-  
+
   @override
   String get themeSetting => 'Theme Setting';
-  
+
   @override
   String get activitySettingsProfile => 'Activity Settings';
-  
+
   @override
   String get removeData => 'Remove Data';
-  
+
   @override
   String get cropProfilePhoto => 'Crop Profile Photo';
-  
+
   @override
   String get profilePhotoUpdatedSuccess => 'Profile photo updated successfully';
-  
+
   @override
   String get failedToUpdateProfilePhoto => 'Failed to update profile photo';
-  
+
   @override
   String get themeChangedTo => 'Theme changed to';
-  
+
   @override
   String get toolsSectionEnabled => 'Tools section enabled';
-  
+
   @override
   String get toolsSectionDisabled => 'Tools section disabled';
-  
+
   @override
   String get removeAllData => 'Remove All Data';
-  
+
   @override
-  String get removeDataConfirmation => 'Are you sure you want to remove all app data? This action cannot be undone and will delete:\n\n• All photos and notes\n• All ebooks and reading progress\n• Activity history\n• Profile settings\n• Custom tags\n\nThe app will start fresh.';
-  
+  String get removeDataConfirmation =>
+      'Are you sure you want to remove all app data? This action cannot be undone and will delete:\n\n• All photos and notes\n• All ebooks and reading progress\n• Activity history\n• Profile settings\n• Custom tags\n\nThe app will start fresh.';
+
   @override
   String get removeAll => 'Remove All';
-  
+
   @override
   String get removingData => 'Removing data...';
-  
+
   @override
   String get allDataRemoved => 'All data successfully removed';
-  
+
   @override
   String get failedToRemoveData => 'Failed to remove data';
 
   // Gallery Screen Additional Localization
   @override
   String get failedToSelectPhoto => 'Failed to select photo';
-  
+
   @override
   String get selectAddMethod => 'Select Add Method';
-  
+
   @override
-  String youSelected(int count) => 'You selected $count photos. How would you like to add them?';
-  
+  String youSelected(int count) =>
+      'You selected $count photos. How would you like to add them?';
+
   @override
   String get separatePhotos => 'Separate Photos';
-  
+
   @override
   String get separatePhotosDesc => 'Each photo as separate item in gallery';
-  
+
   @override
   String get multiPhoto => 'Multi-Photo';
-  
+
   @override
   String addPhotosCount(int count) => 'Add $count Photos';
-  
+
   @override
   String get titlePrefix => 'Title Prefix (will add number)';
-  
+
   @override
   String get descriptionOptionalShort => 'Description (optional)';
-  
+
   @override
   String get tagsOptional => 'Tags (optional):';
-  
+
   @override
   String get newTagsComma => 'New tags (separate with comma)';
-  
+
   @override
   String get saveAll => 'Save All';
-  
+
   @override
   String get createPhotoPageTitle => 'Create Photo Page';
-  
+
   @override
   String photosSelected(int count) => '$count photos selected';
-  
+
   @override
   String get pageTitle => 'Page Title';
-  
+
   @override
   String get createPage => 'Create Page';
-  
+
   @override
-  String photosAddedSuccessfully(int count) => '$count photos successfully added';
-  
+  String photosAddedSuccessfully(int count) =>
+      '$count photos successfully added';
+
   @override
-  String photoPageCreatedSuccess(String title, int count) => 'Photo page "$title" successfully created with $count photos';
-  
+  String photoPageCreatedSuccess(String title, int count) =>
+      'Photo page "$title" successfully created with $count photos';
+
   @override
-  String photoDeletedSuccess(String title) => 'Photo "$title" successfully deleted';
-  
+  String photoDeletedSuccess(String title) =>
+      'Photo "$title" successfully deleted';
+
   @override
   String failedToSavePhotoError(String error) => 'Failed to save photo: $error';
-  
+
   @override
-  String failedToSelectPhotoError(String error) => 'Failed to select photo: $error';
-  
+  String failedToSelectPhotoError(String error) =>
+      'Failed to select photo: $error';
+
   @override
   String failedToAddPhotosError(String error) => 'Failed to add photos: $error';
-  
+
   @override
   String get multiPhotoPageTitle => 'Multi-Photo Page';
-  
+
   @override
   String get multiPhotoPageDesc => 'All photos in one page that can be swiped';
-  
+
   @override
   String get photoPage => 'Photo Page';
 
@@ -1034,10 +1055,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmRestore => 'Confirm Restore';
 
   @override
-  String get confirmRestoreMessage => 'Are you sure you want to restore data from this backup?\n\nAll current data will be replaced with backup data.';
+  String get confirmRestoreMessage =>
+      'Are you sure you want to restore data from this backup?\n\nAll current data will be replaced with backup data.';
 
   @override
-  String get confirmDeleteBackup => 'Are you sure you want to delete this backup?';
+  String get confirmDeleteBackup =>
+      'Are you sure you want to delete this backup?';
 
   @override
   String get backupDeleted => 'Backup successfully deleted';
@@ -1110,4 +1133,251 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signOut => 'Sign Out';
+
+  // Development Section
+  @override
+  String get development => 'Development';
+
+  @override
+  String get supportDevelopment => 'Support Development';
+
+  @override
+  String get githubRepository => 'GitHub Repository';
+
+  // Update Dialog
+  @override
+  String get updateAvailable => 'Update Available';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateNow => 'Update';
+
+  // Common Actions and Messages (New)
+  @override
+  String get finished => 'Finished';
+
+  @override
+  String get goBack => 'Go Back';
+
+  @override
+  String get saveDocument => 'Save Document';
+
+  @override
+  String get updateDocument => 'Update Document';
+
+  @override
+  String get createNewEbook => 'Create New Ebook';
+
+  @override
+  String get newEbook => 'New Ebook';
+
+  @override
+  String get documentSavedSuccessfully => 'Document saved successfully';
+
+  @override
+  String get documentUpdatedSuccessfully => 'Document updated successfully';
+
+  @override
+  String get ebookNotFound => 'Ebook not found';
+
+  @override
+  String get editTags => 'Edit Tags';
+
+  // Tag Management (New)
+  @override
+  String get tagSettings => 'Tag Settings';
+
+  @override
+  String get addNewTag => 'Add New Tag';
+
+  @override
+  String get tagList => 'Tag List';
+
+  @override
+  String get availableTags => 'Available Tags';
+
+  @override
+  String get noTagsAvailable => 'No tags available';
+
+  @override
+  String get addTagsToOrganize => 'Add tags to organize your photos and ebooks';
+
+  @override
+  String get tagNameEmpty => 'Tag name cannot be empty';
+
+  @override
+  String tagAddedSuccessfully(String tagName) =>
+      'Tag "$tagName" added successfully';
+
+  @override
+  String tagAlreadyExists(String tagName) =>
+      'Tag "$tagName" already exists or is invalid';
+
+  @override
+  String get deleteTag => 'Delete Tag';
+
+  @override
+  String confirmDeleteTag(String tag) =>
+      'Are you sure you want to delete tag "$tag"?';
+
+  @override
+  String tagDeletedSuccessfully(String tag) =>
+      'Tag "$tag" deleted successfully';
+
+  @override
+  String get failedToDeleteTag => 'Failed to delete tag';
+
+  @override
+  String get addTag => 'Add Tag';
+
+  // Photo and File Management (New)
+  @override
+  String get photoNotFound => 'Photo not found';
+
+  @override
+  String get photoUpdatedSuccessfully => 'Photo updated successfully';
+
+  @override
+  String get photoFileNotFound => 'Photo file not found';
+
+  @override
+  String failedToSharePhoto(String error) => 'Failed to share photo: $error';
+
+  @override
+  String get photo => 'Photo';
+
+  @override
+  String get shareAsImageFile => 'Share as image file';
+
+  @override
+  String get pdf => 'PDF';
+
+  @override
+  String get convertToPdfOnePage => 'Convert to PDF (1 photo per page)';
+
+  @override
+  String get photoSharedSuccessfully => 'Photo shared successfully';
+
+  @override
+  String get failedToOpenLink => 'Failed to open link';
+
+  // Tools and Features (New)
+  @override
+  String get plusExclusive => 'Plus Exclusive';
+
+  @override
+  String get convertToPdf => 'Convert to PDF';
+
+  @override
+  String get convertImagesToPdf => 'Convert images to PDF files';
+
+  // Default Values and System (New)
+  @override
+  String get sharedImageDescription => 'Image shared from external app';
+
+  @override
+  String get sharedDocumentDescription => 'Document shared from external app';
+
+  @override
+  String get importedPdfFile => 'Imported PDF file';
+
+  // Activity Log Descriptions (New)
+  @override
+  String get photoNoteSuccessfullySaved => 'Photo note successfully saved';
+
+  @override
+  String get photoNoteDeletedFromGallery =>
+      'Photo note has been deleted from gallery';
+
+  @override
+  String get photoNameSuccessfullyUpdated => 'Photo name successfully updated';
+
+  @override
+  String get photoDetailsSuccessfullyUpdated =>
+      'Photo details successfully updated';
+
+  @override
+  String get ebookNoteSuccessfullySaved => 'Ebook note successfully saved';
+
+  @override
+  String get ebookNoteDeletedFromGallery =>
+      'Ebook note has been deleted from gallery';
+
+  @override
+  String get ebookNameSuccessfullyUpdated => 'Ebook name successfully updated';
+
+  @override
+  String get ebookDetailsSuccessfullyUpdated =>
+      'Ebook details successfully updated';
+
+  @override
+  String get ebookTitleSuccessfullyUpdated =>
+      'Ebook title successfully updated';
+
+  @override
+  String get photoPageNoteDeletedFromGallery =>
+      'Photo page note has been deleted from gallery';
+
+  @override
+  String get photoPageNameSuccessfullyUpdated =>
+      'Photo page name successfully updated';
+
+  @override
+  String get photoPageDetailsSuccessfullyUpdated =>
+      'Photo page details successfully updated';
+
+  // Folder View Feature
+  @override
+  String get folderView => 'Folder View';
+
+  @override
+  String get enableFolderView => 'Enable Folder View';
+
+  @override
+  String get disableFolderView => 'Disable Folder View';
+
+  @override
+  String get folderViewEnabled => 'Folder view enabled';
+
+  @override
+  String get folderViewDisabled => 'Folder view disabled';
+
+  @override
+  String get viewAsGrid => 'View as Grid';
+
+  @override
+  String get viewAsFolders => 'View as Folders';
+
+  @override
+  String folderPhotosCount(int count) => '$count photos';
+
+  @override
+  String get noPhotosInFolder => 'No photos in this folder';
+
+  @override
+  String get addPhotoToFolder => 'Add Photo to Folder';
+
+  @override
+  String get selectFolder => 'Select Folder';
+
+  @override
+  String get createNewFolder => 'Create New Folder';
+
+  @override
+  String get folderName => 'Folder Name';
+
+  @override
+  String get enterFolderName => 'Enter folder name';
+
+  @override
+  String get createFolder => 'Create Folder';
+
+  @override
+  String folderCreated(String name) => 'Folder "$name" created';
+
+  @override
+  String photoAddedToFolder(String folderName) =>
+      'Photo added to "$folderName" folder';
 }

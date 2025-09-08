@@ -125,7 +125,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Pilih Tag'),
+        title: Text(AppLocalizations.of(context).selectTags),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -163,7 +163,7 @@ class _TextToEbookEditorScreenState extends State<TextToEbookEditorScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Selesai'),
+            child: Text(AppLocalizations.of(context).finished),
           ),
         ],
       ),

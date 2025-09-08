@@ -5,6 +5,7 @@ import 'services/theme_service.dart' as theme_service;
 import 'services/data_service.dart';
 import 'services/shared_file_handler.dart';
 import 'services/language_service.dart';
+import 'services/update_service.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
@@ -218,6 +219,8 @@ class _MainScreenState extends State<MainScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print('MainScreen: Setting context for SharedFileHandler');
       SharedFileHandler.setContext(context);
+      // Check for app updates
+      UpdateService.checkForUpdates(context);
     });
   }
 

@@ -259,9 +259,9 @@ class _TextScannerScreenState extends State<TextScannerScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: const BorderSide(color: Color(0xFF6366F1)),
                     ),
-                    child: const Text(
-                      'Kembali',
-                      style: TextStyle(color: Color(0xFF6366F1)),
+                    child: Text(
+                      AppLocalizations.of(context).goBack,
+                      style: const TextStyle(color: Color(0xFF6366F1)),
                     ),
                   ),
                 ),
@@ -274,7 +274,7 @@ class _TextScannerScreenState extends State<TextScannerScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text('Salin Teks'),
+                    child: Text(AppLocalizations.of(context).copyText),
                   ),
                 ),
               ],

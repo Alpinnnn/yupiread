@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import '../services/data_service.dart';
 import '../services/theme_service.dart' as theme_service;
@@ -28,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final LanguageService _languageService = LanguageService.instance;
   bool _isManagementExpanded = false;
   bool _isAppSettingExpanded = false;
+  bool _isDevelopmentExpanded = false;
 
   @override
   void initState() {
@@ -54,44 +56,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {});
   }
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color backgroundColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: backgroundColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: backgroundColor, size: 24),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: backgroundColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: backgroundColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -199,59 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
-                  // Stats Grid (2x2)
-                  Column(
-                    children: [
-                      // First Row
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              icon: Icons.local_fire_department,
-                              value: '${_dataService.readingStreak}',
-                              label: l10n.streakLabel,
-                              backgroundColor: const Color(0xFFF59E0B),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              icon: Icons.schedule,
-                              value: _dataService.formattedReadingTime,
-                              label: l10n.readingTimeLabel,
-                              backgroundColor: const Color(0xFF8B5CF6),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Second Row
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              icon: Icons.photo_library,
-                              value:
-                                  '${_dataService.totalPhotos + _dataService.photoPages.length}',
-                              label: l10n.totalPhotos,
-                              backgroundColor: const Color(0xFF3B82F6),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              icon: Icons.menu_book,
-                              value: '${_dataService.totalEbooks}',
-                              label: l10n.totalEbooks,
-                              backgroundColor: const Color(0xFF10B981),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -374,6 +286,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: AppLocalizations.of(context).removeData,
                   color: const Color(0xFFEF4444),
                   onTap: _showRemoveDataDialog,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Development Settings Section
+            _buildSettingsCategory(
+              title: l10n.development,
+              icon: Icons.code,
+              isExpanded: _isDevelopmentExpanded,
+              onToggle:
+                  () => setState(
+                    () => _isDevelopmentExpanded = !_isDevelopmentExpanded,
+                  ),
+              children: [
+                _buildSettingItem(
+                  icon: Icons.favorite,
+                  title: l10n.supportDevelopment,
+                  color: const Color(0xFFEF4444),
+                  onTap: () => _launchUrl('https://trakteer.id/euphyfve/tip'),
+                ),
+                const SizedBox(height: 12),
+                _buildSettingItem(
+                  icon: Icons.code_rounded,
+                  title: l10n.githubRepository,
+                  color: const Color(0xFF374151),
+                  onTap: () => _launchUrl('https://github.com/Alpinnnn/yupiread'),
                 ),
               ],
             ),
@@ -797,6 +735,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka link: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
   }
 
   void _showRemoveDataDialog() {

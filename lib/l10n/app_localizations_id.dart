@@ -84,6 +84,7 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get textScanner => 'Pemindai Teks';
 
+  @override
   String get scanResults => 'Hasil Pemindaian';
 
   @override
@@ -1109,4 +1110,238 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get signOut => 'Keluar';
+
+  // Development Section
+  @override
+  String get development => 'Pengembangan';
+
+  @override
+  String get supportDevelopment => 'Dukung Pengembangan';
+
+  @override
+  String get githubRepository => 'Repositori GitHub';
+
+  // Update Dialog
+  @override
+  String get updateAvailable => 'Update Tersedia';
+
+  @override
+  String get updateLater => 'Nanti';
+
+  @override
+  String get updateNow => 'Update';
+
+  // Common Actions and Messages (New)
+  @override
+  String get finished => 'Selesai';
+
+  @override
+  String get goBack => 'Kembali';
+
+  @override
+  String get saveDocument => 'Simpan Dokumen';
+
+  @override
+  String get updateDocument => 'Perbarui Dokumen';
+
+  @override
+  String get createNewEbook => 'Buat Ebook Baru';
+
+  @override
+  String get newEbook => 'Ebook Baru';
+
+  @override
+  String get documentSavedSuccessfully => 'Dokumen berhasil disimpan';
+
+  @override
+  String get documentUpdatedSuccessfully => 'Dokumen berhasil diperbarui';
+
+  @override
+  String get ebookNotFound => 'Ebook tidak ditemukan';
+
+  @override
+  String get editTags => 'Edit Tag';
+
+  // Tag Management (New)
+  @override
+  String get tagSettings => 'Pengaturan Tag';
+
+  @override
+  String get addNewTag => 'Tambah Tag Baru';
+
+  @override
+  String get tagList => 'Daftar Tag';
+
+  @override
+  String get availableTags => 'Tag Tersedia';
+
+  @override
+  String get noTagsAvailable => 'Belum ada tag tersedia';
+
+  @override
+  String get addTagsToOrganize => 'Tambahkan tag untuk mengorganisir foto dan ebook Anda';
+
+  @override
+  String get tagNameEmpty => 'Nama tag tidak boleh kosong';
+
+  @override
+  String tagAddedSuccessfully(String tagName) => 'Tag "$tagName" berhasil ditambahkan';
+
+  @override
+  String tagAlreadyExists(String tagName) => 'Tag "$tagName" sudah ada atau tidak valid';
+
+  @override
+  String get deleteTag => 'Hapus Tag';
+
+  @override
+  String confirmDeleteTag(String tag) => 'Apakah Anda yakin ingin menghapus tag "$tag"?';
+
+  @override
+  String tagDeletedSuccessfully(String tag) => 'Tag "$tag" berhasil dihapus';
+
+  @override
+  String get failedToDeleteTag => 'Gagal menghapus tag';
+
+  @override
+  String get addTag => 'Tambah';
+
+  // Photo and File Management (New)
+  @override
+  String get photoNotFound => 'Foto tidak ditemukan';
+
+  @override
+  String get photoUpdatedSuccessfully => 'Foto berhasil diperbarui';
+
+  @override
+  String get photoFileNotFound => 'File foto tidak ditemukan';
+
+  @override
+  String failedToSharePhoto(String error) => 'Gagal membagikan foto: $error';
+
+  @override
+  String get photo => 'Foto';
+
+  @override
+  String get shareAsImageFile => 'Bagikan sebagai file gambar';
+
+  @override
+  String get pdf => 'PDF';
+
+  @override
+  String get convertToPdfOnePage => 'Konversi ke PDF (1 foto / halaman)';
+
+  @override
+  String get photoSharedSuccessfully => 'Foto berhasil dibagikan';
+
+  @override
+  String get failedToOpenLink => 'Gagal membuka link';
+
+  // Tools and Features (New)
+  @override
+  String get plusExclusive => 'Plus Eksklusif';
+
+  @override
+  String get convertToPdf => 'Konversi ke PDF';
+
+  @override
+  String get convertImagesToPdf => 'Konversi gambar ke file PDF';
+
+  // Default Values and System (New)
+  @override
+  String get sharedImageDescription => 'Gambar dibagikan dari aplikasi eksternal';
+
+  @override
+  String get sharedDocumentDescription => 'Dokumen dibagikan dari aplikasi eksternal';
+
+  @override
+  String get importedPdfFile => 'File PDF yang diimpor';
+
+  // Activity Log Descriptions (New)
+  @override
+  String get photoNoteSuccessfullySaved => 'Catatan foto berhasil disimpan';
+
+  @override
+  String get photoNoteDeletedFromGallery => 'Catatan foto telah dihapus dari galeri';
+
+  @override
+  String get photoNameSuccessfullyUpdated => 'Nama foto berhasil diperbarui';
+
+  @override
+  String get photoDetailsSuccessfullyUpdated => 'Detail foto berhasil diperbarui';
+
+  @override
+  String get ebookNoteSuccessfullySaved => 'Catatan ebook berhasil disimpan';
+
+  @override
+  String get ebookNoteDeletedFromGallery => 'Catatan ebook telah dihapus dari galeri';
+
+  @override
+  String get ebookNameSuccessfullyUpdated => 'Nama ebook berhasil diperbarui';
+
+  @override
+  String get ebookDetailsSuccessfullyUpdated => 'Detail ebook berhasil diperbarui';
+
+  @override
+  String get ebookTitleSuccessfullyUpdated => 'Judul ebook berhasil diperbarui';
+
+  @override
+  String get photoPageNoteDeletedFromGallery => 'Catatan halaman foto telah dihapus dari galeri';
+
+  @override
+  String get photoPageNameSuccessfullyUpdated => 'Nama halaman foto berhasil diperbarui';
+
+  @override
+  String get photoPageDetailsSuccessfullyUpdated => 'Detail halaman foto berhasil diperbarui';
+
+  // Folder View Feature
+  @override
+  String get folderView => 'Tampilan Folder';
+
+  @override
+  String get enableFolderView => 'Aktifkan Tampilan Folder';
+
+  @override
+  String get disableFolderView => 'Nonaktifkan Tampilan Folder';
+
+  @override
+  String get folderViewEnabled => 'Tampilan folder diaktifkan';
+
+  @override
+  String get folderViewDisabled => 'Tampilan folder dinonaktifkan';
+
+  @override
+  String get viewAsGrid => 'Tampilkan sebagai Grid';
+
+  @override
+  String get viewAsFolders => 'Tampilkan sebagai Folder';
+
+  @override
+  String folderPhotosCount(int count) => '$count foto';
+
+  @override
+  String get noPhotosInFolder => 'Tidak ada foto di folder ini';
+
+  @override
+  String get addPhotoToFolder => 'Tambah Foto ke Folder';
+
+  @override
+  String get selectFolder => 'Pilih Folder';
+
+  @override
+  String get createNewFolder => 'Buat Folder Baru';
+
+  @override
+  String get folderName => 'Nama Folder';
+
+  @override
+  String get enterFolderName => 'Masukkan nama folder';
+
+  @override
+  String get createFolder => 'Buat Folder';
+
+  @override
+  String folderCreated(String name) => 'Folder "$name" berhasil dibuat';
+
+  @override
+  String photoAddedToFolder(String folderName) => 'Foto ditambahkan ke folder "$folderName"';
 }

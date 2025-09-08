@@ -85,22 +85,27 @@ abstract class AppLocalizations {
 
   // Text Recognition
   String get textScanner => 'Text Recognition';
-  String get textRecognitionTitle;
-  String get scanningText;
-  String get extractingText;
-  String get textRecognitionFailed;
-  String get noTextDetected;
-  String get textExtractionFailed;
-  String get enterEditTextHere;
-  String get saving;
-  String get scannedImage;
-  String get saveToGallery;
-  String get scanResults;
-  String get noInternetConnection;
-  String errorOccurredWith(String error);
+  String get textRecognitionTitle => 'Text Recognition';
+  String get scanningText => 'Scanning Text';
+  String get extractingText => 'Extracting Text';
+  String get activityDescPhotoPageCreated => 'Photo page created';
+  String get activityDescPhotoPageUpdated => 'Photo page updated';
+  String get activityDescPhotoPageDeleted => 'Photo page deleted';
+  String get extractText => 'Extract Text';
+  String get technicalInfo => 'Technical Info';
+  String get resolution => 'Resolution';
+  String get fileSize => 'File Size';
+  String get enterEditTextHere => 'Enter edit text here';
+  String get saving => 'Saving';
+  String get scannedImage => 'Scanned Image';
+  String get saveToGallery => 'Save to Gallery';
+  String get scanResults => 'Scan Results';
+  String get noInternetConnection => 'No internet connection';
+  String errorOccurredWith(String error) => 'An error occurred: $error';
   String get editScannedText => 'Edit scanned text...';
   String get imageAndTextSaved => 'Image and text successfully saved to gallery';
   String get failedToSaveToGallery => 'Failed to save to gallery';
+  String get textRecognitionFailed => 'Text recognition failed';
 
   // Dashboard
   String get welcomeBack => 'Welcome Back';
@@ -464,5 +469,98 @@ abstract class AppLocalizations {
   String get justNow => 'Just now';
   String get signInToViewBackups => 'Sign in to Google Drive to view backups';
   String get backingUp => 'Backing up...';
+
+  // Folder View Feature
+  String get folderView => 'Folder View';
+  String get enableFolderView => 'Enable Folder View';
+  String get disableFolderView => 'Disable Folder View';
+  String get folderViewEnabled => 'Folder view enabled';
+  String get folderViewDisabled => 'Folder view disabled';
+  String get viewAsGrid => 'View as Grid';
+  String get viewAsFolders => 'View as Folders';
+  String folderPhotosCount(int count) => '$count photos';
+  String get noPhotosInFolder => 'No photos in this folder';
+  String get addPhotoToFolder => 'Add Photo to Folder';
+  String get selectFolder => 'Select Folder';
+  String get createNewFolder => 'Create New Folder';
+  String get folderName => 'Folder Name';
+  String get enterFolderName => 'Enter folder name';
+  String get createFolder => 'Create Folder';
+  String folderCreated(String name) => 'Folder "$name" created';
+  String photoAddedToFolder(String folderName) => 'Photo added to "$folderName" folder';
   String get signOut => 'Sign Out';
+
+  // Development Section
+  String get development => 'Development';
+  String get supportDevelopment => 'Support Development';
+  String get githubRepository => 'GitHub Repository';
+
+  // Update Dialog
+  String get updateAvailable => 'Update Available';
+  String get updateLater => 'Later';
+  String get updateNow => 'Update';
+
+  // Common Actions and Messages (New)
+  String get finished => 'Finished';
+  String get goBack => 'Go Back';
+  String get saveDocument => 'Save Document';
+  String get updateDocument => 'Update Document';
+  String get createNewEbook => 'Create New Ebook';
+  String get newEbook => 'New Ebook';
+  String get documentSavedSuccessfully => 'Document saved successfully';
+  String get documentUpdatedSuccessfully => 'Document updated successfully';
+  String get ebookNotFound => 'Ebook not found';
+  String get editTags => 'Edit Tags';
+
+  // Tag Management (New)
+  String get tagSettings => 'Tag Settings';
+  String get addNewTag => 'Add New Tag';
+  String get tagList => 'Tag List';
+  String get availableTags => 'Available Tags';
+  String get noTagsAvailable => 'No tags available';
+  String get addTagsToOrganize => 'Add tags to organize your photos and ebooks';
+  String get tagNameEmpty => 'Tag name cannot be empty';
+  String tagAddedSuccessfully(String tagName) => 'Tag "$tagName" added successfully';
+  String tagAlreadyExists(String tagName) => 'Tag "$tagName" already exists or is invalid';
+  String get deleteTag => 'Delete Tag';
+  String confirmDeleteTag(String tag) => 'Are you sure you want to delete tag "$tag"?';
+  String tagDeletedSuccessfully(String tag) => 'Tag "$tag" deleted successfully';
+  String get failedToDeleteTag => 'Failed to delete tag';
+  String get addTag => 'Add Tag';
+
+  // Photo and File Management (New)
+  String get photoNotFound => 'Photo not found';
+  String get photoUpdatedSuccessfully => 'Photo updated successfully';
+  String get photoFileNotFound => 'Photo file not found';
+  String failedToSharePhoto(String error) => 'Failed to share photo: $error';
+  String get photo => 'Photo';
+  String get shareAsImageFile => 'Share as image file';
+  String get pdf => 'PDF';
+  String get convertToPdfOnePage => 'Convert to PDF (1 photo per page)';
+  String get photoSharedSuccessfully => 'Photo shared successfully';
+  String get failedToOpenLink => 'Failed to open link';
+
+  // Tools and Features (New)
+  String get plusExclusive => 'Plus Exclusive';
+  String get convertToPdf => 'Convert to PDF';
+  String get convertImagesToPdf => 'Convert images to PDF files';
+
+  // Default Values and System (New)
+  String get sharedImageDescription => 'Image shared from external app';
+  String get sharedDocumentDescription => 'Document shared from external app';
+  String get importedPdfFile => 'Imported PDF file';
+
+  // Activity Log Descriptions (New)
+  String get photoNoteSuccessfullySaved => 'Photo note successfully saved';
+  String get photoNoteDeletedFromGallery => 'Photo note has been deleted from gallery';
+  String get photoNameSuccessfullyUpdated => 'Photo name successfully updated';
+  String get photoDetailsSuccessfullyUpdated => 'Photo details successfully updated';
+  String get ebookNoteSuccessfullySaved => 'Ebook note successfully saved';
+  String get ebookNoteDeletedFromGallery => 'Ebook note has been deleted from gallery';
+  String get ebookNameSuccessfullyUpdated => 'Ebook name successfully updated';
+  String get ebookDetailsSuccessfullyUpdated => 'Ebook details successfully updated';
+  String get ebookTitleSuccessfullyUpdated => 'Ebook title successfully updated';
+  String get photoPageNoteDeletedFromGallery => 'Photo page note has been deleted from gallery';
+  String get photoPageNameSuccessfullyUpdated => 'Photo page name successfully updated';
+  String get photoPageDetailsSuccessfullyUpdated => 'Photo page details successfully updated';
 }

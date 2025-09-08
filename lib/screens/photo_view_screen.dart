@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:extended_image/extended_image.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
-import '../services/data_service.dart';
+import 'package:pdf/pdf.dart';
+import 'package:extended_image/extended_image.dart';
 import '../models/photo_model.dart';
+import '../services/data_service.dart';
 import '../l10n/app_localizations.dart';
 import 'text_scanner_screen.dart';
 
@@ -98,8 +101,8 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         setState(() {});
       }
     } catch (e) {
-      _imageResolution = 'Tidak diketahui';
-      _fileSize = 'Tidak diketahui';
+      _imageResolution = 'Unknown';
+      _fileSize = 'Unknown';
       if (mounted) {
         setState(() {});
       }
@@ -140,9 +143,9 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         appBar: AppBar(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
-          title: const Text('Foto tidak ditemukan'),
+          title: Text(AppLocalizations.of(context).photoNotFound),
         ),
-        body: const Center(child: Text('Foto tidak ditemukan')),
+        body: Center(child: Text(AppLocalizations.of(context).photoNotFound)),
       );
     }
 
@@ -259,7 +262,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Gagal memuat foto',
+                              AppLocalizations.of(context).photoFileNotFound,
                               style: TextStyle(
                                 color: Colors.grey[400],
                                 fontSize: 16,
@@ -492,7 +495,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
                                           ),
                                           _buildActionButton(
                                             icon: Icons.text_fields,
-                                            label: 'Ekstrak Teks',
+                                            label: AppLocalizations.of(context).extractText,
                                             onTap: () {
                                               _bottomMenuAnimationController
                                                   .reverse()
@@ -551,7 +554,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Info Teknis',
+            AppLocalizations.of(context).technicalInfo,
             style: TextStyle(
               color: Colors.grey[300],
               fontSize: 12,
@@ -563,13 +566,13 @@ class _PhotoViewScreenState extends State<PhotoViewScreen>
             children: [
               Expanded(
                 child: _buildInfoItem(
-                  'Resolusi',
-                  _imageResolution ?? 'Memuat...',
+                  AppLocalizations.of(context).resolution,
+                  _imageResolution ?? AppLocalizations.of(context).loading,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildInfoItem('Ukuran', _fileSize ?? 'Memuat...'),
+                child: _buildInfoItem(AppLocalizations.of(context).fileSize, _fileSize ?? AppLocalizations.of(context).loading),
               ),
             ],
           ),

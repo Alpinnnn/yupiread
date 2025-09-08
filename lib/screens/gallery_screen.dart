@@ -1,13 +1,16 @@
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../models/photo_model.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:reorderable_grid_view/reorderable_grid_view.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import '../services/data_service.dart';
-import 'photo_view_screen.dart';
-import 'document_scanner_screen.dart';
-import 'photo_page_view_screen.dart';
-import 'text_scanner_screen.dart';
+import '../models/photo_model.dart';
+import '../screens/photo_view_screen.dart';
+import '../screens/photo_page_view_screen.dart';
+import '../screens/folder_view_screen.dart';
 import '../l10n/app_localizations.dart';
+import 'text_scanner_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -17,16 +20,40 @@ class GalleryScreen extends StatefulWidget {
 }
 
 class _GalleryScreenState extends State<GalleryScreen> {
-  final DataService _dataService = DataService.instance;
-  List<String> _selectedTags = [];
+  final DataService _dataService = DataService();
   List<PhotoModel> _filteredPhotos = [];
   List<PhotoPageModel> _filteredPhotoPages = [];
+  List<String> _selectedTags = [];
+  bool _folderViewMode = false;
+  bool _isLoading = false;
 
+  @override
   void initState() {
     super.initState();
-    _updateFilteredPhotos();
+    _initializeScreen();
   }
 
+  Future<void> _initializeScreen() async {
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
+    
+    await _loadFolderViewState();
+    _updateFilteredPhotos();
+    
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadFolderViewState() async {
+    final savedFolderViewMode = await _dataService.loadFolderViewMode();
+    if (mounted) {
+      setState(() {
+        _folderViewMode = savedFolderViewMode;
+      });
+    }
+  }
 
   int _getCrossAxisCount(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -41,14 +68,384 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   void _updateFilteredPhotos() {
     setState(() {
-      _filteredPhotos = _dataService.getFilteredPhotos(_selectedTags);
-      _filteredPhotoPages = _dataService.getFilteredPhotoPages(_selectedTags);
+      // Create mutable copies to allow reordering
+      _filteredPhotos = List<PhotoModel>.from(_dataService.getFilteredPhotos(_selectedTags));
+      _filteredPhotoPages = List<PhotoPageModel>.from(_dataService.getFilteredPhotoPages(_selectedTags));
     });
+  }
+
+  void _handleReorder(int oldIndex, int newIndex) {
+    setState(() {
+      // Adjust indices to account for add button at index 0
+      final adjustedOldIndex = oldIndex - 1;
+      final adjustedNewIndex = newIndex - 1;
+      
+      if (adjustedOldIndex < _filteredPhotoPages.length && adjustedNewIndex < _filteredPhotoPages.length) {
+        // Reordering within photo pages
+        final item = _filteredPhotoPages.removeAt(adjustedOldIndex);
+        _filteredPhotoPages.insert(adjustedNewIndex, item);
+        _dataService.reorderPhotoPages(_filteredPhotoPages);
+      } else if (adjustedOldIndex >= _filteredPhotoPages.length && adjustedNewIndex >= _filteredPhotoPages.length) {
+        // Reordering within photos
+        final photoOldIndex = adjustedOldIndex - _filteredPhotoPages.length;
+        final photoNewIndex = adjustedNewIndex - _filteredPhotoPages.length;
+        final item = _filteredPhotos.removeAt(photoOldIndex);
+        _filteredPhotos.insert(photoNewIndex, item);
+        _dataService.reorderPhotos(_filteredPhotos);
+      }
+      // Note: Mixed reordering between photos and photo pages is not supported
+    });
+  }
+
+  void _toggleFolderView() {
+    if (mounted) {
+      setState(() {
+        _folderViewMode = !_folderViewMode;
+      });
+      
+      // Save the folder view state asynchronously
+      _dataService.saveFolderViewMode(_folderViewMode);
+      
+      final localizations = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _folderViewMode 
+              ? localizations.folderViewEnabled 
+              : localizations.folderViewDisabled,
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Widget _buildPhotoGridView() {
+    // Create a combined list with keys for reordering
+    List<Widget> allItems = [];
+    
+    // Add photo card (non-reorderable) with key
+    allItems.add(
+      Container(
+        key: const ValueKey('add_photo_card'),
+        child: _buildAddPhotoCard(context),
+      ),
+    );
+    
+    // Add photo pages with keys
+    for (int i = 0; i < _filteredPhotoPages.length; i++) {
+      allItems.add(
+        Container(
+          key: ValueKey('photopage_${_filteredPhotoPages[i].id}'),
+          child: _buildPhotoPageCard(context, _filteredPhotoPages[i]),
+        ),
+      );
+    }
+    
+    // Add photos with keys
+    for (int i = 0; i < _filteredPhotos.length; i++) {
+      allItems.add(
+        Container(
+          key: ValueKey('photo_${_filteredPhotos[i].id}'),
+          child: _buildPhotoCard(context, _filteredPhotos[i]),
+        ),
+      );
+    }
+
+    return ReorderableGridView.count(
+      crossAxisCount: _getCrossAxisCount(context),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 0.85,
+      children: allItems,
+      onReorder: (oldIndex, newIndex) {
+        if (oldIndex == 0 || newIndex == 0) return; // Don't reorder add button
+        _handleReorder(oldIndex, newIndex);
+      },
+    );
+  }
+
+  Widget _buildFolderView() {
+    final folders = _dataService.getPhotoFolders();
+    final folderNames = folders.keys.toList();
+    folderNames.sort();
+
+    if (folderNames.isEmpty) {
+      return _buildEmptyFolderView();
+    }
+
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: _getCrossAxisCount(context),
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: folderNames.length,
+      itemBuilder: (context, index) {
+        final folderName = folderNames[index];
+        final folderPhotos = folders[folderName]!;
+        return _buildFolderCard(folderName, folderPhotos);
+      },
+    );
+  }
+
+  Widget _buildEmptyFolderView() {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.folder_open,
+            size: 64,
+            color: theme.colorScheme.outline,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No folders yet',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add photos with tags to create folders',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFolderCard(String folderName, List<PhotoModel> photos) {
+    final localizations = AppLocalizations.of(context);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FolderViewScreen(
+              folderName: folderName,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      _buildFolderThumbnail(photos),
+                      // Folder icon overlay
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.folder,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${photos.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    folderName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    localizations.folderPhotosCount(photos.length),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFolderThumbnail(List<PhotoModel> photos) {
+    if (photos.isEmpty) {
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.grey[200],
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.folder_open,
+              size: 32,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Empty Folder',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (photos.length == 1) {
+      return Image.file(
+        File(photos.first.imagePath),
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.grey[200],
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image,
+                  size: 32,
+                  color: Colors.grey,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Failed to load',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    // Grid of 4 photos
+    final displayPhotos = photos.take(4).toList();
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 1,
+        mainAxisSpacing: 1,
+      ),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        if (index < displayPhotos.length) {
+          return Image.file(
+            File(displayPhotos[index].imagePath),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[300],
+                child: const Icon(
+                  Icons.broken_image,
+                  color: Colors.grey,
+                  size: 16,
+                ),
+              );
+            },
+          );
+        } else {
+          return Container(
+            color: Colors.grey[300],
+            child: const Icon(
+              Icons.photo,
+              color: Colors.grey,
+              size: 16,
+            ),
+          );
+        }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -78,54 +475,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   ),
                   Row(
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardTheme.color,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          icon: Stack(
-                            children: [
-                              Icon(
-                                Icons.filter_list,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              if (_selectedTags.isNotEmpty)
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFEF4444),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 12,
-                                      minHeight: 12,
-                                    ),
-                                    child: Text(
-                                      '${_selectedTags.length}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          onPressed: _showFilterDialog,
-                        ),
+                      // Folder view toggle button
+                      _buildActionButton(
+                        icon: _folderViewMode ? Icons.grid_view : Icons.folder,
+                        onPressed: _toggleFolderView,
+                        tooltip: _folderViewMode ? l10n.viewAsGrid : l10n.viewAsFolders,
+                      ),
+                      const SizedBox(width: 8),
+                      // Filter button
+                      _buildActionButton(
+                        icon: _selectedTags.isEmpty 
+                          ? Icons.filter_list 
+                          : Icons.filter_list,
+                        onPressed: _showFilterDialog,
+                        badge: _selectedTags.isNotEmpty ? _selectedTags.length : null,
                       ),
                     ],
                   ),
@@ -133,38 +496,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ),
               const SizedBox(height: 32),
               Expanded(
-                child: GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _getCrossAxisCount(context),
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount:
-                      _filteredPhotos.length +
-                      _filteredPhotoPages.length +
-                      1, // +1 for add button
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return _buildAddPhotoCard(context);
-                    }
-
-                    final adjustedIndex = index - 1;
-                    if (adjustedIndex < _filteredPhotoPages.length) {
-                      return _buildPhotoPageCard(
-                        context,
-                        _filteredPhotoPages[adjustedIndex],
-                      );
-                    } else {
-                      final photoIndex =
-                          adjustedIndex - _filteredPhotoPages.length;
-                      return _buildPhotoCard(
-                        context,
-                        _filteredPhotos[photoIndex],
-                      );
-                    }
-                  },
-                ),
+                child: _folderViewMode ? _buildFolderView() : _buildPhotoGridView(),
               ),
             ],
           ),
@@ -621,6 +953,75 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    String? tooltip,
+    int? badge,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: IconButton(
+        icon: Stack(
+          children: [
+            Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            if (badge != null && badge > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 12,
+                    minHeight: 12,
+                  ),
+                  child: Text(
+                    '$badge',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        onPressed: onPressed,
+        tooltip: tooltip,
+      ),
+    );
+  }
+
+  Future<void> _safeDeleteFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      // Silently handle file deletion errors
+    }
+  }
+
 
 
 
@@ -645,9 +1046,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   void _showTagSelectionDialog(String title, String imagePath) {
-    final TextEditingController titleController = TextEditingController(
-      text: title,
-    );
+    final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     List<String> selectedTags = [];
 
@@ -670,6 +1069,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           controller: titleController,
                           decoration: InputDecoration(
                             labelText: AppLocalizations.of(context).photoTitle,
+                            hintText: title,
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -695,7 +1095,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               _dataService.availableTags.map((tag) {
                                 final isSelected = selectedTags.contains(tag);
                                 return FilterChip(
-                                  label: Text(tag),
+                                  label: Text(
+                                    tag,
+                                    style: TextStyle(
+                                      color: isSelected && Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white
+                                          : null,
+                                    ),
+                                  ),
                                   selected: isSelected,
                                   onSelected: (selected) {
                                     setDialogState(() {
@@ -706,10 +1113,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
+                                  selectedColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
+                                      : const Color(0xFF2563EB).withOpacity(0.2),
+                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF60A5FA)
+                                      : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),
@@ -721,7 +1130,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       onPressed: () {
                         Navigator.pop(context);
                         // Delete the saved image if user cancels
-                        File(imagePath).delete().catchError((_) => File(''));
+                        _safeDeleteFile(imagePath);
                       },
                       child: Text(AppLocalizations.of(context).cancel),
                     ),
@@ -731,28 +1140,27 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         final photoDescription =
                             descriptionController.text.trim();
 
-                        if (photoTitle.isNotEmpty) {
-                          final l10n = AppLocalizations.of(context);
-                          _dataService.addPhoto(
-                            title: photoTitle,
-                            imagePath: imagePath,
-                            tags: selectedTags,
-                            description: photoDescription,
-                            activityTitle: l10n.photoAdded(photoTitle),
-                            activityDescription: l10n.photoAddedDesc,
-                          );
-                          _updateFilteredPhotos();
-                          Navigator.pop(context);
+                        final finalTitle = photoTitle.isNotEmpty ? photoTitle : title;
+                        final l10n = AppLocalizations.of(context);
+                        _dataService.addPhoto(
+                          title: finalTitle,
+                          imagePath: imagePath,
+                          tags: selectedTags,
+                          description: photoDescription,
+                          activityTitle: l10n.photoAdded(finalTitle),
+                          activityDescription: l10n.photoAddedDesc,
+                        );
+                        _updateFilteredPhotos();
+                        Navigator.pop(context);
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(context).photoAddedSuccessfully(photoTitle),
-                              ),
-                              backgroundColor: const Color(0xFF10B981),
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              AppLocalizations.of(context).photoAddedSuccessfully(finalTitle),
                             ),
-                          );
-                        }
+                            backgroundColor: const Color(0xFF10B981),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
@@ -768,18 +1176,23 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
 
   // Scan document from gallery
-  void _scanFromGallery() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DocumentScannerScreen(
-          useGallery: true,
-          onDocumentsScanned: (List<String> scannedImagePaths) {
-            _handleScannedDocuments(scannedImagePaths, AppLocalizations.of(context).scannedFromGallery);
-          },
-        ),
-      ),
-    );
+  void _scanFromGallery() async {
+    try {
+      List<String> pictures = await CunningDocumentScanner.getPictures() ?? [];
+      if (pictures.isNotEmpty) {
+        _handleScannedDocuments(pictures, AppLocalizations.of(context).scannedFromGallery);
+      }
+    } catch (exception) {
+      // Handle scanner exception
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error scanning document: $exception'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
   }
 
   // Handle scanned documents - show validation dialog for multiple images
@@ -994,7 +1407,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                   tag,
                                 );
                                 return FilterChip(
-                                  label: Text(tag),
+                                  label: Text(
+                                    tag,
+                                    style: TextStyle(
+                                      color: isSelected && Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white
+                                          : null,
+                                    ),
+                                  ),
                                   selected: isSelected,
                                   onSelected: (selected) {
                                     setDialogState(() {
@@ -1005,10 +1425,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
+                                  selectedColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
+                                      : const Color(0xFF2563EB).withOpacity(0.2),
+                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF60A5FA)
+                                      : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),
@@ -1307,7 +1729,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   children: _dataService.availableTags.map((tag) {
                     final isSelected = selectedTags.contains(tag);
                     return FilterChip(
-                      label: Text(tag),
+                      label: Text(
+                        tag,
+                        style: TextStyle(
+                          color: isSelected && Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : null,
+                        ),
+                      ),
                       selected: isSelected,
                       onSelected: (selected) {
                         setDialogState(() {
@@ -1318,8 +1747,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           }
                         });
                       },
-                      selectedColor: const Color(0xFF2563EB).withOpacity(0.2),
-                      checkmarkColor: const Color(0xFF2563EB),
+                      selectedColor: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF3B82F6).withOpacity(0.3)
+                          : const Color(0xFF2563EB).withOpacity(0.2),
+                      checkmarkColor: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF60A5FA)
+                          : const Color(0xFF2563EB),
                     );
                   }).toList(),
                 ),
@@ -1501,7 +1934,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               _dataService.availableTags.map((tag) {
                                 final isSelected = selectedTags.contains(tag);
                                 return FilterChip(
-                                  label: Text(tag),
+                                  label: Text(
+                                    tag,
+                                    style: TextStyle(
+                                      color: isSelected && Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white
+                                          : null,
+                                    ),
+                                  ),
                                   selected: isSelected,
                                   onSelected: (selected) {
                                     setDialogState(() {
@@ -1512,10 +1952,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
+                                  selectedColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
+                                      : const Color(0xFF2563EB).withOpacity(0.2),
+                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF60A5FA)
+                                      : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),
@@ -1528,7 +1970,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         Navigator.pop(context);
                         // Delete saved images if user cancels
                         for (String path in imagePaths) {
-                          File(path).delete().catchError((_) => File(''));
+                          _safeDeleteFile(path);
                         }
                       },
                       child: Text(AppLocalizations.of(context).cancel),

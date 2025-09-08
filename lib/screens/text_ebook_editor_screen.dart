@@ -43,7 +43,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController.text = widget.initialTitle ?? 'Ebook Baru';
+    _titleController.text = widget.initialTitle ?? AppLocalizations.of(context).newEbook;
     _isEditingExisting = widget.existingFilePath != null;
     
     // Initialize quill controller with initial text if provided
@@ -152,7 +152,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
       final ebooks = _dataService.ebooks;
       final ebook = ebooks.firstWhere(
         (e) => e.filePath == widget.existingFilePath,
-        orElse: () => throw Exception('Ebook not found'),
+        orElse: () => throw Exception(AppLocalizations.of(context).ebookNotFound),
       );
       
       setState(() {
@@ -179,9 +179,9 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              title: const Text(
-                'Pilih Tags',
-                style: TextStyle(fontWeight: FontWeight.w600),
+              title: Text(
+                AppLocalizations.of(context).selectTags,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               content: SizedBox(
                 width: double.maxFinite,
@@ -214,7 +214,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Batal'),
+                  child: Text(AppLocalizations.of(context).cancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -227,7 +227,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Simpan'),
+                  child: Text(AppLocalizations.of(context).save),
                 ),
               ],
             );

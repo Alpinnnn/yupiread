@@ -37,6 +37,7 @@ class DataService extends ChangeNotifier {
   int _totalReadingTimeMinutes = 0;
   DateTime? _lastReadingDate;
   bool _showToolsSection = false;
+  bool _folderViewEnabled = false;
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
   List<PhotoPageModel> get photoPages => List.unmodifiable(_photoPages);
@@ -46,6 +47,7 @@ class DataService extends ChangeNotifier {
       List.unmodifiable([..._availableTags, ..._customTags]);
   List<String> get customTags => List.unmodifiable(_customTags);
   bool get showToolsSection => _showToolsSection;
+  bool get folderViewEnabled => _folderViewEnabled;
 
   // Initialize data when app starts
   Future<void> initializeData() async {
@@ -228,7 +230,10 @@ class DataService extends ChangeNotifier {
     required ActivityType type,
     Map<String, dynamic>? parameters,
   }) {
-    // Activity logging is always enabled for now
+    // Check if this activity type is enabled
+    if (_activityPreferences[type] != true) {
+      return;
+    }
     
     final activity = ActivityModel(
       id: _generateId(),
@@ -241,8 +246,9 @@ class DataService extends ChangeNotifier {
 
     _activities.insert(0, activity); // Add to beginning for newest first
 
-    if (_activities.length > 20) {
-      _activities.removeRange(20, _activities.length);
+    // Limit activities to prevent memory issues
+    if (_activities.length > 50) {
+      _activities.removeRange(50, _activities.length);
     }
 
     _saveActivities(); // Save to persistent storage
@@ -644,11 +650,12 @@ class DataService extends ChangeNotifier {
         final photosJson = jsonDecode(photosString) as List;
         _photos.clear();
 
-        for (final photoData in photosJson) {
-          // Check if photo file still exists
+        // Use Future.wait for concurrent file existence checks
+        final validPhotos = <PhotoModel>[];
+        final futures = photosJson.map((photoData) async {
           final file = File(photoData['imagePath']);
           if (await file.exists()) {
-            final photo = PhotoModel(
+            return PhotoModel(
               id: photoData['id'],
               title: photoData['title'],
               imagePath: photoData['imagePath'],
@@ -658,12 +665,21 @@ class DataService extends ChangeNotifier {
               tags: List<String>.from(photoData['tags']),
               description: photoData['description'] ?? '',
             );
-            _photos.add(photo);
+          }
+          return null;
+        });
+        
+        final results = await Future.wait(futures);
+        for (final photo in results) {
+          if (photo != null) {
+            validPhotos.add(photo);
           }
         }
+        
+        _photos.addAll(validPhotos);
       }
     } catch (e) {
-      // Handle load error
+      // Handle load error silently
     }
   }
 
@@ -865,6 +881,7 @@ class DataService extends ChangeNotifier {
         'totalReadingTimeMinutes': _totalReadingTimeMinutes,
         'lastReadingDate': _lastReadingDate?.millisecondsSinceEpoch,
         'showToolsSection': _showToolsSection,
+        'folderViewEnabled': _folderViewEnabled,
       };
 
       await prefs.setString('userProfile', jsonEncode(userProfileJson));
@@ -891,6 +908,7 @@ class DataService extends ChangeNotifier {
                 )
                 : null;
         _showToolsSection = userProfileJson['showToolsSection'] ?? false;
+        _folderViewEnabled = userProfileJson['folderViewEnabled'] ?? false;
       }
     } catch (e) {
       // Handle load error
@@ -939,6 +957,7 @@ class DataService extends ChangeNotifier {
       _totalReadingTimeMinutes = 0;
       _lastReadingDate = null;
       _showToolsSection = false;
+      _folderViewEnabled = false;
       
       // Clear app directory files (photos, ebooks, etc.)
       final appDir = await getApplicationDocumentsDirectory();
@@ -985,6 +1004,113 @@ class DataService extends ChangeNotifier {
     _showToolsSection = show;
     await _saveUserProfile();
     notifyListeners(); // Notify UI to rebuild
+  }
+
+  Future<void> setFolderViewEnabled(bool enabled) async {
+    _folderViewEnabled = enabled;
+    await _saveUserProfile();
+    notifyListeners(); // Notify UI to rebuild
+  }
+
+  // Save and load folder view mode state
+  Future<void> saveFolderViewMode(bool isFolderView) async {
+    _folderViewEnabled = isFolderView;
+    await _saveUserProfile(); // Use existing profile save method
+  }
+
+  Future<bool> loadFolderViewMode() async {
+    return _folderViewEnabled;
+  }
+
+  // Reorder photos and save to storage
+  void reorderPhotos(List<PhotoModel> reorderedPhotos) {
+    _photos.clear();
+    _photos.addAll(reorderedPhotos);
+    _savePhotos();
+    notifyListeners();
+  }
+
+  // Reorder photo pages and save to storage
+  void reorderPhotoPages(List<PhotoPageModel> reorderedPhotoPages) {
+    _photoPages.clear();
+    _photoPages.addAll(reorderedPhotoPages);
+    _savePhotoPages();
+    notifyListeners();
+  }
+
+  // Get folder data (photos grouped by tags) - optimized version
+  Map<String, List<PhotoModel>> getPhotoFolders() {
+    final Map<String, List<PhotoModel>> folders = {};
+    
+    // Helper function to add photo to folder
+    void addToFolder(String folderName, PhotoModel photo) {
+      folders.putIfAbsent(folderName, () => []).add(photo);
+    }
+    
+    // Group photos by their first tag
+    for (final photo in _photos) {
+      if (photo.tags.isNotEmpty) {
+        addToFolder(photo.tags.first, photo);
+      }
+    }
+    
+    // Group photo pages by their first tag
+    for (final photoPage in _photoPages) {
+      if (photoPage.tags.isNotEmpty) {
+        final folderName = photoPage.tags.first;
+        // Convert photo page to individual photos for folder view
+        for (int i = 0; i < photoPage.imagePaths.length; i++) {
+          final photo = PhotoModel(
+            id: '${photoPage.id}_$i',
+            title: '${photoPage.title} - ${i + 1}',
+            imagePath: photoPage.imagePaths[i],
+            createdAt: photoPage.createdAt,
+            tags: photoPage.tags,
+            description: photoPage.description,
+          );
+          addToFolder(folderName, photo);
+        }
+      }
+    }
+    
+    return folders;
+  }
+
+  // Get photos for a specific folder (tag)
+  List<PhotoModel> getPhotosForFolder(String folderName) {
+    return _photos.where((photo) => photo.tags.contains(folderName)).toList();
+  }
+
+  // Get photo pages for a specific folder (tag)
+  List<PhotoPageModel> getPhotoPageForFolder(String folderName) {
+    return _photoPages.where((photoPage) => photoPage.tags.contains(folderName)).toList();
+  }
+
+  // Get all folder names
+  List<String> getFolderNames() {
+    final folders = getPhotoFolders();
+    final folderNames = folders.keys.toList();
+    folderNames.sort();
+    return folderNames;
+  }
+
+  // Add photo with specific folder (tag)
+  String addPhotoToFolder({
+    required String title,
+    required String imagePath,
+    required String folderName,
+    String? description,
+    String? activityTitle,
+    String? activityDescription,
+  }) {
+    return addPhoto(
+      title: title,
+      imagePath: imagePath,
+      tags: [folderName],
+      description: description,
+      activityTitle: activityTitle,
+      activityDescription: activityDescription,
+    );
   }
 
   Future<void> addReadingTime(int minutes) async {
