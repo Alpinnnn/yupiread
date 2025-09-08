@@ -2,7 +2,7 @@
 
 **Modern Education Gallery & Ebook App for Android**
 
-Yupiread adalah aplikasi Android modern yang menggabungkan manajemen galeri foto dengan sistem ebook yang canggih. Dirancang khusus untuk kebutuhan edukasi dengan antarmuka yang bersih, fitur-fitur produktif, dan sistem manajemen konten yang komprehensif.
+Yupiread adalah aplikasi Android yang menggabungkan manajemen galeri foto dengan sistem ebook. Dirancang untuk kebutuhan edukasi dengan antarmuka yang bersih dan fitur manajemen konten.
 
 ## ✨ Fitur Utama
 
@@ -10,16 +10,16 @@ Yupiread adalah aplikasi Android modern yang menggabungkan manajemen galeri foto
 - **Foto Individual & Photo Pages**: Kelola foto tunggal atau kumpulan foto dalam halaman terorganisir
 - **Folder View Mode**: Toggle antara grid view dan folder view berdasarkan tag
 - **Document Scanner**: Auto-detection dokumen dengan teknologi ML Kit
-- **Smart Tagging**: Sistem tag yang dapat dikustomisasi dengan auto-tagging
+- **Smart Tagging**: Sistem tag yang dapat dikustomisasi
 - **Batch Operations**: Multi-selection untuk operasi massal
 - **Image Processing**: Crop, edit, dan share foto dengan mudah
 - **Text Recognition**: Extract teks dari gambar menggunakan Google ML Kit
 
 ### 📚 Ebook Management
 - **Multi-Format Support**: PDF, Word (.docx), dan Rich Text (JSON Delta)
-- **Rich Text Editor**: Editor WYSIWYG lengkap dengan flutter_quill
-- **PDF Reader**: Viewer dengan zoom, navigation, dan bookmark
-- **Progress Tracking**: Pelacakan kemajuan baca otomatis dan akurat
+- **Rich Text Editor**: Editor WYSIWYG dengan flutter_quill
+- **PDF Reader**: Viewer dengan zoom dan navigation
+- **Progress Tracking**: Pelacakan kemajuan baca otomatis
 - **Text-to-Ebook**: Konversi teks hasil scan menjadi ebook
 - **Export Features**: Export ke PDF dengan formatting
 
@@ -29,30 +29,30 @@ Yupiread adalah aplikasi Android modern yang menggabungkan manajemen galeri foto
 - **Image to PDF**: Konversi gambar ke PDF dengan layout otomatis
 
 ### 📊 Dashboard & Analytics
-- **Activity Dashboard**: Log aktivitas lengkap dengan lokalisasi
-- **Reading Statistics**: Streak harian, total waktu baca, progress tracking
-- **Quick Stats**: Overview foto, ebook, dan aktivitas terbaru
-- **User Profile**: Manajemen profil dengan foto dan preferensi
+- **Activity Dashboard**: Log aktivitas dengan lokalisasi
+- **Reading Statistics**: Streak harian dan total waktu baca
+- **Quick Stats**: Overview foto, ebook, dan aktivitas
+- **User Profile**: Manajemen profil dan preferensi
 
 ### ☁️ Backup & Sync
-- **Google Drive Integration**: Backup otomatis ke Google Drive
-- **Data Export/Import**: Export/import data dalam format ZIP
+- **Google Drive Integration**: Backup ke Google Drive
+- **Data Export/Import**: Export/import data format ZIP
 - **Progress Tracking**: Real-time backup/restore progress
-- **Selective Backup**: Pilih data yang ingin di-backup
+- **Selective Backup**: Backup data selektif
 
 ## 🏗️ Arsitektur & Teknologi
 
 ### Framework & Platform
-- **Flutter SDK**: ^3.7.2 dengan Material Design 3
+- **Flutter SDK**: ^3.7.2
 - **Target Platform**: Android (minSdk 21, targetSdk 34)
-- **Localization**: Indonesian & English (comprehensive i18n)
+- **Localization**: Indonesian & English
 
 ### Dependencies Utama
 ```yaml
 # Core Framework
 flutter: sdk
-flutter_quill: ^11.4.2              # Rich text editor
-extended_image: ^10.0.1             # Advanced image handling
+flutter_quill: ^11.4.2
+extended_image: ^10.0.1
 
 # File & Document Processing
 syncfusion_flutter_pdfviewer: ^30.2.6
@@ -86,33 +86,23 @@ url_launcher: ^6.3.0
 ### Struktur Project
 ```
 lib/
-├── models/                    # Data models & types
-│   ├── photo_model.dart      # Photo, PhotoPage, Activity models
-│   ├── ebook_model.dart      # Ebook model dengan progress tracking
-│   └── activity_type.dart    # Activity types & enums
-├── screens/                  # UI Screens (24 screens)
+├── models/
+│   ├── photo_model.dart
+│   ├── ebook_model.dart
+│   └── activity_type.dart
+├── screens/
 │   ├── dashboard_screen.dart
-│   ├── gallery_screen.dart   # Main gallery dengan folder view
-│   ├── folder_view_screen.dart
+│   ├── gallery_screen.dart
 │   ├── ebook_screen.dart
-│   ├── ebook_reader_screen.dart
-│   ├── text_ebook_editor_screen.dart
-│   ├── tools_screen.dart     # PDF tools
-│   ├── backup_screen.dart    # Google Drive backup
-│   └── [21+ other screens]
-├── services/                 # Business Logic Layer
-│   ├── data_service.dart     # Core data management
-│   ├── backup_service.dart   # Google Drive integration
-│   ├── theme_service.dart    # Theme management
-│   ├── language_service.dart # Localization
-│   ├── text_recognition_service.dart
-│   ├── image_cache_service.dart
-│   └── shared_file_handler.dart
-├── l10n/                     # Localization files
-│   ├── app_localizations.dart
-│   ├── app_localizations_en.dart
-│   └── app_localizations_id.dart
-└── main.dart                 # App entry point
+│   ├── tools_screen.dart
+│   └── [20+ other screens]
+├── services/
+│   ├── data_service.dart
+│   ├── backup_service.dart
+│   ├── theme_service.dart
+│   └── [5+ other services]
+├── l10n/
+└── main.dart
 ```
 
 ### Pola Arsitektur
@@ -164,69 +154,67 @@ flutter install --release
 ## 📱 Fitur Detail
 
 ### Dashboard Screen
-- **Activity Timeline**: Log aktivitas real-time dengan lokalisasi
+- **Activity Timeline**: Log aktivitas dengan lokalisasi
 - **Statistics Cards**: Total photos, ebooks, reading streak
 - **Quick Actions**: Akses cepat ke fitur utama
-- **Recent Items**: Preview foto dan ebook terbaru
 
 ### Gallery Management
-- **Dual View Mode**: Grid view normal atau folder view berdasarkan tag
-- **Smart Organization**: Auto-grouping berdasarkan tag pertama
-- **Advanced Search**: Filter berdasarkan tag, tanggal, atau nama
-- **Batch Operations**: Select multiple, delete, atau edit tags
-- **Document Scanner**: Scan dokumen dengan auto-crop dan enhancement
-- **Photo Pages**: Kumpulkan multiple foto dalam satu halaman terorganisir
+- **Dual View Mode**: Grid view atau folder view berdasarkan tag
+- **Smart Organization**: Auto-grouping berdasarkan tag
+- **Advanced Search**: Filter berdasarkan tag, tanggal, nama
+- **Batch Operations**: Multi-select untuk operasi massal
+- **Document Scanner**: Scan dokumen dengan auto-crop
+- **Photo Pages**: Kumpulan foto dalam halaman terorganisir
 
 ### Ebook System
-- **Universal Reader**: Support PDF, DOCX, dan rich text format
-- **Smart Progress**: Tracking progress yang akurat untuk semua format
-- **Rich Editor**: Full-featured text editor dengan formatting tools
-- **Text Recognition**: Scan dan convert gambar ke teks editable
-- **Export Options**: Save sebagai PDF dengan custom formatting
-- **Reading Analytics**: Track waktu baca dan maintain reading streak
+- **Universal Reader**: Support PDF, DOCX, rich text
+- **Progress Tracking**: Tracking progress untuk semua format
+- **Rich Editor**: Text editor dengan formatting tools
+- **Text Recognition**: Convert gambar ke teks
+- **Export Options**: Save sebagai PDF
+- **Reading Analytics**: Track waktu baca dan reading streak
 
 ### PDF Tools Suite
-- **Intelligent Compression**: Multiple compression levels dengan preview
-- **Smart Merger**: Combine PDFs dengan custom page ordering
-- **Image Converter**: Batch convert images ke PDF dengan layout options
-- **Quality Control**: Preview hasil sebelum save
+- **PDF Compression**: Multiple compression levels
+- **PDF Merger**: Combine multiple PDFs
+- **Image Converter**: Convert images ke PDF
+- **Quality Control**: Preview sebelum save
 
 ### Backup & Cloud Sync
-- **Google Drive Integration**: Seamless backup ke Google Drive
-- **Incremental Backup**: Hanya backup perubahan untuk efisiensi
-- **Selective Restore**: Pilih data spesifik untuk restore
-- **Progress Monitoring**: Real-time backup/restore progress
-- **Conflict Resolution**: Handle conflicts saat restore
+- **Google Drive Integration**: Backup ke Google Drive
+- **Incremental Backup**: Backup perubahan saja
+- **Selective Restore**: Restore data spesifik
+- **Progress Monitoring**: Real-time progress
 
 ### Profile & Settings
-- **User Management**: Profile dengan foto dan statistik personal
-- **Theme System**: Light, Dark, dan System theme dengan smooth transition
-- **Language Settings**: Switch between Indonesian dan English
-- **Activity Controls**: Kontrol logging aktivitas per kategori
-- **Gallery Settings**: Customize gallery behavior dan folder view
-- **Tag Management**: Create, edit, dan organize custom tags
+- **User Management**: Profile dengan foto dan statistik
+- **Theme System**: Light, Dark, System theme
+- **Language Settings**: Indonesian dan English
+- **Activity Controls**: Kontrol logging aktivitas
+- **Gallery Settings**: Customize gallery behavior
+- **Tag Management**: Kelola custom tags
 
 ## 🎨 UI/UX Features
 
 ### Design System
-- **Material Design 3**: Latest Android design guidelines
+- **Material Design 3**: Android design guidelines
 - **Dynamic Colors**: Adaptive color system
-- **Responsive Layout**: Optimized untuk semua ukuran layar Android
-- **Smooth Animations**: 60fps transitions dan micro-interactions
-- **Accessibility**: Support untuk screen readers dan high contrast
+- **Responsive Layout**: Support semua ukuran layar
+- **Smooth Animations**: 60fps transitions
+- **Accessibility**: Screen readers dan high contrast
 
 ### Localization
 - **Comprehensive i18n**: 200+ localized strings
-- **Context-Aware**: Smart pluralization dan gender-aware text
+- **Context-Aware**: Smart pluralization
 - **Real-time Switching**: Change language tanpa restart
-- **Fallback System**: Graceful handling untuk missing translations
+- **Fallback System**: Handle missing translations
 
 ### Performance Optimizations
-- **Image Caching**: Intelligent memory management dengan LRU cache
-- **Lazy Loading**: On-demand loading untuk large datasets
-- **File Management**: Automatic cleanup dan orphaned file detection
-- **Database Optimization**: Indexed queries dan efficient data structures
-- **Memory Management**: Proper disposal patterns dan leak prevention
+- **Image Caching**: Memory management dengan LRU cache
+- **Lazy Loading**: On-demand loading
+- **File Management**: Automatic cleanup
+- **Database Optimization**: Indexed queries
+- **Memory Management**: Proper disposal patterns
 
 ## 🔒 Security & Permissions
 
@@ -239,25 +227,25 @@ flutter install --release
 ```
 
 ### Privacy Features
-- **Local Storage**: Data disimpan lokal di device
-- **Optional Cloud**: Backup ke Google Drive bersifat optional
-- **No Analytics**: Tidak ada tracking atau analytics third-party
-- **Secure Authentication**: OAuth 2.0 untuk Google Drive integration
+- **Local Storage**: Data disimpan lokal
+- **Optional Cloud**: Backup Google Drive optional
+- **No Analytics**: Tidak ada tracking third-party
+- **Secure Authentication**: OAuth 2.0 Google Drive
 
 ## 🔧 Development
 
 ### Code Quality
-- **Linting**: Strict analysis_options dengan custom rules
-- **Architecture**: Clean code principles dan SOLID patterns
-- **Error Handling**: Comprehensive error handling dan user feedback
-- **Testing**: Unit tests untuk core business logic
-- **Documentation**: Inline documentation dan README
+- **Linting**: Strict analysis_options
+- **Architecture**: Clean code principles
+- **Error Handling**: Comprehensive error handling
+- **Testing**: Unit tests core logic
+- **Documentation**: Inline documentation
 
 ### Performance Metrics
-- **App Size**: ~50MB (optimized dengan split APKs)
-- **Memory Usage**: <100MB average dengan efficient caching
+- **App Size**: ~50MB (split APKs)
+- **Memory Usage**: <100MB average
 - **Startup Time**: <2 seconds cold start
-- **Battery Optimization**: Background processing minimized
+- **Battery Optimization**: Minimal background processing
 
 ## 📋 Platform Support
 
@@ -270,12 +258,12 @@ flutter install --release
 
 1. Fork repository
 2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Follow coding standards dan linting rules
+3. Follow coding standards
 4. Add tests untuk new features
 5. Update documentation
 6. Commit changes (`git commit -m 'Add AmazingFeature'`)
 7. Push to branch (`git push origin feature/AmazingFeature`)
-8. Open Pull Request dengan detailed description
+8. Open Pull Request
 
 ## 📄 License
 
@@ -284,11 +272,9 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 📞 Contact & Support
 
 - **GitHub**: [https://github.com/Alpinnnn/yupiread](https://github.com/Alpinnnn/yupiread)
-- **Issues**: Report bugs atau request features via GitHub Issues
-- **Discussions**: Community discussions di GitHub Discussions
+- **Issues**: Report bugs atau request features
+- **Discussions**: Community discussions
 
 ---
 
-**Yupiread v1.1.8** - *Where Reality Comes Into Eternity*
-
-*Modern education companion untuk Android dengan focus pada productivity, organization, dan user experience yang exceptional.* 
+**Yupiread v1.1.8** - *Where Reality Comes Into Eternity* 
