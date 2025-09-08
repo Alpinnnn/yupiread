@@ -6,6 +6,7 @@ import 'services/data_service.dart';
 import 'services/shared_file_handler.dart';
 import 'services/language_service.dart';
 import 'services/update_service.dart';
+import 'services/backup_service.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
@@ -35,6 +36,10 @@ void main() async {
   
   final imageCacheService = ImageCacheService.instance;
   await imageCacheService.initialize();
+
+  // Initialize backup service for OAuth session persistence
+  final backupService = BackupService.instance;
+  await backupService.initialize();
 
   // Initialize shared file handler
   SharedFileHandler.initialize();

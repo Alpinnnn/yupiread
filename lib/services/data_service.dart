@@ -1035,6 +1035,16 @@ class DataService extends ChangeNotifier {
     _photoPages.clear();
     _photoPages.addAll(reorderedPhotoPages);
     _savePhotoPages();
+  }
+
+  // Mixed reordering - handles both photos and photo pages together
+  void reorderMixedItems(List<PhotoPageModel> reorderedPhotoPages, List<PhotoModel> reorderedPhotos) {
+    _photoPages.clear();
+    _photoPages.addAll(reorderedPhotoPages);
+    _photos.clear();
+    _photos.addAll(reorderedPhotos);
+    _savePhotoPages();
+    _savePhotos();
     notifyListeners();
   }
 
@@ -1074,6 +1084,37 @@ class DataService extends ChangeNotifier {
     }
     
     return folders;
+  }
+
+  // Get photos without tags for folder view
+  List<PhotoModel> getUntaggedPhotos() {
+    final List<PhotoModel> untaggedPhotos = [];
+    
+    // Add photos without tags
+    for (final photo in _photos) {
+      if (photo.tags.isEmpty) {
+        untaggedPhotos.add(photo);
+      }
+    }
+    
+    // Add photo pages without tags (convert to individual photos)
+    for (final photoPage in _photoPages) {
+      if (photoPage.tags.isEmpty) {
+        for (int i = 0; i < photoPage.imagePaths.length; i++) {
+          final photo = PhotoModel(
+            id: '${photoPage.id}_$i',
+            title: '${photoPage.title} - ${i + 1}',
+            imagePath: photoPage.imagePaths[i],
+            createdAt: photoPage.createdAt,
+            tags: photoPage.tags,
+            description: photoPage.description,
+          );
+          untaggedPhotos.add(photo);
+        }
+      }
+    }
+    
+    return untaggedPhotos;
   }
 
   // Get photos for a specific folder (tag)

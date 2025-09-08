@@ -106,6 +106,8 @@ abstract class AppLocalizations {
   String get imageAndTextSaved => 'Image and text successfully saved to gallery';
   String get failedToSaveToGallery => 'Failed to save to gallery';
   String get textRecognitionFailed => 'Text recognition failed';
+  String get noTextDetected => 'No text detected';
+  String get textExtractionFailed => 'Failed to extract text: ';
 
   // Dashboard
   String get welcomeBack => 'Welcome Back';

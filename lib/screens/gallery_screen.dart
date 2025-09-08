@@ -11,6 +11,7 @@ import '../screens/photo_page_view_screen.dart';
 import '../screens/folder_view_screen.dart';
 import '../l10n/app_localizations.dart';
 import 'text_scanner_screen.dart';
+import 'document_scanner_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -37,10 +38,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
     if (mounted) {
       setState(() => _isLoading = true);
     }
-    
+
     await _loadFolderViewState();
     _updateFilteredPhotos();
-    
+
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -69,8 +70,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
   void _updateFilteredPhotos() {
     setState(() {
       // Create mutable copies to allow reordering
-      _filteredPhotos = List<PhotoModel>.from(_dataService.getFilteredPhotos(_selectedTags));
-      _filteredPhotoPages = List<PhotoPageModel>.from(_dataService.getFilteredPhotoPages(_selectedTags));
+      _filteredPhotos = List<PhotoModel>.from(
+        _dataService.getFilteredPhotos(_selectedTags),
+      );
+      _filteredPhotoPages = List<PhotoPageModel>.from(
+        _dataService.getFilteredPhotoPages(_selectedTags),
+      );
     });
   }
 
@@ -79,21 +84,55 @@ class _GalleryScreenState extends State<GalleryScreen> {
       // Adjust indices to account for add button at index 0
       final adjustedOldIndex = oldIndex - 1;
       final adjustedNewIndex = newIndex - 1;
-      
-      if (adjustedOldIndex < _filteredPhotoPages.length && adjustedNewIndex < _filteredPhotoPages.length) {
+
+      // Create working copies of the lists
+      final workingPhotoPages = List<PhotoPageModel>.from(_filteredPhotoPages);
+      final workingPhotos = List<PhotoModel>.from(_filteredPhotos);
+
+      if (adjustedOldIndex < workingPhotoPages.length &&
+          adjustedNewIndex < workingPhotoPages.length) {
         // Reordering within photo pages
-        final item = _filteredPhotoPages.removeAt(adjustedOldIndex);
-        _filteredPhotoPages.insert(adjustedNewIndex, item);
-        _dataService.reorderPhotoPages(_filteredPhotoPages);
-      } else if (adjustedOldIndex >= _filteredPhotoPages.length && adjustedNewIndex >= _filteredPhotoPages.length) {
+        final item = workingPhotoPages.removeAt(adjustedOldIndex);
+        workingPhotoPages.insert(adjustedNewIndex, item);
+        _filteredPhotoPages = workingPhotoPages;
+        _dataService.reorderPhotoPages(workingPhotoPages);
+      } else if (adjustedOldIndex >= workingPhotoPages.length &&
+          adjustedNewIndex >= workingPhotoPages.length) {
         // Reordering within photos
-        final photoOldIndex = adjustedOldIndex - _filteredPhotoPages.length;
-        final photoNewIndex = adjustedNewIndex - _filteredPhotoPages.length;
-        final item = _filteredPhotos.removeAt(photoOldIndex);
-        _filteredPhotos.insert(photoNewIndex, item);
-        _dataService.reorderPhotos(_filteredPhotos);
+        final photoOldIndex = adjustedOldIndex - workingPhotoPages.length;
+        final photoNewIndex = adjustedNewIndex - workingPhotoPages.length;
+        final item = workingPhotos.removeAt(photoOldIndex);
+        workingPhotos.insert(photoNewIndex, item);
+        _filteredPhotos = workingPhotos;
+        _dataService.reorderPhotos(workingPhotos);
+      } else {
+        // Mixed reordering - maintain original types, just reorder positions
+        // Create a combined list to determine new order
+        List<dynamic> combinedItems = [];
+        combinedItems.addAll(workingPhotoPages);
+        combinedItems.addAll(workingPhotos);
+        
+        // Move item to new position
+        final item = combinedItems.removeAt(adjustedOldIndex);
+        combinedItems.insert(adjustedNewIndex, item);
+        
+        // Separate back into photo pages and photos
+        workingPhotoPages.clear();
+        workingPhotos.clear();
+        
+        for (final item in combinedItems) {
+          if (item is PhotoPageModel) {
+            workingPhotoPages.add(item);
+          } else if (item is PhotoModel) {
+            workingPhotos.add(item);
+          }
+        }
+        
+        // Update both lists and save
+        _filteredPhotoPages = workingPhotoPages;
+        _filteredPhotos = workingPhotos;
+        _dataService.reorderMixedItems(workingPhotoPages, workingPhotos);
       }
-      // Note: Mixed reordering between photos and photo pages is not supported
     });
   }
 
@@ -102,17 +141,17 @@ class _GalleryScreenState extends State<GalleryScreen> {
       setState(() {
         _folderViewMode = !_folderViewMode;
       });
-      
+
       // Save the folder view state asynchronously
       _dataService.saveFolderViewMode(_folderViewMode);
-      
+
       final localizations = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _folderViewMode 
-              ? localizations.folderViewEnabled 
-              : localizations.folderViewDisabled,
+            _folderViewMode
+                ? localizations.folderViewEnabled
+                : localizations.folderViewDisabled,
           ),
           duration: const Duration(seconds: 2),
         ),
@@ -123,7 +162,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Widget _buildPhotoGridView() {
     // Create a combined list with keys for reordering
     List<Widget> allItems = [];
-    
+
     // Add photo card (non-reorderable) with key
     allItems.add(
       Container(
@@ -131,7 +170,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         child: _buildAddPhotoCard(context),
       ),
     );
-    
+
     // Add photo pages with keys
     for (int i = 0; i < _filteredPhotoPages.length; i++) {
       allItems.add(
@@ -141,7 +180,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ),
       );
     }
-    
+
     // Add photos with keys
     for (int i = 0; i < _filteredPhotos.length; i++) {
       allItems.add(
@@ -169,8 +208,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
     final folders = _dataService.getPhotoFolders();
     final folderNames = folders.keys.toList();
     folderNames.sort();
+    
+    final untaggedPhotos = _dataService.getUntaggedPhotos();
+    final totalItems = folderNames.length + untaggedPhotos.length;
 
-    if (folderNames.isEmpty) {
+    if (totalItems == 0) {
       return _buildEmptyFolderView();
     }
 
@@ -181,11 +223,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
         mainAxisSpacing: 16,
         childAspectRatio: 0.85,
       ),
-      itemCount: folderNames.length,
+      itemCount: totalItems,
       itemBuilder: (context, index) {
-        final folderName = folderNames[index];
-        final folderPhotos = folders[folderName]!;
-        return _buildFolderCard(folderName, folderPhotos);
+        // Show folder cards first
+        if (index < folderNames.length) {
+          final folderName = folderNames[index];
+          final folderPhotos = folders[folderName]!;
+          return _buildFolderCard(folderName, folderPhotos);
+        } 
+        // Then show individual untagged photos
+        else {
+          final photoIndex = index - folderNames.length;
+          final photo = untaggedPhotos[photoIndex];
+          return _buildPhotoCard(context, photo);
+        }
       },
     );
   }
@@ -197,11 +248,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.folder_open,
-            size: 64,
-            color: theme.colorScheme.outline,
-          ),
+          Icon(Icons.folder_open, size: 64, color: theme.colorScheme.outline),
           const SizedBox(height: 16),
           Text(
             'No folders yet',
@@ -230,9 +277,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => FolderViewScreen(
-              folderName: folderName,
-            ),
+            builder: (context) => FolderViewScreen(folderName: folderName),
           ),
         );
       },
@@ -242,7 +287,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+              color:
+                  Theme.of(context).cardTheme.shadowColor ??
+                  Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -343,18 +390,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.folder_open,
-              size: 32,
-              color: Colors.grey,
-            ),
+            Icon(Icons.folder_open, size: 32, color: Colors.grey),
             SizedBox(height: 8),
             Text(
               'Empty Folder',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ],
         ),
@@ -375,18 +415,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
             child: const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.broken_image,
-                  size: 32,
-                  color: Colors.grey,
-                ),
+                Icon(Icons.broken_image, size: 32, color: Colors.grey),
                 SizedBox(height: 8),
                 Text(
                   'Failed to load',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
@@ -424,11 +457,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         } else {
           return Container(
             color: Colors.grey[300],
-            child: const Icon(
-              Icons.photo,
-              color: Colors.grey,
-              size: 16,
-            ),
+            child: const Icon(Icons.photo, color: Colors.grey, size: 16),
           );
         }
       },
@@ -438,15 +467,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -479,16 +504,23 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       _buildActionButton(
                         icon: _folderViewMode ? Icons.grid_view : Icons.folder,
                         onPressed: _toggleFolderView,
-                        tooltip: _folderViewMode ? l10n.viewAsGrid : l10n.viewAsFolders,
+                        tooltip:
+                            _folderViewMode
+                                ? l10n.viewAsGrid
+                                : l10n.viewAsFolders,
                       ),
                       const SizedBox(width: 8),
                       // Filter button
                       _buildActionButton(
-                        icon: _selectedTags.isEmpty 
-                          ? Icons.filter_list 
-                          : Icons.filter_list,
+                        icon:
+                            _selectedTags.isEmpty
+                                ? Icons.filter_list
+                                : Icons.filter_list,
                         onPressed: _showFilterDialog,
-                        badge: _selectedTags.isNotEmpty ? _selectedTags.length : null,
+                        badge:
+                            _selectedTags.isNotEmpty
+                                ? _selectedTags.length
+                                : null,
                       ),
                     ],
                   ),
@@ -496,7 +528,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ),
               const SizedBox(height: 32),
               Expanded(
-                child: _folderViewMode ? _buildFolderView() : _buildPhotoGridView(),
+                child:
+                    _folderViewMode
+                        ? _buildFolderView()
+                        : _buildPhotoGridView(),
               ),
             ],
           ),
@@ -522,7 +557,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+              color:
+                  Theme.of(context).cardTheme.shadowColor ??
+                  Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -556,7 +593,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
             Text(
               l10n.newNote,
               style: TextStyle(
-                fontSize: 12, 
+                fontSize: 12,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
@@ -582,7 +619,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+              color:
+                  Theme.of(context).cardTheme.shadowColor ??
+                  Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -710,7 +749,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+              color:
+                  Theme.of(context).cardTheme.shadowColor ??
+                  Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -965,7 +1006,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+            color:
+                Theme.of(context).cardTheme.shadowColor ??
+                Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -974,10 +1017,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       child: IconButton(
         icon: Stack(
           children: [
-            Icon(
-              icon,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
             if (badge != null && badge > 0)
               Positioned(
                 right: 0,
@@ -1022,9 +1062,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
   }
 
-
-
-
   Future<void> _processSelectedImage(
     String imagePath,
     String defaultTitle,
@@ -1037,7 +1074,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).failedToSavePhotoError(e.toString())),
+            content: Text(
+              AppLocalizations.of(context).failedToSavePhotoError(e.toString()),
+            ),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -1077,7 +1116,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         TextField(
                           controller: descriptionController,
                           decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context).descriptionOptional,
+                            labelText:
+                                AppLocalizations.of(
+                                  context,
+                                ).descriptionOptional,
                             border: OutlineInputBorder(),
                           ),
                           maxLines: 3,
@@ -1098,9 +1140,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                   label: Text(
                                     tag,
                                     style: TextStyle(
-                                      color: isSelected && Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white
-                                          : null,
+                                      color:
+                                          isSelected &&
+                                                  Theme.of(
+                                                        context,
+                                                      ).brightness ==
+                                                      Brightness.dark
+                                              ? Colors.white
+                                              : null,
                                     ),
                                   ),
                                   selected: isSelected,
@@ -1113,12 +1160,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
-                                      : const Color(0xFF2563EB).withOpacity(0.2),
-                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFF60A5FA)
-                                      : const Color(0xFF2563EB),
+                                  selectedColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(
+                                            0xFF3B82F6,
+                                          ).withOpacity(0.3)
+                                          : const Color(
+                                            0xFF2563EB,
+                                          ).withOpacity(0.2),
+                                  checkmarkColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),
@@ -1140,7 +1195,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         final photoDescription =
                             descriptionController.text.trim();
 
-                        final finalTitle = photoTitle.isNotEmpty ? photoTitle : title;
+                        final finalTitle =
+                            photoTitle.isNotEmpty ? photoTitle : title;
                         final l10n = AppLocalizations.of(context);
                         _dataService.addPhoto(
                           title: finalTitle,
@@ -1156,7 +1212,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              AppLocalizations.of(context).photoAddedSuccessfully(finalTitle),
+                              AppLocalizations.of(
+                                context,
+                              ).photoAddedSuccessfully(finalTitle),
                             ),
                             backgroundColor: const Color(0xFF10B981),
                           ),
@@ -1174,31 +1232,29 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-
   // Scan document from gallery
-  void _scanFromGallery() async {
-    try {
-      List<String> pictures = await CunningDocumentScanner.getPictures() ?? [];
-      if (pictures.isNotEmpty) {
-        _handleScannedDocuments(pictures, AppLocalizations.of(context).scannedFromGallery);
-      }
-    } catch (exception) {
-      // Handle scanner exception
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error scanning document: $exception'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    }
+  void _scanFromGallery() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => DocumentScannerScreen(
+              useGallery: true,
+              onDocumentsScanned: (List<String> scannedImagePaths) {
+                _handleScannedDocuments(
+                  scannedImagePaths,
+                  AppLocalizations.of(context).scannedFromGallery,
+                );
+              },
+            ),
+      ),
+    );
   }
 
   // Handle scanned documents - show validation dialog for multiple images
   void _handleScannedDocuments(List<String> imagePaths, String defaultTitle) {
     if (imagePaths.isEmpty) return;
-    
+
     if (imagePaths.length == 1) {
       // Single document - process directly
       _processSelectedImage(imagePaths.first, defaultTitle);
@@ -1219,15 +1275,16 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
       if (image != null) {
         final File imageFile = File(image.path);
-        
+
         // Navigate to text scanner screen
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TextScannerScreen(
-              imageFile: imageFile,
-              saveImage: false, // Don't save the image, just scan text
-            ),
+            builder:
+                (context) => TextScannerScreen(
+                  imageFile: imageFile,
+                  saveImage: false, // Don't save the image, just scan text
+                ),
           ),
         );
       }
@@ -1235,7 +1292,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).failedToSelectPhotoError(e.toString())),
+            content: Text(
+              AppLocalizations.of(
+                context,
+              ).failedToSelectPhotoError(e.toString()),
+            ),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -1244,7 +1305,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   // Show validation dialog for multiple scanned documents
-  void _showScannedDocumentsValidationDialog(List<String> imagePaths, String defaultTitle) {
+  void _showScannedDocumentsValidationDialog(
+    List<String> imagePaths,
+    String defaultTitle,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1257,7 +1321,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                AppLocalizations.of(context).documentsScannedCount(imagePaths.length),
+                AppLocalizations.of(
+                  context,
+                ).documentsScannedCount(imagePaths.length),
                 style: const TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 16),
@@ -1289,7 +1355,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               ),
                             ),
                             Text(
-                              AppLocalizations.of(context).multiDocumentPageDesc,
+                              AppLocalizations.of(
+                                context,
+                              ).multiDocumentPageDesc,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF6B7280),
@@ -1331,7 +1399,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               ),
                             ),
                             Text(
-                              AppLocalizations.of(context).separateDocumentsDesc,
+                              AppLocalizations.of(
+                                context,
+                              ).separateDocumentsDesc,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF6B7280),
@@ -1358,14 +1428,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   // Process multiple scanned images as photo page
-  void _processMultipleScannedImages(List<String> imagePaths, String defaultTitle) {
+  void _processMultipleScannedImages(
+    List<String> imagePaths,
+    String defaultTitle,
+  ) {
     // Convert paths to XFile-like objects for existing method
     List<XFile> xFiles = imagePaths.map((path) => XFile(path)).toList();
     _processMultipleImages(xFiles);
   }
 
   // Process individual scanned images
-  void _processIndividualScannedImages(List<String> imagePaths, String defaultTitle) {
+  void _processIndividualScannedImages(
+    List<String> imagePaths,
+    String defaultTitle,
+  ) {
     // Convert paths to XFile-like objects for existing method
     List<XFile> xFiles = imagePaths.map((path) => XFile(path)).toList();
     _processIndividualImages(xFiles);
@@ -1410,9 +1486,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                   label: Text(
                                     tag,
                                     style: TextStyle(
-                                      color: isSelected && Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white
-                                          : null,
+                                      color:
+                                          isSelected &&
+                                                  Theme.of(
+                                                        context,
+                                                      ).brightness ==
+                                                      Brightness.dark
+                                              ? Colors.white
+                                              : null,
                                     ),
                                   ),
                                   selected: isSelected,
@@ -1425,12 +1506,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
-                                      : const Color(0xFF2563EB).withOpacity(0.2),
-                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFF60A5FA)
-                                      : const Color(0xFF2563EB),
+                                  selectedColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(
+                                            0xFF3B82F6,
+                                          ).withOpacity(0.3)
+                                          : const Color(
+                                            0xFF2563EB,
+                                          ).withOpacity(0.2),
+                                  checkmarkColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),
@@ -1479,7 +1568,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             title: Text(AppLocalizations.of(context).deletePhotoTitle),
-            content: Text(AppLocalizations.of(context).deletePhotoMessage(photo.title)),
+            content: Text(
+              AppLocalizations.of(context).deletePhotoMessage(photo.title),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -1517,123 +1608,129 @@ class _GalleryScreenState extends State<GalleryScreen> {
   void _showMultiPhotoValidationDialog(List<XFile> images) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          AppLocalizations.of(context).selectAddMethod,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppLocalizations.of(context).youSelected(images.length),
-              style: const TextStyle(fontSize: 14),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            title: Text(
+              AppLocalizations.of(context).selectAddMethod,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.of(context).youSelected(images.length),
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.collections, size: 16, color: Color(0xFF2563EB)),
-                      const SizedBox(width: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.collections,
+                            size: 16,
+                            color: Color(0xFF2563EB),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppLocalizations.of(context).multiPhotoPageTitle,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        AppLocalizations.of(context).multiPhotoPageTitle,
+                        AppLocalizations.of(context).multiPhotoPageDesc,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
+                          fontSize: 12,
+                          color: Color(0xFF6B7280),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    AppLocalizations.of(context).multiPhotoPageDesc,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.photo, size: 16, color: Color(0xFF059669)),
-                      const SizedBox(width: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.photo,
+                            size: 16,
+                            color: Color(0xFF059669),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppLocalizations.of(context).separatePhotos,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
                       Text(
-                        AppLocalizations.of(context).separatePhotos,
+                        AppLocalizations.of(context).separatePhotosDesc,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
+                          fontSize: 12,
+                          color: Color(0xFF6B7280),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    AppLocalizations.of(context).separatePhotosDesc,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _processMultipleImages(images);
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2563EB),
+                ),
+                child: Text(AppLocalizations.of(context).multiPhoto),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _processIndividualImages(images);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF059669),
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(AppLocalizations.of(context).separatePhotos),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _processMultipleImages(images);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF2563EB),
-            ),
-            child: Text(AppLocalizations.of(context).multiPhoto),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _processIndividualImages(images);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF059669),
-              foregroundColor: Colors.white,
-            ),
-            child: Text(AppLocalizations.of(context).separatePhotos),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1641,14 +1738,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
     try {
       // Save all images first without showing dialogs
       List<String> savedPaths = [];
-      
+
       // Show loading indicator
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
       // Save all images to app directory
@@ -1658,16 +1753,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
       }
 
       Navigator.pop(context); // Close loading dialog
-      
+
       // Show batch dialog for all photos
       _showBatchPhotoDialog(savedPaths);
     } catch (e) {
       Navigator.pop(context); // Close loading dialog
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).failedToSavePhotoError(e.toString())),
+            content: Text(
+              AppLocalizations.of(context).failedToSavePhotoError(e.toString()),
+            ),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -1684,169 +1781,191 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            'Tambah ${imagePaths.length} Foto',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: prefixController,
-                  decoration: const InputDecoration(
-                    labelText: 'Prefix Judul (akan ditambah nomor)',
-                    border: OutlineInputBorder(),
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Deskripsi (opsional)',
-                    border: OutlineInputBorder(),
+                  title: Text(
+                    'Tambah ${imagePaths.length} Foto',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Tag (opsional):',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: _dataService.availableTags.map((tag) {
-                    final isSelected = selectedTags.contains(tag);
-                    return FilterChip(
-                      label: Text(
-                        tag,
-                        style: TextStyle(
-                          color: isSelected && Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : null,
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: prefixController,
+                          decoration: const InputDecoration(
+                            labelText: 'Prefix Judul (akan ditambah nomor)',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
-                      ),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setDialogState(() {
-                          if (selected) {
-                            selectedTags.add(tag);
-                          } else {
-                            selectedTags.remove(tag);
-                          }
-                        });
-                      },
-                      selectedColor: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF3B82F6).withOpacity(0.3)
-                          : const Color(0xFF2563EB).withOpacity(0.2),
-                      checkmarkColor: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF60A5FA)
-                          : const Color(0xFF2563EB),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Tag baru (pisahkan dengan koma)',
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (value) {
-                    final newTags = value
-                        .split(',')
-                        .map((tag) => tag.trim())
-                        .where((tag) => tag.isNotEmpty)
-                        .toList();
-                    setDialogState(() {
-                      for (String tag in newTags) {
-                        if (!selectedTags.contains(tag)) {
-                          selectedTags.add(tag);
-                        }
-                      }
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(AppLocalizations.of(context).cancel),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final prefix = prefixController.text.trim();
-                final description = descriptionController.text.trim();
-
-                if (prefix.isNotEmpty) {
-                  // Show loading for batch creation
-                  Navigator.pop(context); // Close dialog first
-                  
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) => const Center(
-                      child: CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: descriptionController,
+                          decoration: const InputDecoration(
+                            labelText: 'Deskripsi (opsional)',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Tag (opsional):',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children:
+                              _dataService.availableTags.map((tag) {
+                                final isSelected = selectedTags.contains(tag);
+                                return FilterChip(
+                                  label: Text(
+                                    tag,
+                                    style: TextStyle(
+                                      color:
+                                          isSelected &&
+                                                  Theme.of(
+                                                        context,
+                                                      ).brightness ==
+                                                      Brightness.dark
+                                              ? Colors.white
+                                              : null,
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setDialogState(() {
+                                      if (selected) {
+                                        selectedTags.add(tag);
+                                      } else {
+                                        selectedTags.remove(tag);
+                                      }
+                                    });
+                                  },
+                                  selectedColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(
+                                            0xFF3B82F6,
+                                          ).withOpacity(0.3)
+                                          : const Color(
+                                            0xFF2563EB,
+                                          ).withOpacity(0.2),
+                                  checkmarkColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF2563EB),
+                                );
+                              }).toList(),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Tag baru (pisahkan dengan koma)',
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: (value) {
+                            final newTags =
+                                value
+                                    .split(',')
+                                    .map((tag) => tag.trim())
+                                    .where((tag) => tag.isNotEmpty)
+                                    .toList();
+                            setDialogState(() {
+                              for (String tag in newTags) {
+                                if (!selectedTags.contains(tag)) {
+                                  selectedTags.add(tag);
+                                }
+                              }
+                            });
+                          },
+                        ),
+                      ],
                     ),
-                  );
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(AppLocalizations.of(context).cancel),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final prefix = prefixController.text.trim();
+                        final description = descriptionController.text.trim();
 
-                  try {
-                    // Add all photos with sequential titles
-                    final l10n = AppLocalizations.of(context);
-                    for (int i = 0; i < imagePaths.length; i++) {
-                      final photoTitle = '$prefix ${i + 1}';
-                      _dataService.addPhoto(
-                        title: photoTitle,
-                        imagePath: imagePaths[i],
-                        tags: selectedTags,
-                        description: description,
-                        activityTitle: l10n.photoAdded(photoTitle),
-                        activityDescription: l10n.photoAddedDesc,
-                      );
-                    }
+                        if (prefix.isNotEmpty) {
+                          // Show loading for batch creation
+                          Navigator.pop(context); // Close dialog first
 
-                    _updateFilteredPhotos();
-                    Navigator.pop(context); // Close loading dialog
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (context) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          );
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${imagePaths.length} foto berhasil ditambahkan'),
-                        backgroundColor: const Color(0xFF10B981),
+                          try {
+                            // Add all photos with sequential titles
+                            final l10n = AppLocalizations.of(context);
+                            for (int i = 0; i < imagePaths.length; i++) {
+                              final photoTitle = '$prefix ${i + 1}';
+                              _dataService.addPhoto(
+                                title: photoTitle,
+                                imagePath: imagePaths[i],
+                                tags: selectedTags,
+                                description: description,
+                                activityTitle: l10n.photoAdded(photoTitle),
+                                activityDescription: l10n.photoAddedDesc,
+                              );
+                            }
+
+                            _updateFilteredPhotos();
+                            Navigator.pop(context); // Close loading dialog
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${imagePaths.length} foto berhasil ditambahkan',
+                                ),
+                                backgroundColor: const Color(0xFF10B981),
+                              ),
+                            );
+                          } catch (e) {
+                            Navigator.pop(context); // Close loading dialog
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Gagal menambahkan foto: ${e.toString()}',
+                                ),
+                                backgroundColor: const Color(0xFFEF4444),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
                       ),
-                    );
-                  } catch (e) {
-                    Navigator.pop(context); // Close loading dialog
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Gagal menambahkan foto: ${e.toString()}'),
-                        backgroundColor: const Color(0xFFEF4444),
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Simpan Semua'),
-            ),
-          ],
-        ),
-      ),
+                      child: const Text('Simpan Semua'),
+                    ),
+                  ],
+                ),
+          ),
     );
   }
 
@@ -1864,7 +1983,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).failedToSavePhotoError(e.toString())),
+            content: Text(
+              AppLocalizations.of(context).failedToSavePhotoError(e.toString()),
+            ),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -1874,7 +1995,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   void _showPhotoPageCreationDialog(List<String> imagePaths) {
     final TextEditingController titleController = TextEditingController(
-      text: '${AppLocalizations.of(context).photoPage} ${DateTime.now().day}/${DateTime.now().month}',
+      text:
+          '${AppLocalizations.of(context).photoPage} ${DateTime.now().day}/${DateTime.now().month}',
     );
     final TextEditingController descriptionController = TextEditingController();
     List<String> selectedTags = [];
@@ -1898,7 +2020,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppLocalizations.of(context).photosSelected(imagePaths.length),
+                          AppLocalizations.of(
+                            context,
+                          ).photosSelected(imagePaths.length),
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -1916,7 +2040,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         TextField(
                           controller: descriptionController,
                           decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context).descriptionOptional,
+                            labelText:
+                                AppLocalizations.of(
+                                  context,
+                                ).descriptionOptional,
                             border: OutlineInputBorder(),
                           ),
                           maxLines: 3,
@@ -1937,9 +2064,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                   label: Text(
                                     tag,
                                     style: TextStyle(
-                                      color: isSelected && Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white
-                                          : null,
+                                      color:
+                                          isSelected &&
+                                                  Theme.of(
+                                                        context,
+                                                      ).brightness ==
+                                                      Brightness.dark
+                                              ? Colors.white
+                                              : null,
                                     ),
                                   ),
                                   selected: isSelected,
@@ -1952,12 +2084,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                       }
                                     });
                                   },
-                                  selectedColor: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFF3B82F6).withOpacity(0.3)
-                                      : const Color(0xFF2563EB).withOpacity(0.2),
-                                  checkmarkColor: Theme.of(context).brightness == Brightness.dark
-                                      ? const Color(0xFF60A5FA)
-                                      : const Color(0xFF2563EB),
+                                  selectedColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(
+                                            0xFF3B82F6,
+                                          ).withOpacity(0.3)
+                                          : const Color(
+                                            0xFF2563EB,
+                                          ).withOpacity(0.2),
+                                  checkmarkColor:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF2563EB),
                                 );
                               }).toList(),
                         ),
@@ -1989,7 +2129,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                             tags: selectedTags,
                             description: pageDescription,
                             activityTitle: l10n.photoPageAdded(pageTitle),
-                            activityDescription: l10n.photoPageAddedDesc(imagePaths.length),
+                            activityDescription: l10n.photoPageAddedDesc(
+                              imagePaths.length,
+                            ),
                           );
                           _updateFilteredPhotos();
                           Navigator.pop(context);

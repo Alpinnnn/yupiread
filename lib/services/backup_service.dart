@@ -13,7 +13,9 @@ class BackupService extends ChangeNotifier {
   static final BackupService _instance = BackupService._internal();
   factory BackupService() => _instance;
   static BackupService get instance => _instance;
-  BackupService._internal();
+  BackupService._internal() {
+    _initializeGoogleSignIn();
+  }
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
@@ -28,6 +30,7 @@ class BackupService extends ChangeNotifier {
   double _restoreProgress = 0.0;
   String _backupStatus = '';
   String _restoreStatus = '';
+  bool _isInitialized = false;
 
   bool get isBackingUp => _isBackingUp;
   bool get isRestoring => _isRestoring;
@@ -36,11 +39,43 @@ class BackupService extends ChangeNotifier {
   String get backupStatus => _backupStatus;
   String get restoreStatus => _restoreStatus;
 
+  /// Initialize Google Sign In and restore previous session
+  Future<void> _initializeGoogleSignIn() async {
+    if (_isInitialized) return;
+    
+    try {
+      // Try to restore previous sign-in session silently
+      await _googleSignIn.signInSilently();
+      _isInitialized = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to restore Google Sign In session: $e');
+      _isInitialized = true;
+    }
+  }
+
+  /// Ensure Google Sign In is initialized
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      await _initializeGoogleSignIn();
+    }
+  }
+
+  /// Initialize the backup service (call this when app starts)
+  Future<void> initialize() async {
+    await _ensureInitialized();
+  }
+
   /// Sign in to Google Drive
   Future<bool> signInToGoogleDrive() async {
     try {
+      await _ensureInitialized();
       final account = await _googleSignIn.signIn();
-      return account != null;
+      if (account != null) {
+        notifyListeners();
+        return true;
+      }
+      return false;
     } catch (e) {
       debugPrint('Google Sign In Error: $e');
       return false;
@@ -50,21 +85,37 @@ class BackupService extends ChangeNotifier {
   /// Sign out from Google Drive
   Future<void> signOutFromGoogleDrive() async {
     await _googleSignIn.signOut();
+    notifyListeners();
   }
 
   /// Check if user is signed in to Google Drive
-  bool get isSignedInToGoogleDrive => _googleSignIn.currentUser != null;
+  bool get isSignedInToGoogleDrive {
+    return _googleSignIn.currentUser != null;
+  }
 
   /// Get current user email
   String? get currentUserEmail => _googleSignIn.currentUser?.email;
 
   /// Create authenticated HTTP client
   Future<http.Client?> _createAuthenticatedClient() async {
+    await _ensureInitialized();
+    
     final account = _googleSignIn.currentUser;
     if (account == null) return null;
 
-    final authHeaders = await account.authHeaders;
-    return _GoogleAuthClient(authHeaders);
+    try {
+      final authHeaders = await account.authHeaders;
+      return _GoogleAuthClient(authHeaders);
+    } catch (e) {
+      debugPrint('Failed to get auth headers: $e');
+      // Try to refresh authentication
+      final refreshedAccount = await _googleSignIn.signInSilently();
+      if (refreshedAccount != null) {
+        final authHeaders = await refreshedAccount.authHeaders;
+        return _GoogleAuthClient(authHeaders);
+      }
+      return null;
+    }
   }
 
   /// Backup all app data to Google Drive
