@@ -1,189 +1,143 @@
 # Yupiread
 
-**Modern Education Gallery & Ebook App for Android**
+Aplikasi Android untuk mengelola galeri foto dan ebook. Dirancang untuk kebutuhan edukasi dengan antarmuka yang sederhana.
 
-Yupiread adalah aplikasi Android modern yang menggabungkan manajemen galeri foto dengan sistem ebook yang canggih. Dirancang khusus untuk kebutuhan edukasi dengan antarmuka yang bersih dan fitur-fitur produktif.
+## Apa yang bisa Anda lakukan
 
-## Fitur Utama
+### Kelola foto dengan mudah
+- Ambil foto langsung dari kamera atau galeri
+- Scan dokumen otomatis dengan teknologi ML
+- Atur foto dengan sistem tag
+- Lihat foto dalam mode grid atau folder
+- Bagikan foto dengan cepat
 
-### Galeri Foto
-- **Foto Tunggal & Multi-Foto**: Kelola foto individual atau kumpulan foto dalam satu halaman
-- **Pengambilan Foto**: Kamera langsung atau import dari galeri
-- **Scan Dokumen**: Auto-detection dokumen dengan teknologi OpenCV
-- **Sistem Tag**: Organisasi foto dengan tag yang dapat dikustomisasi
-- **Edit & Share**: Edit metadata dan bagikan foto dengan mudah
+### Baca dan buat ebook
+- Buka file PDF dan Word (.docx)
+- Tulis ebook dengan editor rich text
+- Lacak progress membaca otomatis
+- Scan teks dari gambar
+- Konversi foto ke PDF
 
-### Sistem Ebook
-- **Format Lengkap**: Dukungan PDF, Word (.docx), dan format JSON Delta
-- **Rich Text Editor**: Editor WYSIWYG dengan flutter_quill
-- **Progress Tracking**: Pelacakan kemajuan baca otomatis
-- **Text Recognition**: Scan teks dari gambar menggunakan ML Kit
-- **Reading Analytics**: Statistik waktu baca dan streak harian
+### Pantau aktivitas baca
+- Lihat streak harian membaca
+- Cek total waktu baca
+- Kelola tag personal
+- Ganti tema (terang/gelap/sistem)
 
-### Profil & Analytics
-- **Reading Streak**: Pelacakan konsistensi membaca harian
-- **Statistik Baca**: Total waktu membaca dan aktivitas
-- **Custom Tags**: Manajemen tag personal
-- **Theme System**: Light, Dark, dan System theme
-- **Activity Dashboard**: Log aktivitas lengkap
+## Cara install
 
-## Teknologi
+### Yang Anda butuhkan
+- Flutter SDK 3.7.2 atau lebih baru
+- Android Studio atau VS Code
+- Device Android (API 21+)
 
-### Framework & Platform
-- **Flutter SDK**: ^3.7.2
-- **Platform**: Android (minSdk 21, targetSdk 34)
-- **Localization**: Indonesian & English
-
-### Dependencies Utama
-```yaml
-# UI & Editor
-flutter_quill: ^11.4.2
-extended_image: ^8.2.0
-image_cropper: ^9.1.0
-
-# File Management
-file_picker: ^10.3.2
-syncfusion_flutter_pdfviewer: ^30.2.6
-syncfusion_flutter_pdf: ^30.2.6
-
-# Storage & Database
-shared_preferences: ^2.2.2
-sqflite: ^2.3.0
-path_provider: ^2.1.1
-
-# ML & Recognition
-google_mlkit_text_recognition: ^0.15.0
-cunning_document_scanner: ^1.3.0
-
-# Utilities
-image_picker: ^1.0.4
-share_plus: ^11.1.0
-docx_to_text: ^1.0.1
-```
-
-## Arsitektur
-
-### Struktur Project
-```
-lib/
-├── models/           # Data models (Photo, Ebook, Activity)
-├── screens/          # UI screens (16 screens)
-├── services/         # Business logic & data management
-├── widgets/          # Reusable UI components
-└── main.dart         # App entry point
-```
-
-### Pola Arsitektur
-- **Singleton Pattern**: DataService untuk state management
-- **Service Layer**: Pemisahan logic bisnis dan UI
-- **Local Storage**: SharedPreferences + SQLite
-- **Theme Management**: Real-time theme switching
-- **File Management**: Optimized caching & cleanup
-
-## Instalasi & Setup
-
-### Prerequisites
-- Flutter SDK ^3.7.2
-- Android Studio / VS Code
-- Android device/emulator (API 21+)
-
-### Langkah Instalasi
+### Langkah install
 ```bash
-# Clone repository
 git clone <repository-url>
 cd yupiread
-
-# Install dependencies
 flutter pub get
-
-# Run app
 flutter run
 ```
 
-### Build Release
+### Build untuk rilis
 ```bash
-# Build APK
 flutter build apk --release
-
-# Build App Bundle
-flutter build appbundle --release
 ```
 
-## Fitur Detail
+## Teknologi yang digunakan
+
+### Framework
+- Flutter 3.7.2
+- Android (minSdk 21, targetSdk 34)
+- Bahasa Indonesia dan Inggris
+
+### Library utama
+- `flutter_quill` - Editor rich text
+- `extended_image` - Manajemen gambar
+- `syncfusion_flutter_pdfviewer` - PDF viewer
+- `google_mlkit_text_recognition` - OCR
+- `cunning_document_scanner` - Document scanner
+- `shared_preferences` - Penyimpanan data
+- `image_picker` - Ambil foto
+
+## Struktur project
+
+```
+lib/
+├── models/     # Model data
+├── screens/    # Layar UI (24 screens)
+├── services/   # Logic bisnis
+├── widgets/    # Komponen UI
+└── main.dart   # Entry point
+```
+
+## Fitur lengkap
 
 ### Dashboard
-- Overview aktivitas terbaru
-- Quick stats (streak, reading time)
-- Recent photos dan ebooks
+- Ringkasan aktivitas terbaru
+- Statistik cepat (streak, waktu baca)
+- Foto dan ebook terbaru
 
-### Gallery Management
-- Grid view dengan lazy loading
-- Multi-selection untuk batch operations
-- Tag filtering dan search
-- Document scanner integration
+### Galeri
+- Tampilan grid dengan lazy loading
+- Pilih multiple foto
+- Filter berdasarkan tag
+- Integrasi document scanner
+- Mode folder view
 
 ### Ebook Reader
-- PDF viewer dengan zoom & navigation
-- Word document support
-- Rich text editor dengan toolbar lengkap
-- Progress tracking otomatis
+- Baca PDF dengan zoom dan navigasi
+- Support dokumen Word
+- Editor dengan toolbar lengkap
+- Tracking progress otomatis
 - Export ke PDF
 
-### Profile System
-- User profile dengan foto
-- Reading statistics
-- Custom tag management
-- Theme preferences
-- Gallery settings
+### Profil
+- Foto profil user
+- Statistik membaca
+- Kelola tag custom
+- Pengaturan tema
+- Pengaturan galeri
 
-## UI/UX Features
+## Performa
 
-- **Material Design 3**: Modern Android design language
-- **Dark/Light Theme**: Automatic system theme detection
-- **Responsive Layout**: Optimized untuk berbagai ukuran layar
-- **Smooth Animations**: Transisi yang halus dan natural
-- **Indonesian Localization**: UI dalam bahasa Indonesia
+- Cache gambar yang optimal
+- Loading data efisien
+- Cleanup file otomatis
+- Database SQLite teroptimasi
+- Manajemen memori yang baik
 
-## Performance
-
-- **Image Caching**: Optimized memory management
-- **Lazy Loading**: Efficient data loading
-- **File Cleanup**: Automatic cleanup unused files
-- **Database Optimization**: SQLite dengan indexing
-- **Memory Management**: Proper disposal pattern
-
-## Permissions
+## Permission yang dibutuhkan
 
 ```xml
-<!-- Required permissions -->
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 ```
 
-## Changelog
+## Update terbaru (v1.1.8)
 
-### Version 1.0.6
-- Enhanced document scanning
-- Improved ebook progress tracking
-- Bug fixes dan performance improvements
-- Theme system optimization
+- Folder view untuk galeri
+- Scan dokumen yang lebih baik
+- Tracking ebook yang diperbaiki
+- Optimasi performa
+- Perbaikan bug
 
-## Contributing
+## Kontribusi
 
-1. Fork repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+1. Fork repository ini
+2. Buat branch fitur (`git checkout -b feature/FiturBaru`)
+3. Commit perubahan (`git commit -m 'Tambah FiturBaru'`)
+4. Push ke branch (`git push origin feature/FiturBaru`)
+5. Buat Pull Request
 
-## License
+## Lisensi
 
-Distributed under the MIT License. See `LICENSE` for more information.
+MIT License. Lihat file `LICENSE` untuk detail.
 
-## Contact
+## Link project
 
-Project Link: [https://github.com/Alpinnnn/yupiread](https://github.com/Alpinnnn/yupiread)
+[https://github.com/Alpinnnn/yupiread](https://github.com/Alpinnnn/yupiread)
 
 ---
 
