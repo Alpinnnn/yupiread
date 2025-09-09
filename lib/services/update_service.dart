@@ -61,26 +61,55 @@ class UpdateService {
   
   /// Compare version strings to determine if new version is available
   static bool _isNewerVersion(String current, String latest) {
-    final currentParts = current.split('.').map(int.parse).toList();
-    final latestParts = latest.split('.').map(int.parse).toList();
-    
-    // Pad shorter version with zeros
-    while (currentParts.length < latestParts.length) {
-      currentParts.add(0);
-    }
-    while (latestParts.length < currentParts.length) {
-      latestParts.add(0);
-    }
-    
-    for (int i = 0; i < currentParts.length; i++) {
-      if (latestParts[i] > currentParts[i]) {
-        return true;
-      } else if (latestParts[i] < currentParts[i]) {
-        return false;
+    try {
+      // Clean version strings to remove any non-numeric characters except dots
+      final cleanCurrent = _sanitizeVersionString(current);
+      final cleanLatest = _sanitizeVersionString(latest);
+      
+      final currentParts = cleanCurrent.split('.').map((part) {
+        // Extract only numeric part from each segment
+        final numericPart = RegExp(r'\d+').firstMatch(part)?.group(0);
+        return int.tryParse(numericPart ?? '0') ?? 0;
+      }).toList();
+      
+      final latestParts = cleanLatest.split('.').map((part) {
+        // Extract only numeric part from each segment
+        final numericPart = RegExp(r'\d+').firstMatch(part)?.group(0);
+        return int.tryParse(numericPart ?? '0') ?? 0;
+      }).toList();
+      
+      // Pad shorter version with zeros
+      while (currentParts.length < latestParts.length) {
+        currentParts.add(0);
       }
+      while (latestParts.length < currentParts.length) {
+        latestParts.add(0);
+      }
+      
+      for (int i = 0; i < currentParts.length; i++) {
+        if (latestParts[i] > currentParts[i]) {
+          return true;
+        } else if (latestParts[i] < currentParts[i]) {
+          return false;
+        }
+      }
+      
+      return false;
+    } catch (e) {
+      debugPrint('Version comparison error: $e');
+      return false;
     }
+  }
+  
+  /// Sanitize version string to handle various formats
+  static String _sanitizeVersionString(String version) {
+    // Remove common prefixes and suffixes
+    String cleaned = version
+        .replaceAll(RegExp(r'^v'), '') // Remove 'v' prefix
+        .replaceAll(RegExp(r'-release$'), '') // Remove '-release' suffix
+        .replaceAll(RegExp(r'-.*$'), ''); // Remove any suffix after dash
     
-    return false;
+    return cleaned;
   }
   
   /// Show update dialog with options

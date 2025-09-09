@@ -1048,7 +1048,7 @@ class DataService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Get folder data (photos grouped by tags) - optimized version
+  // Get folder data (photos grouped by tags) - supports multiple tags per photo
   Map<String, List<PhotoModel>> getPhotoFolders() {
     final Map<String, List<PhotoModel>> folders = {};
     
@@ -1057,28 +1057,33 @@ class DataService extends ChangeNotifier {
       folders.putIfAbsent(folderName, () => []).add(photo);
     }
     
-    // Group photos by their first tag
+    // Group photos by ALL their tags (not just first tag)
     for (final photo in _photos) {
       if (photo.tags.isNotEmpty) {
-        addToFolder(photo.tags.first, photo);
+        // Add photo to every folder that matches its tags
+        for (final tag in photo.tags) {
+          addToFolder(tag, photo);
+        }
       }
     }
     
-    // Group photo pages by their first tag
+    // Group photo pages by ALL their tags
     for (final photoPage in _photoPages) {
       if (photoPage.tags.isNotEmpty) {
-        final folderName = photoPage.tags.first;
-        // Convert photo page to individual photos for folder view
-        for (int i = 0; i < photoPage.imagePaths.length; i++) {
-          final photo = PhotoModel(
-            id: '${photoPage.id}_$i',
-            title: '${photoPage.title} - ${i + 1}',
-            imagePath: photoPage.imagePaths[i],
-            createdAt: photoPage.createdAt,
-            tags: photoPage.tags,
-            description: photoPage.description,
-          );
-          addToFolder(folderName, photo);
+        // Add photo page to every folder that matches its tags
+        for (final tag in photoPage.tags) {
+          // Convert photo page to individual photos for folder view
+          for (int i = 0; i < photoPage.imagePaths.length; i++) {
+            final photo = PhotoModel(
+              id: '${photoPage.id}_$i',
+              title: '${photoPage.title} - ${i + 1}',
+              imagePath: photoPage.imagePaths[i],
+              createdAt: photoPage.createdAt,
+              tags: photoPage.tags,
+              description: photoPage.description,
+            );
+            addToFolder(tag, photo);
+          }
         }
       }
     }

@@ -144,18 +144,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
       // Save the folder view state asynchronously
       _dataService.saveFolderViewMode(_folderViewMode);
-
-      final localizations = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _folderViewMode
-                ? localizations.folderViewEnabled
-                : localizations.folderViewDisabled,
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -210,9 +198,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
     folderNames.sort();
     
     final untaggedPhotos = _dataService.getUntaggedPhotos();
-    final totalItems = folderNames.length + untaggedPhotos.length;
+    final totalItems = folderNames.length + untaggedPhotos.length + 1; // +1 for add photo card
 
-    if (totalItems == 0) {
+    if (totalItems == 1) { // Only add photo card
       return _buildEmptyFolderView();
     }
 
@@ -225,15 +213,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
       ),
       itemCount: totalItems,
       itemBuilder: (context, index) {
-        // Show folder cards first
-        if (index < folderNames.length) {
-          final folderName = folderNames[index];
+        // First item is always the add photo card
+        if (index == 0) {
+          return _buildAddPhotoCard(context);
+        }
+        
+        final adjustedIndex = index - 1;
+        
+        // Show folder cards
+        if (adjustedIndex < folderNames.length) {
+          final folderName = folderNames[adjustedIndex];
           final folderPhotos = folders[folderName]!;
           return _buildFolderCard(folderName, folderPhotos);
         } 
         // Then show individual untagged photos
         else {
-          final photoIndex = index - folderNames.length;
+          final photoIndex = adjustedIndex - folderNames.length;
           final photo = untaggedPhotos[photoIndex];
           return _buildPhotoCard(context, photo);
         }
@@ -244,25 +239,41 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Widget _buildEmptyFolderView() {
     final theme = Theme.of(context);
 
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.folder_open, size: 64, color: theme.colorScheme.outline),
-          const SizedBox(height: 16),
-          Text(
-            'No folders yet',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
+          // Add photo card at the top
+          SizedBox(
+            height: 200,
+            child: _buildAddPhotoCard(context),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Add photos with tags to create folders',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
+          const SizedBox(height: 32),
+          // Empty state message
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.folder_open, size: 64, color: theme.colorScheme.outline),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No folders yet',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Add photos with tags to create folders',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

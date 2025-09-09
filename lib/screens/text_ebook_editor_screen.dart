@@ -43,7 +43,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController.text = widget.initialTitle ?? AppLocalizations.of(context).newEbook;
+    _titleController.text = widget.initialTitle ?? 'Ebook Baru';
     _isEditingExisting = widget.existingFilePath != null;
     
     // Initialize quill controller with initial text if provided
@@ -55,12 +55,6 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
       );
     } else {
       _quillController = QuillController.basic();
-    }
-    
-    // Load existing document if editing
-    if (_isEditingExisting) {
-      _loadExistingDocument();
-      _loadExistingTags();
     }
     
     // Auto-hide toolbar when typing
@@ -78,6 +72,17 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
 
     // Setup formatting preservation
     _setupFormattingPreservation();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Load existing document and tags after dependencies are available
+    if (_isEditingExisting) {
+      _loadExistingDocument();
+      _loadExistingTags();
+    }
   }
 
   @override
@@ -152,7 +157,7 @@ class _TextEbookEditorScreenState extends State<TextEbookEditorScreen> {
       final ebooks = _dataService.ebooks;
       final ebook = ebooks.firstWhere(
         (e) => e.filePath == widget.existingFilePath,
-        orElse: () => throw Exception(AppLocalizations.of(context).ebookNotFound),
+        orElse: () => throw Exception('Ebook not found'),
       );
       
       setState(() {

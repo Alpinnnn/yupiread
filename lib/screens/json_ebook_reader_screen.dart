@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/ebook_model.dart';
 import '../services/data_service.dart';
@@ -69,10 +70,17 @@ class _JsonEbookReaderScreenState extends State<JsonEbookReaderScreen>
 
   Future<void> _loadDocument() async {
     try {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _errorMessage = null;
+      });
+
       final file = File(widget.ebook.filePath);
       if (!await file.exists()) {
         setState(() {
           _errorMessage = 'File tidak ditemukan';
+          _hasError = true;
           _isLoading = false;
         });
         return;
@@ -89,6 +97,7 @@ class _JsonEbookReaderScreenState extends State<JsonEbookReaderScreen>
 
       setState(() {
         ebook = widget.ebook;
+        _hasError = false;
         _isLoading = false;
       });
 
@@ -98,6 +107,7 @@ class _JsonEbookReaderScreenState extends State<JsonEbookReaderScreen>
     } catch (e) {
       setState(() {
         _errorMessage = 'Gagal memuat dokumen: $e';
+        _hasError = true;
         _isLoading = false;
       });
     }
@@ -481,8 +491,15 @@ class _JsonEbookReaderScreenState extends State<JsonEbookReaderScreen>
                                   horizontal: 16,
                                   vertical: 12,
                                 ),
-                                child: QuillEditor.basic(
+                                child: QuillEditor(
                                   controller: _controller,
+                                  scrollController: ScrollController(),
+                                  focusNode: FocusNode(),
+                                  config: QuillEditorConfig(
+                                    embedBuilders: [
+                                      ...FlutterQuillEmbeds.editorBuilders(),
+                                    ],
+                                  ),
                                 ),
                               ),
                   ),

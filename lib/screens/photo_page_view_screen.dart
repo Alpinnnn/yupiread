@@ -353,17 +353,21 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                           if (newIndex > oldIndex) {
                             newIndex -= 1;
                           }
+                          
+                          // Reorder the image paths
                           final item = photoPage!.imagePaths.removeAt(oldIndex);
                           photoPage!.imagePaths.insert(newIndex, item);
+
+                          // Reorder gesture keys and zoom states to match new order
+                          final gestureKey = _gestureKeys.removeAt(oldIndex);
+                          _gestureKeys.insert(newIndex, gestureKey);
+                          
+                          final zoomState = _zoomStates.removeAt(oldIndex);
+                          _zoomStates.insert(newIndex, zoomState);
 
                           // Update current index if needed
                           if (oldIndex == _currentPhotoIndex) {
                             _currentPhotoIndex = newIndex;
-                            _pageController.animateToPage(
-                              _currentPhotoIndex,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
                           } else if (oldIndex < _currentPhotoIndex &&
                               newIndex >= _currentPhotoIndex) {
                             _currentPhotoIndex -= 1;
@@ -377,6 +381,17 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
                             id: photoPage!.id,
                             imagePaths: photoPage!.imagePaths,
                           );
+                        });
+                        
+                        // Force PageView to rebuild and navigate to current photo
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_pageController.hasClients) {
+                            _pageController.animateToPage(
+                              _currentPhotoIndex,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
                         });
                       },
                       itemBuilder: (context, index) {
