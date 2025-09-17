@@ -3,12 +3,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import '../services/data_service.dart';
 import '../models/photo_model.dart';
 import '../screens/photo_view_screen.dart';
 import '../screens/photo_page_view_screen.dart';
 import '../screens/folder_view_screen.dart';
+import '../screens/gallery_settings_screen.dart';
 import '../l10n/app_localizations.dart';
 import 'text_scanner_screen.dart';
 import 'document_scanner_screen.dart';
@@ -237,46 +237,17 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Widget _buildEmptyFolderView() {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        children: [
-          // Add photo card at the top
-          SizedBox(
-            height: 200,
-            child: _buildAddPhotoCard(context),
-          ),
-          const SizedBox(height: 32),
-          // Empty state message
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.folder_open, size: 64, color: theme.colorScheme.outline),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No folders yet',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Add photos with tags to create folders',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: _getCrossAxisCount(context),
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
       ),
+      itemCount: 1, // Only show add photo card
+      itemBuilder: (context, index) {
+        return _buildAddPhotoCard(context);
+      },
     );
   }
 
@@ -511,6 +482,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   ),
                   Row(
                     children: [
+                      // Edit button
+                      _buildActionButton(
+                        icon: Icons.edit,
+                        onPressed: _openEditMode,
+                        tooltip: 'Edit Gallery',
+                      ),
+                      const SizedBox(width: 8),
                       // Folder view toggle button
                       _buildActionButton(
                         icon: _folderViewMode ? Icons.grid_view : Icons.folder,
@@ -2167,5 +2145,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 ),
           ),
     );
+  }
+
+  void _openEditMode() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const GallerySettingsScreen(),
+      ),
+    ).then((_) => _updateFilteredPhotos()); // Refresh when returning
   }
 }

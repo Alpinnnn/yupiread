@@ -34,10 +34,13 @@ class DataService extends ChangeNotifier {
   String _username = 'User';
   String? _profileImagePath;
   int _readingStreak = 0;
+  int _longestStreak = 0;
   int _totalReadingTimeMinutes = 0;
   DateTime? _lastReadingDate;
   bool _showToolsSection = false;
   bool _folderViewEnabled = false;
+  bool _streakReminderEnabled = false;
+  String _streakReminderTime = '20:00';
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
   List<PhotoPageModel> get photoPages => List.unmodifiable(_photoPages);
@@ -878,10 +881,13 @@ class DataService extends ChangeNotifier {
         'username': _username,
         'profileImagePath': _profileImagePath,
         'readingStreak': _readingStreak,
+        'longestStreak': _longestStreak,
         'totalReadingTimeMinutes': _totalReadingTimeMinutes,
         'lastReadingDate': _lastReadingDate?.millisecondsSinceEpoch,
         'showToolsSection': _showToolsSection,
         'folderViewEnabled': _folderViewEnabled,
+        'streakReminderEnabled': _streakReminderEnabled,
+        'streakReminderTime': _streakReminderTime,
       };
 
       await prefs.setString('userProfile', jsonEncode(userProfileJson));
@@ -899,16 +905,18 @@ class DataService extends ChangeNotifier {
         final userProfileJson = jsonDecode(userProfileString);
         _username = userProfileJson['username'];
         _profileImagePath = userProfileJson['profileImagePath'];
-        _readingStreak = userProfileJson['readingStreak'];
-        _totalReadingTimeMinutes = userProfileJson['totalReadingTimeMinutes'];
+        _readingStreak = userProfileJson['readingStreak'] ?? 0;
+        _longestStreak = userProfileJson['longestStreak'] ?? 0;
+        _totalReadingTimeMinutes = userProfileJson['totalReadingTimeMinutes'] ?? 0;
         _lastReadingDate =
             userProfileJson['lastReadingDate'] != null
                 ? DateTime.fromMillisecondsSinceEpoch(
-                  userProfileJson['lastReadingDate'],
-                )
+                    userProfileJson['lastReadingDate'])
                 : null;
         _showToolsSection = userProfileJson['showToolsSection'] ?? false;
         _folderViewEnabled = userProfileJson['folderViewEnabled'] ?? false;
+        _streakReminderEnabled = userProfileJson['streakReminderEnabled'] ?? false;
+        _streakReminderTime = userProfileJson['streakReminderTime'] ?? '20:00';
       }
     } catch (e) {
       // Handle load error
@@ -979,7 +987,10 @@ class DataService extends ChangeNotifier {
   String get username => _username;
   String? get profileImagePath => _profileImagePath;
   int get readingStreak => _readingStreak;
+  int get longestStreak => _longestStreak;
   int get totalReadingTimeMinutes => _totalReadingTimeMinutes;
+  bool get streakReminderEnabled => _streakReminderEnabled;
+  String get streakReminderTime => _streakReminderTime;
   String get formattedReadingTime {
     if (_totalReadingTimeMinutes < 60) {
       return '$_totalReadingTimeMinutes menit';
@@ -1168,13 +1179,72 @@ class DataService extends ChangeNotifier {
     if (lastRead == null || !_isSameDay(lastRead, today)) {
       if (lastRead != null && _isConsecutiveDay(lastRead, today)) {
         _readingStreak++;
+        // Update longest streak if current streak is longer
+        if (_readingStreak > _longestStreak) {
+          _longestStreak = _readingStreak;
+        }
+        // Log streak activity
+        _logActivity(
+          title: 'Streak Continued',
+          description: 'Continued reading streak - Day $_readingStreak',
+          type: ActivityType.streakContinue,
+          parameters: {'streakDays': _readingStreak},
+        );
       } else {
+        // Reset streak but check if it was longer than previous longest
+        if (_readingStreak > _longestStreak) {
+          _longestStreak = _readingStreak;
+        }
         _readingStreak = 1;
+        // Log new streak activity
+        _logActivity(
+          title: 'New Streak Started',
+          description: 'Started a new reading streak',
+          type: ActivityType.streakStart,
+        );
       }
       _lastReadingDate = today;
     }
 
     await _saveUserProfile();
+  }
+
+  // End streak functionality
+  Future<void> endStreak() async {
+    final currentStreak = _readingStreak;
+    
+    // Update longest streak if current is longer
+    if (_readingStreak > _longestStreak) {
+      _longestStreak = _readingStreak;
+    }
+    
+    // Log end streak activity
+    _logActivity(
+      title: 'Reading Streak Ended',
+      description: 'Ended reading streak of $currentStreak days',
+      type: ActivityType.streakEnd,
+      parameters: {'streakDays': currentStreak},
+    );
+    
+    // Reset streak
+    _readingStreak = 0;
+    _lastReadingDate = null;
+    
+    await _saveUserProfile();
+    notifyListeners();
+  }
+
+  // Streak reminder settings
+  Future<void> setStreakReminderEnabled(bool enabled) async {
+    _streakReminderEnabled = enabled;
+    await _saveUserProfile();
+    notifyListeners();
+  }
+
+  Future<void> setStreakReminderTime(String time) async {
+    _streakReminderTime = time;
+    await _saveUserProfile();
+    notifyListeners();
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {

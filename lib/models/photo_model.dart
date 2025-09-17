@@ -250,6 +250,12 @@ extension ActivityTypeExtension on ActivityType {
         return 'delete';
       case ActivityType.ebookEdited:
         return 'edit';
+      case ActivityType.streakStart:
+        return 'local_fire_department';
+      case ActivityType.streakContinue:
+        return 'trending_up';
+      case ActivityType.streakEnd:
+        return 'stop_circle';
     }
   }
 
@@ -281,6 +287,12 @@ extension ActivityTypeExtension on ActivityType {
         return 0xFFEF4444;
       case ActivityType.ebookEdited:
         return 0xFFF59E0B;
+      case ActivityType.streakStart:
+        return 0xFF10B981; // Green for starting streak
+      case ActivityType.streakContinue:
+        return 0xFF2563EB; // Blue for continuing streak
+      case ActivityType.streakEnd:
+        return 0xFFEF4444; // Red for ending streak
     }
   }
 }

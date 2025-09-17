@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import '../l10n/app_localizations.dart';
 
 class UpdateService {
@@ -24,25 +26,20 @@ class UpdateService {
         
         // Compare versions
         if (_isNewerVersion(currentVersion, latestVersion)) {
-          // Find APK download URL
+          // Find the best APK download URL based on device architecture
           final assets = releaseData['assets'] as List;
-          String? apkUrl;
-          
-          for (final asset in assets) {
-            final downloadUrl = asset['browser_download_url'] as String;
-            if (downloadUrl.toLowerCase().endsWith('.apk')) {
-              apkUrl = downloadUrl;
-              break;
-            }
-          }
+          String? apkUrl = await _findBestApkUrl(assets);
           
           if (apkUrl != null && context.mounted) {
+            // Extract release title from tag name (format: "v?.?.? [release title]")
+            final releaseTitle = _extractReleaseTitle(releaseData['tag_name'] ?? '');
+            
             _showUpdateDialog(
               context,
               currentVersion,
               latestVersion,
               apkUrl,
-              releaseData['name'] ?? AppLocalizations.of(context).updateAvailable,
+              releaseTitle.isNotEmpty ? releaseTitle : AppLocalizations.of(context).updateAvailable,
               releaseData['body'] ?? '',
             );
           }
@@ -225,6 +222,132 @@ class UpdateService {
     );
   }
   
+  /// Extract release title from tag name (format: "v?.?.? [release title]")
+  static String _extractReleaseTitle(String tagName) {
+    try {
+      // Look for pattern like "v1.2.3 [Release Title]"
+      final regex = RegExp(r'v\d+\.\d+\.\d+\s*\[(.+)\]');
+      final match = regex.firstMatch(tagName);
+      if (match != null && match.groupCount >= 1) {
+        return match.group(1)?.trim() ?? '';
+      }
+      return '';
+    } catch (e) {
+      debugPrint('Failed to extract release title: $e');
+      return '';
+    }
+  }
+
+  /// Find the best APK URL based on device architecture
+  static Future<String?> _findBestApkUrl(List assets) async {
+    try {
+      // Get device architecture
+      String? deviceArch = await _getDeviceArchitecture();
+      
+      // Priority order for APK selection based on architecture
+      List<String> apkPriority = [];
+      
+      if (deviceArch != null) {
+        switch (deviceArch.toLowerCase()) {
+          case 'arm64':
+          case 'aarch64':
+            apkPriority = [
+              'yupiread-arm64-v8a-release.apk',
+              'yupiread-armeabi-v7a-release.apk',
+              'yupiread-x86_64-release.apk'
+            ];
+            break;
+          case 'arm':
+          case 'armv7':
+            apkPriority = [
+              'yupiread-armeabi-v7a-release.apk',
+              'yupiread-arm64-v8a-release.apk',
+              'yupiread-x86_64-release.apk'
+            ];
+            break;
+          case 'x86_64':
+          case 'x64':
+            apkPriority = [
+              'yupiread-x86_64-release.apk',
+              'yupiread-arm64-v8a-release.apk',
+              'yupiread-armeabi-v7a-release.apk'
+            ];
+            break;
+          default:
+            apkPriority = [
+              'yupiread-arm64-v8a-release.apk',
+              'yupiread-armeabi-v7a-release.apk',
+              'yupiread-x86_64-release.apk'
+            ];
+        }
+      } else {
+        // Default priority if architecture detection fails
+        apkPriority = [
+          'yupiread-arm64-v8a-release.apk',
+          'yupiread-armeabi-v7a-release.apk',
+          'yupiread-x86_64-release.apk'
+        ];
+      }
+
+      // Find the best matching APK
+      for (String preferredApk in apkPriority) {
+        for (final asset in assets) {
+          final downloadUrl = asset['browser_download_url'] as String;
+          if (downloadUrl.toLowerCase().contains(preferredApk.toLowerCase())) {
+            return downloadUrl;
+          }
+        }
+      }
+
+      // Fallback: find any APK
+      for (final asset in assets) {
+        final downloadUrl = asset['browser_download_url'] as String;
+        if (downloadUrl.toLowerCase().endsWith('.apk')) {
+          return downloadUrl;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Failed to find best APK URL: $e');
+      return null;
+    }
+  }
+
+  /// Get device architecture
+  static Future<String?> _getDeviceArchitecture() async {
+    try {
+      if (Platform.isAndroid) {
+        final deviceInfo = DeviceInfoPlugin();
+        final androidInfo = await deviceInfo.androidInfo;
+        
+        // Get supported ABIs (Application Binary Interfaces)
+        final supportedAbis = androidInfo.supportedAbis;
+        if (supportedAbis.isNotEmpty) {
+          final primaryAbi = supportedAbis.first;
+          
+          // Map ABI to architecture
+          switch (primaryAbi.toLowerCase()) {
+            case 'arm64-v8a':
+              return 'arm64';
+            case 'armeabi-v7a':
+              return 'arm';
+            case 'x86_64':
+              return 'x86_64';
+            case 'x86':
+              return 'x86';
+            default:
+              return primaryAbi;
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Failed to get device architecture: $e');
+      return null;
+    }
+  }
+
   /// Launch download URL
   static Future<void> _launchDownload(String url) async {
     try {

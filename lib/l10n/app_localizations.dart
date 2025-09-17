@@ -565,4 +565,27 @@ abstract class AppLocalizations {
   String get photoPageNoteDeletedFromGallery => 'Photo page note has been deleted from gallery';
   String get photoPageNameSuccessfullyUpdated => 'Photo page name successfully updated';
   String get photoPageDetailsSuccessfullyUpdated => 'Photo page details successfully updated';
+
+  // Streak Features
+  String get streakTitle => 'Reading Streak';
+  String get currentStreak => 'Current Streak';
+  String get longestStreak => 'Longest Streak';
+  String get streakDays => 'days';
+  String get endStreak => 'End Streak';
+  String get endStreakConfirmTitle => 'End Reading Streak?';
+  String get endStreakConfirmMessage => 'Are you sure you want to end your current reading streak? This action cannot be undone.';
+  String get streakEnded => 'Reading streak ended';
+  String get streakEndedSuccessfully => 'Your reading streak has been ended successfully';
+  String get streakReminder => 'Reading Streak Reminder';
+  String get streakReminderMessage => 'Don\'t forget to read today to maintain your streak!';
+  String get streakReminderTime => 'Reminder Time';
+  String get enableStreakReminder => 'Enable Daily Reminder';
+  String get streakReminderEnabled => 'Streak reminder enabled';
+  String get streakReminderDisabled => 'Streak reminder disabled';
+  String get keepStreakAlive => 'Keep your streak alive!';
+  String get readingStreakBroken => 'Reading streak broken';
+  String get streakWillResetTomorrow => 'Your streak will reset tomorrow if you don\'t read today';
+  String streakActivityEndStreak(int days) => 'Ended reading streak of $days days';
+  String streakActivityStartStreak() => 'Started a new reading streak';
+  String streakActivityContinueStreak(int days) => 'Continued reading streak - Day $days';
 }

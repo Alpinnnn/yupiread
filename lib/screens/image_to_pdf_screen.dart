@@ -587,23 +587,53 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
         return;
       }
 
-      // Determine external directory path
-      Directory? externalDir;
-      try {
-        externalDir = Directory('/storage/emulated/0/Documents');
-        if (!await externalDir.exists()) {
-          externalDir = Directory('/storage/emulated/0/Download');
+      // Determine external directory path with multiple fallbacks
+      Directory? yupireadDir;
+      
+      if (Platform.isAndroid) {
+        // Try multiple paths for Documents directory
+        final List<String> possiblePaths = [
+          '/storage/emulated/0/Documents/Yupiread',
+          '/storage/emulated/0/Download/Yupiread',
+        ];
+        
+        // Try to get external storage directory as fallback
+        try {
+          final List<Directory>? externalDirs = await getExternalStorageDirectories();
+          if (externalDirs != null && externalDirs.isNotEmpty) {
+            final String externalPath = externalDirs.first.path;
+            final List<String> pathParts = externalPath.split('/');
+            final int androidIndex = pathParts.indexOf('Android');
+            if (androidIndex > 0) {
+              final String publicPath = pathParts.sublist(0, androidIndex).join('/');
+              possiblePaths.insert(0, '$publicPath/Documents/Yupiread');
+            }
+          }
+        } catch (e) {
+          debugPrint('Failed to get external storage directories: $e');
         }
-      } catch (e) {
-        externalDir = await getExternalStorageDirectory();
+        
+        // Try each path until one works
+        for (String path in possiblePaths) {
+          try {
+            final testDir = Directory(path);
+            await testDir.create(recursive: true);
+            if (await testDir.exists()) {
+              yupireadDir = testDir;
+              debugPrint('Using image to PDF output directory: $path');
+              break;
+            }
+          } catch (e) {
+            debugPrint('Failed to create directory $path: $e');
+            continue;
+          }
+        }
       }
-
-      if (externalDir == null) {
-        throw Exception('Could not access external storage');
-      }
-
-      final yupireadDir = Directory('${externalDir.path}/Yupiread');
-      if (!await yupireadDir.exists()) {
+      
+      // Final fallback if all above failed
+      if (yupireadDir == null) {
+        final appDir = await getApplicationDocumentsDirectory();
+        yupireadDir = Directory('${appDir.path}/Yupiread');
         await yupireadDir.create(recursive: true);
       }
 

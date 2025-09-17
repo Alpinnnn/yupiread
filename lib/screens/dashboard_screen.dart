@@ -344,6 +344,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Icons.edit;
       case ActivityType.ebookCreated:
         return Icons.add_circle;
+      case ActivityType.streakStart:
+        return Icons.local_fire_department;
+      case ActivityType.streakContinue:
+        return Icons.trending_up;
+      case ActivityType.streakEnd:
+        return Icons.stop_circle;
     }
   }
 

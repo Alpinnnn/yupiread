@@ -66,3 +66,4 @@ android/app/upload-keystore.jks
 # Local configuration
 local.properties
 android/local.properties
+/informations

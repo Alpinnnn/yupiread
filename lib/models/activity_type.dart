@@ -12,4 +12,7 @@ enum ActivityType {
   ebookCompleted,
   ebookDeleted,
   ebookEdited,
+  streakStart,
+  streakContinue,
+  streakEnd,
 }

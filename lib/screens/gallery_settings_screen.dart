@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
+import '../l10n/app_localizations.dart';
 import 'photo_view_screen.dart';
 import 'photo_page_view_screen.dart';
 
@@ -64,6 +67,8 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
   }
 
   void _showPhotoOptions(PhotoModel photo) {
+    final localizations = AppLocalizations.of(context);
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardTheme.color,
@@ -95,7 +100,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             const SizedBox(height: 20),
             _buildOptionTile(
               icon: Icons.edit,
-              title: 'Edit',
+              title: localizations.editTags,
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -104,6 +109,16 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                     builder: (context) => PhotoViewScreen(photoId: photo.id),
                   ),
                 ).then((_) => _loadPhotos());
+              },
+            ),
+            _buildOptionTile(
+              icon: Icons.save_alt,
+              title: 'Save to Gallery',
+              subtitle: 'Simpan ke galeri perangkat',
+              color: const Color(0xFF10B981),
+              onTap: () {
+                Navigator.pop(context);
+                _savePhotoToDeviceGallery(photo);
               },
             ),
             _buildOptionTile(
@@ -118,7 +133,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             ),
             _buildOptionTile(
               icon: Icons.delete,
-              title: 'Delete',
+              title: localizations.delete,
               color: Colors.red,
               onTap: () {
                 Navigator.pop(context);
@@ -132,6 +147,8 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
   }
 
   void _showPhotoPageOptions(PhotoPageModel photoPage) {
+    final localizations = AppLocalizations.of(context);
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardTheme.color,
@@ -163,7 +180,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             const SizedBox(height: 20),
             _buildOptionTile(
               icon: Icons.edit,
-              title: 'Edit',
+              title: localizations.editTags,
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -172,6 +189,16 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                     builder: (context) => PhotoPageViewScreen(photoPageId: photoPage.id),
                   ),
                 ).then((_) => _loadPhotos());
+              },
+            ),
+            _buildOptionTile(
+              icon: Icons.save_alt,
+              title: 'Save to Gallery',
+              subtitle: 'Simpan semua foto ke galeri perangkat',
+              color: const Color(0xFF10B981),
+              onTap: () {
+                Navigator.pop(context);
+                _savePhotoPageToDeviceGallery(photoPage);
               },
             ),
             _buildOptionTile(
@@ -186,7 +213,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             ),
             _buildOptionTile(
               icon: Icons.delete,
-              title: 'Delete',
+              title: localizations.delete,
               color: Colors.red,
               onTap: () {
                 Navigator.pop(context);
@@ -229,16 +256,17 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
   }
 
   void _showDeleteConfirmation(List<String> photoIds, List<String> photoPageIds) {
+    final localizations = AppLocalizations.of(context);
     final totalItems = photoIds.length + photoPageIds.length;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Foto'),
-        content: Text('Apakah Anda yakin ingin menghapus $totalItems item?'),
+        title: const Text('Delete Photos'),
+        content: Text('Are you sure you want to delete $totalItems items?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: Text(localizations.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -246,7 +274,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
               _deleteSelectedItems(photoIds, photoPageIds);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Hapus'),
+            child: Text(localizations.delete),
           ),
         ],
       ),
@@ -264,8 +292,8 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
     _toggleSelectMode();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${photoIds.length + photoPageIds.length} item berhasil dihapus'),
-        backgroundColor: Colors.green,
+        content: Text('${photoIds.length + photoPageIds.length} items deleted successfully'),
+        backgroundColor: const Color(0xFF10B981),
       ),
     );
   }
@@ -395,19 +423,6 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
         centerTitle: true,
         actions: _isSelectMode
             ? [
-                if (selectedCount > 0)
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _showDeleteConfirmation(
-                      _selectedPhotoIds.toList(),
-                      _selectedPhotoPageIds.toList(),
-                    ),
-                  ),
-                if (selectedCount > 1)
-                  IconButton(
-                    icon: const Icon(Icons.merge, color: Color(0xFF2563EB)),
-                    onPressed: _mergeSelectedItems,
-                  ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: _toggleSelectMode,
@@ -427,7 +442,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$totalItems foto tersimpan',
+                '$totalItems photos saved',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
@@ -444,7 +459,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
                             ),
                             SizedBox(height: 16),
                             Text(
-                              'Belum ada foto tersimpan',
+                              'No photos saved yet',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Color(0xFF94A3B8),
@@ -474,7 +489,407 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
           ),
         ),
       ),
+      floatingActionButton: _isSelectMode && selectedCount > 0
+          ? FloatingActionButton(
+              onPressed: _showSelectedItemsOptions,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.more_vert, color: Colors.white),
+            )
+          : null,
     );
+  }
+
+  void _showSelectedItemsOptions() {
+    final selectedCount = _selectedPhotoIds.length + _selectedPhotoPageIds.length;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardTheme.color,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '$selectedCount item dipilih',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).textTheme.headlineMedium?.color,
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (selectedCount > 1)
+              _buildOptionTile(
+                icon: Icons.merge,
+                title: 'Merge',
+                subtitle: 'Gabungkan foto yang dipilih',
+                color: const Color(0xFF2563EB),
+                onTap: () {
+                  Navigator.pop(context);
+                  _mergeSelectedItems();
+                },
+              ),
+            _buildOptionTile(
+              icon: Icons.save_alt,
+              title: 'Save to Gallery',
+              subtitle: 'Simpan ke galeri perangkat',
+              color: const Color(0xFF10B981),
+              onTap: () {
+                Navigator.pop(context);
+                _saveToDeviceGallery();
+              },
+            ),
+            _buildOptionTile(
+              icon: Icons.delete,
+              title: 'Delete',
+              subtitle: 'Hapus foto yang dipilih',
+              color: Colors.red,
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(
+                  _selectedPhotoIds.toList(),
+                  _selectedPhotoPageIds.toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Storage Permission Required'),
+        content: const Text(
+          'This app needs storage permission to save photos to your device gallery. Please grant storage permission in app settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _requestStoragePermission() async {
+    // For Android 13+ (API 33+), we need to request READ_MEDIA_IMAGES
+    // For Android 11-12 (API 30-32), we need MANAGE_EXTERNAL_STORAGE or READ_EXTERNAL_STORAGE
+    // For Android 10 and below, we need WRITE_EXTERNAL_STORAGE
+    
+    // Check if photos permission is already granted (Android 13+)
+    if (await Permission.photos.status.isGranted) {
+      return true;
+    }
+    
+    // Check if storage permission is already granted (Android 12 and below)
+    if (await Permission.storage.status.isGranted) {
+      return true;
+    }
+    
+    // Request photos permission first (for Android 13+)
+    final photosPermission = await Permission.photos.request();
+    if (photosPermission.isGranted) {
+      return true;
+    }
+    
+    // If photos permission failed, try storage permission (for older Android)
+    final storagePermission = await Permission.storage.request();
+    if (storagePermission.isGranted) {
+      return true;
+    }
+    
+    // Check if any permission is permanently denied
+    if (photosPermission.isPermanentlyDenied || storagePermission.isPermanentlyDenied) {
+      _showPermissionDialog();
+    } else if (photosPermission.isDenied || storagePermission.isDenied) {
+      _showPermissionDialog();
+    }
+    
+    return false;
+  }
+
+  void _saveToDeviceGallery() async {
+    try {
+      // Request storage permission with dialog
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        return;
+      }
+
+      int savedCount = 0;
+
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Saving photos to gallery...'),
+            ],
+          ),
+        ),
+      );
+
+      // Save selected photos
+      for (String photoId in _selectedPhotoIds) {
+        final photo = _photos.firstWhere((p) => p.id == photoId);
+        final success = await _saveImageToGallery(photo.imagePath, photo.title);
+        if (success) savedCount++;
+      }
+
+      // Save photos from selected photo pages
+      for (String photoPageId in _selectedPhotoPageIds) {
+        final photoPage = _photoPages.firstWhere((p) => p.id == photoPageId);
+        for (int i = 0; i < photoPage.imagePaths.length; i++) {
+          final imagePath = photoPage.imagePaths[i];
+          final fileName = '${photoPage.title}_${i + 1}';
+          final success = await _saveImageToGallery(imagePath, fileName);
+          if (success) savedCount++;
+        }
+      }
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show result
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$savedCount photos saved to gallery'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+
+      _toggleSelectMode(); // Exit selection mode
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) Navigator.pop(context);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save photos: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  void _savePhotoToDeviceGallery(PhotoModel photo) async {
+    try {
+      // Request storage permission with dialog
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        return;
+      }
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Saving photo to gallery...'),
+            ],
+          ),
+        ),
+      );
+
+      final success = await _saveImageToGallery(photo.imagePath, photo.title);
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success 
+              ? 'Photo saved to gallery successfully' 
+              : 'Failed to save photo to gallery'),
+            backgroundColor: success ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) Navigator.pop(context);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save photo: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  void _savePhotoPageToDeviceGallery(PhotoPageModel photoPage) async {
+    try {
+      // Request storage permission with dialog
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        return;
+      }
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Saving ${photoPage.imagePaths.length} photos to gallery...'),
+            ],
+          ),
+        ),
+      );
+
+      int savedCount = 0;
+      for (int i = 0; i < photoPage.imagePaths.length; i++) {
+        final imagePath = photoPage.imagePaths[i];
+        final fileName = '${photoPage.title}_${i + 1}';
+        final success = await _saveImageToGallery(imagePath, fileName);
+        if (success) savedCount++;
+      }
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$savedCount of ${photoPage.imagePaths.length} photos saved to gallery'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) Navigator.pop(context);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save photos: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<bool> _saveImageToGallery(String imagePath, String fileName) async {
+    try {
+      final sourceFile = File(imagePath);
+      if (!await sourceFile.exists()) {
+        return false;
+      }
+
+      // Get the public Pictures directory (DCIM/Pictures)
+      Directory? picturesDir;
+      
+      // Try to get the public Pictures directory
+      try {
+        // For Android, use the public Pictures directory
+        final externalDir = Directory('/storage/emulated/0/Pictures/Yupiread');
+        picturesDir = externalDir;
+      } catch (e) {
+        // Fallback to DCIM directory
+        try {
+          final dcimDir = Directory('/storage/emulated/0/DCIM/Yupiread');
+          picturesDir = dcimDir;
+        } catch (e) {
+          // Final fallback to external storage
+          final directory = await getExternalStorageDirectory();
+          if (directory == null) return false;
+          picturesDir = Directory('${directory.path}/Pictures/Yupiread');
+        }
+      }
+
+      // Create directory if it doesn't exist
+      if (!await picturesDir.exists()) {
+        await picturesDir.create(recursive: true);
+      }
+
+      // Create unique filename
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = imagePath.split('.').last;
+      final targetPath = '${picturesDir.path}/${fileName}_$timestamp.$extension';
+
+      // Copy file
+      await sourceFile.copy(targetPath);
+      
+      // Trigger media scanner to make the image visible in gallery
+      try {
+        await _triggerMediaScan(targetPath);
+      } catch (e) {
+        debugPrint('Failed to trigger media scan: $e');
+        // Continue anyway, file is still saved
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error saving image to gallery: $e');
+      return false;
+    }
+  }
+
+  Future<void> _triggerMediaScan(String filePath) async {
+    // This would require a platform channel to trigger media scanner
+    // For now, we'll use a simple approach by creating a .nomedia file and removing it
+    try {
+      final directory = Directory(filePath).parent;
+      final nomediaFile = File('${directory.path}/.nomedia');
+      
+      // Create and immediately delete .nomedia to trigger media scan
+      if (await nomediaFile.exists()) {
+        await nomediaFile.delete();
+      }
+      await nomediaFile.create();
+      await nomediaFile.delete();
+    } catch (e) {
+      debugPrint('Media scan trigger failed: $e');
+    }
   }
 
   Widget _buildPhotoCard(PhotoModel photo) {

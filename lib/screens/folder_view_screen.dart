@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/data_service.dart';
 import '../models/photo_model.dart';
@@ -7,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import 'photo_view_screen.dart';
 import 'photo_page_view_screen.dart';
 import 'document_scanner_screen.dart';
+import 'gallery_settings_screen.dart';
 
 class FolderViewScreen extends StatefulWidget {
   final String folderName;
@@ -22,7 +22,6 @@ class FolderViewScreen extends StatefulWidget {
 
 class _FolderViewScreenState extends State<FolderViewScreen> {
   final DataService _dataService = DataService();
-  final ImagePicker _picker = ImagePicker();
   List<PhotoModel> _folderPhotos = [];
   List<PhotoPageModel> _folderPhotoPages = [];
   bool _isLoading = false;
@@ -40,164 +39,7 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
     });
   }
 
-  Future<void> _addPhotoToFolder() async {
-    final localizations = AppLocalizations.of(context);
-    
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                localizations.addPhotoToFolder,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildAddPhotoOption(
-                    icon: Icons.camera_alt,
-                    label: 'Camera',
-                    onTap: () => _pickImage(ImageSource.camera),
-                  ),
-                  _buildAddPhotoOption(
-                    icon: Icons.photo_library,
-                    label: 'Gallery',
-                    onTap: () => _pickImage(ImageSource.gallery),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
-  Widget _buildAddPhotoOption({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 32),
-            const SizedBox(height: 8),
-            Text(label),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    Navigator.of(context).pop(); // Close bottom sheet
-    
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final XFile? image = await _picker.pickImage(source: source);
-      if (image != null) {
-        await _processImage(image.path);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
-        );
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _processImage(String imagePath) async {
-    final localizations = AppLocalizations.of(context);
-    
-    // Show dialog to get photo title
-    String? title = await _showTitleDialog();
-    if (title == null || title.isEmpty) return;
-
-    try {
-      _dataService.addPhotoToFolder(
-        title: title,
-        imagePath: imagePath,
-        folderName: widget.folderName,
-        activityTitle: localizations.photoAddedToFolder(widget.folderName),
-        activityDescription: title,
-      );
-
-      _loadFolderPhotos(); // Refresh the list
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(localizations.photoAddedToFolder(widget.folderName)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding photo: $e')),
-        );
-      }
-    }
-  }
-
-  Future<String?> _showTitleDialog() async {
-    final localizations = AppLocalizations.of(context);
-    final TextEditingController controller = TextEditingController();
-
-    return showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(localizations.addPhoto),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              labelText: 'Title',
-              hintText: 'Enter photo title',
-            ),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(localizations.cancel),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(controller.text.trim());
-              },
-              child: Text(localizations.add),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,6 +51,20 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GallerySettingsScreen(),
+                ),
+              ).then((_) => _loadFolderPhotos());
+            },
+            tooltip: 'Edit Folder',
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -222,27 +78,45 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
     final localizations = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.folder_open,
-            size: 64,
-            color: theme.colorScheme.outline,
+          // Add photo card at the top
+          SizedBox(
+            height: 200,
+            child: _buildAddPhotoCard(),
           ),
-          const SizedBox(height: 16),
-          Text(
-            localizations.noPhotosInFolder,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.outline,
+          const SizedBox(height: 32),
+          // Empty state message
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.folder_open,
+                    size: 64,
+                    color: theme.colorScheme.outline,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    localizations.noPhotosInFolder,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Add photos to this folder to get started',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _addPhotoToFolder,
-            icon: const Icon(Icons.add_photo_alternate),
-            label: Text(localizations.addPhotoToFolder),
           ),
         ],
       ),

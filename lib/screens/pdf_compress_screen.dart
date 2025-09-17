@@ -665,26 +665,55 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
         }
       }
 
-      // Get external storage directory (user accessible Documents folder)
+      // Determine save directory with multiple fallbacks
       Directory? externalDir;
+      
       if (Platform.isAndroid) {
-        // Try to get external storage directory
-        final List<Directory>? externalDirs = await getExternalStorageDirectories();
-        if (externalDirs != null && externalDirs.isNotEmpty) {
-          // Navigate to the public Documents directory
-          final String externalPath = externalDirs.first.path;
-          // Remove the app-specific part to get to public storage
-          final List<String> pathParts = externalPath.split('/');
-          final int androidIndex = pathParts.indexOf('Android');
-          if (androidIndex > 0) {
-            final String publicPath = pathParts.sublist(0, androidIndex).join('/');
-            externalDir = Directory('$publicPath/Documents/Yupiread');
+        // Try multiple paths for Documents directory
+        final List<String> possiblePaths = [
+          '/storage/emulated/0/Documents/Yupiread',
+          '/storage/emulated/0/Download/Yupiread',
+        ];
+        
+        // Try to get external storage directory as fallback
+        try {
+          final List<Directory>? externalDirs = await getExternalStorageDirectories();
+          if (externalDirs != null && externalDirs.isNotEmpty) {
+            final String externalPath = externalDirs.first.path;
+            final List<String> pathParts = externalPath.split('/');
+            final int androidIndex = pathParts.indexOf('Android');
+            if (androidIndex > 0) {
+              final String publicPath = pathParts.sublist(0, androidIndex).join('/');
+              possiblePaths.insert(0, '$publicPath/Documents/Yupiread');
+            }
+          }
+        } catch (e) {
+          debugPrint('Failed to get external storage directories: $e');
+        }
+        
+        // Try each path until one works
+        for (String path in possiblePaths) {
+          try {
+            final testDir = Directory(path);
+            // Try to create the directory to test write access
+            await testDir.create(recursive: true);
+            if (await testDir.exists()) {
+              externalDir = testDir;
+              debugPrint('Using save directory: $path');
+              break;
+            }
+          } catch (e) {
+            debugPrint('Failed to create directory $path: $e');
+            continue;
           }
         }
       }
       
-      // Fallback to Downloads if Documents is not accessible
-      externalDir ??= Directory('/storage/emulated/0/Download/Yupiread');
+      // Final fallback if all above failed
+      if (externalDir == null) {
+        final appDir = await getApplicationDocumentsDirectory();
+        externalDir = Directory('${appDir.path}/Yupiread');
+      }
       
       // Create directory if it doesn't exist
       if (!await externalDir.exists()) {

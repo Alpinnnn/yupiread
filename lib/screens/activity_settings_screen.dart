@@ -72,6 +72,12 @@ class _ActivitySettingsScreenState extends State<ActivitySettingsScreen> {
         return 'Ebook Dihapus';
       case ActivityType.ebookEdited:
         return 'Ebook Diedit';
+      case ActivityType.streakStart:
+        return 'Streak Dimulai';
+      case ActivityType.streakContinue:
+        return 'Streak Berlanjut';
+      case ActivityType.streakEnd:
+        return 'Streak Berakhir';
     }
   }
 
@@ -103,6 +109,12 @@ class _ActivitySettingsScreenState extends State<ActivitySettingsScreen> {
         return 'Log ketika ebook dihapus';
       case ActivityType.ebookEdited:
         return 'Log ketika ebook diedit atau diubah';
+      case ActivityType.streakStart:
+        return 'Log ketika streak membaca baru dimulai';
+      case ActivityType.streakContinue:
+        return 'Log ketika streak membaca berlanjut';
+      case ActivityType.streakEnd:
+        return 'Log ketika streak membaca diakhiri';
     }
   }
 
@@ -134,6 +146,12 @@ class _ActivitySettingsScreenState extends State<ActivitySettingsScreen> {
         return Icons.auto_delete;
       case ActivityType.ebookEdited:
         return Icons.edit_document;
+      case ActivityType.streakStart:
+        return Icons.local_fire_department;
+      case ActivityType.streakContinue:
+        return Icons.trending_up;
+      case ActivityType.streakEnd:
+        return Icons.stop_circle;
     }
   }
 
@@ -142,6 +160,17 @@ class _ActivitySettingsScreenState extends State<ActivitySettingsScreen> {
       return const Color(0xFF3B82F6); // Blue for photos
     } else if (type.toString().contains('ebook')) {
       return const Color(0xFF10B981); // Green for ebooks
+    } else if (type.toString().contains('streak')) {
+      switch (type) {
+        case ActivityType.streakStart:
+          return const Color(0xFF10B981); // Green for starting streak
+        case ActivityType.streakContinue:
+          return const Color(0xFF2563EB); // Blue for continuing streak
+        case ActivityType.streakEnd:
+          return const Color(0xFFEF4444); // Red for ending streak
+        default:
+          return const Color(0xFF8B5CF6); // Purple default
+      }
     }
     return const Color(0xFF8B5CF6); // Purple default
   }

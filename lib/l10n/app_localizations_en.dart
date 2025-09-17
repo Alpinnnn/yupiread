@@ -846,6 +846,70 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get languageChangedSuccess => 'Language changed successfully';
 
+  // Streak Features
+  @override
+  String get streakTitle => 'Reading Streak';
+
+  @override
+  String get currentStreak => 'Current Streak';
+
+  @override
+  String get longestStreak => 'Longest Streak';
+
+  @override
+  String get streakDays => 'days';
+
+  @override
+  String get endStreak => 'End Streak';
+
+  @override
+  String get endStreakConfirmTitle => 'End Reading Streak?';
+
+  @override
+  String get endStreakConfirmMessage => 'Are you sure you want to end your current reading streak? This action cannot be undone.';
+
+  @override
+  String get streakEnded => 'Reading streak ended';
+
+  @override
+  String get streakEndedSuccessfully => 'Your reading streak has been ended successfully';
+
+  @override
+  String get streakReminder => 'Reading Streak Reminder';
+
+  @override
+  String get streakReminderMessage => 'Don\'t forget to read today to maintain your streak!';
+
+  @override
+  String get streakReminderTime => 'Reminder Time';
+
+  @override
+  String get enableStreakReminder => 'Enable Daily Reminder';
+
+  @override
+  String get streakReminderEnabled => 'Streak reminder enabled';
+
+  @override
+  String get streakReminderDisabled => 'Streak reminder disabled';
+
+  @override
+  String get keepStreakAlive => 'Keep your streak alive!';
+
+  @override
+  String get readingStreakBroken => 'Reading streak broken';
+
+  @override
+  String get streakWillResetTomorrow => 'Your streak will reset tomorrow if you don\'t read today';
+
+  @override
+  String streakActivityEndStreak(int days) => 'Ended reading streak of $days days';
+
+  @override
+  String streakActivityStartStreak() => 'Started a new reading streak';
+
+  @override
+  String streakActivityContinueStreak(int days) => 'Continued reading streak - Day $days';
+
   @override
   String get languageChangedTitle => 'Language Changed Successfully';
 
