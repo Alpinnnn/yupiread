@@ -45,6 +45,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Use default Flutter debug signing for release builds
             signingConfig = signingConfigs.getByName("debug")
         }
     }
