@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../models/photo_model.dart';
 import '../services/data_service.dart';
+import '../services/gallery_service.dart';
 import '../l10n/app_localizations.dart';
 import 'photo_view_screen.dart';
 import 'photo_page_view_screen.dart';
@@ -17,6 +17,7 @@ class GallerySettingsScreen extends StatefulWidget {
 
 class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
   final DataService _dataService = DataService.instance;
+  final GalleryService _galleryService = GalleryService();
   List<PhotoModel> _photos = [];
   List<PhotoPageModel> _photoPages = [];
   Set<String> _selectedPhotoIds = {};
@@ -596,52 +597,15 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
     );
   }
 
-  Future<bool> _requestStoragePermission() async {
-    // For Android 13+ (API 33+), we need to request READ_MEDIA_IMAGES
-    // For Android 11-12 (API 30-32), we need MANAGE_EXTERNAL_STORAGE or READ_EXTERNAL_STORAGE
-    // For Android 10 and below, we need WRITE_EXTERNAL_STORAGE
-    
-    // Check if photos permission is already granted (Android 13+)
-    if (await Permission.photos.status.isGranted) {
-      return true;
-    }
-    
-    // Check if storage permission is already granted (Android 12 and below)
-    if (await Permission.storage.status.isGranted) {
-      return true;
-    }
-    
-    // Request photos permission first (for Android 13+)
-    final photosPermission = await Permission.photos.request();
-    if (photosPermission.isGranted) {
-      return true;
-    }
-    
-    // If photos permission failed, try storage permission (for older Android)
-    final storagePermission = await Permission.storage.request();
-    if (storagePermission.isGranted) {
-      return true;
-    }
-    
-    // Check if any permission is permanently denied
-    if (photosPermission.isPermanentlyDenied || storagePermission.isPermanentlyDenied) {
-      _showPermissionDialog();
-    } else if (photosPermission.isDenied || storagePermission.isDenied) {
-      _showPermissionDialog();
-    }
-    
-    return false;
-  }
 
   void _saveToDeviceGallery() async {
     try {
-      // Request storage permission with dialog
-      final hasPermission = await _requestStoragePermission();
+      // Check permission first
+      final hasPermission = await _galleryService.hasStoragePermission();
       if (!hasPermission) {
+        _showPermissionDialog();
         return;
       }
-
-      int savedCount = 0;
 
       // Show loading dialog
       showDialog(
@@ -653,29 +617,33 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
-              Text('Saving photos to gallery...'),
+              Text('Menyimpan foto ke galeri...'),
             ],
           ),
         ),
       );
 
-      // Save selected photos
+      // Collect all image paths
+      List<String> imagePaths = [];
+      
+      // Add selected photos
       for (String photoId in _selectedPhotoIds) {
         final photo = _photos.firstWhere((p) => p.id == photoId);
-        final success = await _saveImageToGallery(photo.imagePath, photo.title);
-        if (success) savedCount++;
+        imagePaths.add(photo.imagePath);
       }
 
-      // Save photos from selected photo pages
+      // Add photos from selected photo pages
       for (String photoPageId in _selectedPhotoPageIds) {
         final photoPage = _photoPages.firstWhere((p) => p.id == photoPageId);
-        for (int i = 0; i < photoPage.imagePaths.length; i++) {
-          final imagePath = photoPage.imagePaths[i];
-          final fileName = '${photoPage.title}_${i + 1}';
-          final success = await _saveImageToGallery(imagePath, fileName);
-          if (success) savedCount++;
-        }
+        imagePaths.addAll(photoPage.imagePaths);
       }
+
+      // Save using GalleryService
+      final result = await _galleryService.saveMultipleImagesToGallery(
+        imagePaths: imagePaths,
+        baseFileName: 'yupiread_photo',
+        albumName: 'Yupiread',
+      );
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
@@ -684,8 +652,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$savedCount photos saved to gallery'),
-            backgroundColor: const Color(0xFF10B981),
+            content: Text(result.summaryMessage),
+            backgroundColor: result.hasAnySuccess 
+                ? const Color(0xFF10B981) 
+                : const Color(0xFFEF4444),
           ),
         );
       }
@@ -698,7 +668,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save photos: $e'),
+            content: Text('Gagal menyimpan foto: $e'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -708,9 +678,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
 
   void _savePhotoToDeviceGallery(PhotoModel photo) async {
     try {
-      // Request storage permission with dialog
-      final hasPermission = await _requestStoragePermission();
+      // Check permission first
+      final hasPermission = await _galleryService.hasStoragePermission();
       if (!hasPermission) {
+        _showPermissionDialog();
         return;
       }
 
@@ -724,13 +695,17 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Saving photo to gallery...'),
+              Text('Menyimpan foto ke galeri...'),
             ],
           ),
         ),
       );
 
-      final success = await _saveImageToGallery(photo.imagePath, photo.title);
+      final result = await _galleryService.saveImageToGallery(
+        imagePath: photo.imagePath,
+        fileName: photo.title,
+        albumName: 'Yupiread',
+      );
       
       // Close loading dialog
       if (mounted) Navigator.pop(context);
@@ -738,10 +713,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success 
-              ? 'Photo saved to gallery successfully' 
-              : 'Failed to save photo to gallery'),
-            backgroundColor: success ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+            content: Text(result.message),
+            backgroundColor: result.success 
+                ? const Color(0xFF10B981) 
+                : const Color(0xFFEF4444),
           ),
         );
       }
@@ -752,7 +727,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save photo: $e'),
+            content: Text('Gagal menyimpan foto: $e'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -762,9 +737,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
 
   void _savePhotoPageToDeviceGallery(PhotoPageModel photoPage) async {
     try {
-      // Request storage permission with dialog
-      final hasPermission = await _requestStoragePermission();
+      // Check permission first
+      final hasPermission = await _galleryService.hasStoragePermission();
       if (!hasPermission) {
+        _showPermissionDialog();
         return;
       }
 
@@ -778,19 +754,17 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
-              Text('Saving ${photoPage.imagePaths.length} photos to gallery...'),
+              Text('Menyimpan ${photoPage.imagePaths.length} foto ke galeri...'),
             ],
           ),
         ),
       );
 
-      int savedCount = 0;
-      for (int i = 0; i < photoPage.imagePaths.length; i++) {
-        final imagePath = photoPage.imagePaths[i];
-        final fileName = '${photoPage.title}_${i + 1}';
-        final success = await _saveImageToGallery(imagePath, fileName);
-        if (success) savedCount++;
-      }
+      final result = await _galleryService.saveMultipleImagesToGallery(
+        imagePaths: photoPage.imagePaths,
+        baseFileName: photoPage.title,
+        albumName: 'Yupiread',
+      );
       
       // Close loading dialog
       if (mounted) Navigator.pop(context);
@@ -798,8 +772,10 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$savedCount of ${photoPage.imagePaths.length} photos saved to gallery'),
-            backgroundColor: const Color(0xFF10B981),
+            content: Text(result.summaryMessage),
+            backgroundColor: result.hasAnySuccess 
+                ? const Color(0xFF10B981) 
+                : const Color(0xFFEF4444),
           ),
         );
       }
@@ -810,7 +786,7 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save photos: $e'),
+            content: Text('Gagal menyimpan foto: $e'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -818,79 +794,6 @@ class _GallerySettingsScreenState extends State<GallerySettingsScreen> {
     }
   }
 
-  Future<bool> _saveImageToGallery(String imagePath, String fileName) async {
-    try {
-      final sourceFile = File(imagePath);
-      if (!await sourceFile.exists()) {
-        return false;
-      }
-
-      // Get the public Pictures directory (DCIM/Pictures)
-      Directory? picturesDir;
-      
-      // Try to get the public Pictures directory
-      try {
-        // For Android, use the public Pictures directory
-        final externalDir = Directory('/storage/emulated/0/Pictures/Yupiread');
-        picturesDir = externalDir;
-      } catch (e) {
-        // Fallback to DCIM directory
-        try {
-          final dcimDir = Directory('/storage/emulated/0/DCIM/Yupiread');
-          picturesDir = dcimDir;
-        } catch (e) {
-          // Final fallback to external storage
-          final directory = await getExternalStorageDirectory();
-          if (directory == null) return false;
-          picturesDir = Directory('${directory.path}/Pictures/Yupiread');
-        }
-      }
-
-      // Create directory if it doesn't exist
-      if (!await picturesDir.exists()) {
-        await picturesDir.create(recursive: true);
-      }
-
-      // Create unique filename
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final extension = imagePath.split('.').last;
-      final targetPath = '${picturesDir.path}/${fileName}_$timestamp.$extension';
-
-      // Copy file
-      await sourceFile.copy(targetPath);
-      
-      // Trigger media scanner to make the image visible in gallery
-      try {
-        await _triggerMediaScan(targetPath);
-      } catch (e) {
-        debugPrint('Failed to trigger media scan: $e');
-        // Continue anyway, file is still saved
-      }
-      
-      return true;
-    } catch (e) {
-      debugPrint('Error saving image to gallery: $e');
-      return false;
-    }
-  }
-
-  Future<void> _triggerMediaScan(String filePath) async {
-    // This would require a platform channel to trigger media scanner
-    // For now, we'll use a simple approach by creating a .nomedia file and removing it
-    try {
-      final directory = Directory(filePath).parent;
-      final nomediaFile = File('${directory.path}/.nomedia');
-      
-      // Create and immediately delete .nomedia to trigger media scan
-      if (await nomediaFile.exists()) {
-        await nomediaFile.delete();
-      }
-      await nomediaFile.create();
-      await nomediaFile.delete();
-    } catch (e) {
-      debugPrint('Media scan trigger failed: $e');
-    }
-  }
 
   Widget _buildPhotoCard(PhotoModel photo) {
     final isSelected = _selectedPhotoIds.contains(photo.id);

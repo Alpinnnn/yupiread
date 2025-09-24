@@ -1,7 +1,7 @@
 name: Yupiread
 description: "An Modern-Simple Education Gallery And EBook App."
 publish_to: 'none'
-version: 1.1.10+1
+version: 1.1.11+1
 
 environment:
   sdk: ^3.7.2
@@ -34,9 +34,11 @@ dependencies:
   http: ^1.2.1
   reorderable_grid_view: ^2.2.8
   package_info_plus: ^8.0.0
+  device_info_plus: ^11.1.0
   url_launcher: ^6.3.0
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
+  saver_gallery: ^4.0.1
 
 dev_dependencies:
   flutter_test:

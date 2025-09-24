@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import '../services/data_service.dart';
 import '../models/photo_model.dart';
 import '../l10n/app_localizations.dart';
@@ -135,58 +136,108 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
   }
 
   Widget _buildPhotoGrid() {
+    // Combine all items for reordering (excluding add photo card)
+    final List<dynamic> allItems = [
+      ..._folderPhotoPages,
+      ..._folderPhotos,
+    ];
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
-      child: GridView.builder(
+      child: ReorderableGridView.builder(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: _getCrossAxisCount(context),
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           childAspectRatio: 0.85,
         ),
-        itemCount: _folderPhotoPages.length + _folderPhotos.length + 1, // +1 for add button
+        itemCount: allItems.length + 1, // +1 for add button
         itemBuilder: (context, index) {
           if (index == 0) {
+            // Add photo card - not draggable
             return _buildAddPhotoCard();
           }
           
           final adjustedIndex = index - 1;
-          if (adjustedIndex < _folderPhotoPages.length) {
-            return _buildPhotoPageCard(_folderPhotoPages[adjustedIndex]);
-          } else {
-            final photoIndex = adjustedIndex - _folderPhotoPages.length;
-            return _buildPhotoCard(_folderPhotos[photoIndex]);
+          final item = allItems[adjustedIndex];
+          
+          if (item is PhotoPageModel) {
+            return _buildPhotoPageCard(item);
+          } else if (item is PhotoModel) {
+            return _buildPhotoCard(item);
           }
+          
+          return Container(); // Fallback
+        },
+        onReorder: (oldIndex, newIndex) {
+          // Prevent reordering if trying to move add photo card or move items to position 0
+          if (oldIndex == 0 || newIndex == 0) {
+            return;
+          }
+          
+          setState(() {
+            // Adjust indices to account for add photo card at position 0
+            final adjustedOldIndex = oldIndex - 1;
+            final adjustedNewIndex = newIndex - 1;
+            
+            // Reorder the combined list
+            final item = allItems.removeAt(adjustedOldIndex);
+            allItems.insert(adjustedNewIndex, item);
+            
+            // Update the original lists
+            _updateOriginalLists(allItems);
+          });
         },
       ),
     );
   }
 
+  void _updateOriginalLists(List<dynamic> reorderedItems) {
+    final List<PhotoPageModel> newPhotoPages = [];
+    final List<PhotoModel> newPhotos = [];
+    
+    for (final item in reorderedItems) {
+      if (item is PhotoPageModel) {
+        newPhotoPages.add(item);
+      } else if (item is PhotoModel) {
+        newPhotos.add(item);
+      }
+    }
+    
+    _folderPhotoPages = newPhotoPages;
+    _folderPhotos = newPhotos;
+    
+    // Update the data service with new order
+    _dataService.reorderFolderItems(widget.folderName, newPhotoPages, newPhotos);
+  }
+
   Widget _buildPhotoCard(PhotoModel photo) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PhotoViewScreen(photoId: photo.id),
-          ),
-        ).then((_) => _loadFolderPhotos()); // Refresh when returning
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+    return Container(
+      key: ValueKey('photo_${photo.id}'), // Unique key for each photo
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PhotoViewScreen(photoId: photo.id),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          ).then((_) => _loadFolderPhotos()); // Refresh when returning
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Expanded(
               child: Container(
                 margin: const EdgeInsets.all(8),
@@ -283,7 +334,8 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -291,58 +343,61 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
 
   Widget _buildAddPhotoCard() {
     final localizations = AppLocalizations.of(context);
-    return GestureDetector(
-      onTap: _scanFromGallery,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-            width: 2,
-            style: BorderStyle.solid,
+    return Container(
+      key: const ValueKey('add_photo_card'), // Fixed key for add photo card
+      child: GestureDetector(
+        onTap: _scanFromGallery,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+              width: 2,
+              style: BorderStyle.solid,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(50),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: Icon(
+                  Icons.add_a_photo,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-              child: Icon(
-                Icons.add_a_photo,
-                size: 32,
-                color: Theme.of(context).colorScheme.primary,
+              const SizedBox(height: 16),
+              Text(
+                localizations.addPhoto,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              localizations.addPhoto,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.primary,
+              const SizedBox(height: 4),
+              Text(
+                localizations.newNote,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              localizations.newNote,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).textTheme.bodyMedium?.color,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -588,16 +643,18 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
   }
 
   Widget _buildPhotoPageCard(PhotoPageModel photoPage) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PhotoPageViewScreen(photoPageId: photoPage.id),
-          ),
-        ).then((_) => _loadFolderPhotos()); // Refresh when returning
-      },
-      child: Container(
+    return Container(
+      key: ValueKey('photopage_${photoPage.id}'), // Unique key for each photo page
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PhotoPageViewScreen(photoPageId: photoPage.id),
+            ),
+          ).then((_) => _loadFolderPhotos()); // Refresh when returning
+        },
+        child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(16),
@@ -741,7 +798,8 @@ class _FolderViewScreenState extends State<FolderViewScreen> {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

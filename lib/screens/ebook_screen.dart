@@ -15,6 +15,7 @@ import 'ebook_reader_screen.dart';
 import '../screens/json_ebook_reader_screen.dart';
 import '../screens/txt_reader_screen.dart';
 import 'text_ebook_editor_screen.dart';
+import 'ebook_settings_screen.dart';
 import '../l10n/app_localizations.dart';
 
 // Word document data classes
@@ -166,6 +167,35 @@ class _EbookScreenState extends State<EbookScreen> {
                           ],
                         ),
                         child: IconButton(
+                          icon: const Icon(Icons.edit),
+                          color: Theme.of(context).colorScheme.primary,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const EbookSettingsScreen(),
+                              ),
+                            ).then((_) => _updateFilteredEbooks());
+                          },
+                          tooltip: 'Edit Ebooks',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardTheme.color,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  Theme.of(context).cardTheme.shadowColor ??
+                                  Colors.black.withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
                           icon: Stack(
                             children: [
                               Icon(
@@ -236,13 +266,33 @@ class _EbookScreenState extends State<EbookScreen> {
                 child:
                     _filteredEbooks.isEmpty
                         ? _buildEmptyState(context)
-                        : ListView.builder(
+                        : ReorderableListView.builder(
                           itemCount: _filteredEbooks.length,
                           itemBuilder: (context, index) {
+                            final ebook = _filteredEbooks[index];
                             return _buildEbookCard(
                               context,
-                              _filteredEbooks[index],
+                              ebook,
+                              ValueKey('ebook_${ebook.id}'),
                             );
+                          },
+                          onReorder: (oldIndex, newIndex) {
+                            setState(() {
+                              if (newIndex > oldIndex) {
+                                newIndex -= 1;
+                              }
+                              
+                              // Create a mutable copy of the list
+                              final mutableList = List<EbookModel>.from(_filteredEbooks);
+                              final ebook = mutableList.removeAt(oldIndex);
+                              mutableList.insert(newIndex, ebook);
+                              
+                              // Update the filtered list
+                              _filteredEbooks = mutableList;
+                              
+                              // Update the data service with new order
+                              _dataService.reorderEbooks(mutableList);
+                            });
                           },
                         ),
               ),
@@ -304,7 +354,7 @@ class _EbookScreenState extends State<EbookScreen> {
     );
   }
 
-  Widget _buildEbookCard(BuildContext context, EbookModel ebook) {
+  Widget _buildEbookCard(BuildContext context, EbookModel ebook, [Key? key]) {
     final categoryColors = [
       const Color(0xFF3B82F6),
       const Color(0xFF10B981),
@@ -317,11 +367,13 @@ class _EbookScreenState extends State<EbookScreen> {
     final colorIndex = ebook.id.hashCode % categoryColors.length;
     final categoryColor = categoryColors[colorIndex.abs()];
 
-    return GestureDetector(
-      onTap: () {
-        _openEbook(ebook);
-      },
-      child: Container(
+    return Container(
+      key: key, // Add key to the container
+      child: GestureDetector(
+        onTap: () {
+          _openEbook(ebook);
+        },
+        child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -449,7 +501,8 @@ class _EbookScreenState extends State<EbookScreen> {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

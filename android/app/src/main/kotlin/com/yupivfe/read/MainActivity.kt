@@ -11,7 +11,9 @@ import java.io.InputStream
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "Yupiread/shared_files"
+    private val DOWNLOAD_CHANNEL = "com.alpinnnn.yupiread/download"
     private var methodChannel: MethodChannel? = null
+    private var downloadChannel: MethodChannel? = null
     private var hasProcessedIntent = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -21,6 +23,23 @@ class MainActivity : FlutterActivity() {
         methodChannel?.setMethodCallHandler { call, result ->
             // Handle method calls from Flutter if needed
             result.notImplemented()
+        }
+        
+        // Setup download channel
+        downloadChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DOWNLOAD_CHANNEL)
+        downloadChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "launchDownload" -> {
+                    val url = call.argument<String>("url")
+                    if (url != null) {
+                        val success = launchDownloadIntent(url)
+                        result.success(success)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "URL is required", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
         }
         
         // Handle shared files when Flutter engine is ready
@@ -99,6 +118,46 @@ class MainActivity : FlutterActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+    
+    private fun launchDownloadIntent(url: String): Boolean {
+        return try {
+            android.util.Log.d("MainActivity", "Attempting to launch download: $url")
+            
+            // Create intent to open URL in browser/download manager
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse(url)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                
+                // Add headers to help with download
+                putExtra("android.intent.extra.REFERRER", Uri.parse("android-app://${packageName}"))
+            }
+            
+            // Try to start the intent
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+                android.util.Log.d("MainActivity", "Successfully launched download intent")
+                true
+            } else {
+                android.util.Log.w("MainActivity", "No activity found to handle download intent")
+                
+                // Fallback: try with chooser
+                val chooserIntent = Intent.createChooser(intent, "Download APK")
+                chooserIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                
+                if (chooserIntent.resolveActivity(packageManager) != null) {
+                    startActivity(chooserIntent)
+                    android.util.Log.d("MainActivity", "Successfully launched download chooser")
+                    true
+                } else {
+                    android.util.Log.e("MainActivity", "No activity found to handle download chooser")
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to launch download intent", e)
+            false
         }
     }
 }

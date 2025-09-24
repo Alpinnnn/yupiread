@@ -1444,4 +1444,56 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String photoAddedToFolder(String folderName) =>
       'Photo added to "$folderName" folder';
+
+  // Save To Phone Feature
+  @override
+  String get saveToPhone => 'Save To Phone';
+
+  @override
+  String get saveToPhoneDesc => 'Save to Documents/Yupiread';
+
+  @override
+  String get savingToDocuments => 'Saving to Documents...';
+
+  @override
+  String savingEbookToDocuments(String title) => 'Saving $title to Documents...';
+
+  @override
+  String savingMultipleEbooksToDocuments(int count) => 'Saving $count ebooks to Documents...';
+
+  @override
+  String get ebookSavedToDocuments => 'Ebook successfully saved to Documents/Yupiread';
+
+  @override
+  String get ebooksSavedToDocuments => 'Ebooks successfully saved to Documents/Yupiread';
+
+  @override
+  String get failedToSaveEbook => 'Failed to save ebook';
+
+  @override
+  String failedToSaveEbookError(String error) => 'Failed to save ebook: $error';
+
+  @override
+  String ebooksSavedSummary(int success, int total) => '$success of $total ebooks saved successfully';
+
+  @override
+  String ebooksSavedPartial(int success, int fail) => '$success successful, $fail failed to save';
+
+  @override
+  String get failedToSaveAllEbooks => 'Failed to save all ebooks';
+
+  @override
+  String get storagePermissionRequired => 'Storage Permission Required';
+
+  @override
+  String get storagePermissionMessage => 'This app needs storage permission to save ebooks to your device. Please grant storage permission in app settings.';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get cannotAccessDocuments => 'Cannot access Documents folder';
+
+  @override
+  String get sourceFileNotFound => 'Source file not found';
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,7 +9,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import '../l10n/app_localizations.dart';
 
 class UpdateService {
-  static const String _githubApiUrl = 'https://api.github.com/repos/Alpinnnn/yupiread/releases/latest';
+  static const String _githubApiUrl = 'https://api.github.com/repos/Alpinnnn/yupiread/releases';
   
   /// Check for app updates and show dialog if available
   static Future<void> checkForUpdates(BuildContext context) async {
@@ -17,37 +18,99 @@ class UpdateService {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
       
-      // Fetch latest release from GitHub
+      debugPrint('Update check: Current version = $currentVersion');
+      
+      // Fetch all releases from GitHub (including pre-releases)
       final response = await http.get(Uri.parse(_githubApiUrl));
       
       if (response.statusCode == 200) {
-        final releaseData = json.decode(response.body);
-        final latestVersion = _cleanVersionString(releaseData['tag_name']);
+        final releasesData = json.decode(response.body) as List;
         
-        // Compare versions
-        if (_isNewerVersion(currentVersion, latestVersion)) {
-          // Find the best APK download URL based on device architecture
-          final assets = releaseData['assets'] as List;
-          String? apkUrl = await _findBestApkUrl(assets);
+        debugPrint('Update check: Found ${releasesData.length} releases');
+        
+        if (releasesData.isNotEmpty) {
+          // Find the latest release (including pre-releases)
+          final latestRelease = _findLatestRelease(releasesData);
           
-          if (apkUrl != null && context.mounted) {
-            // Extract release title from tag name (format: "v?.?.? [release title]")
-            final releaseTitle = _extractReleaseTitle(releaseData['tag_name'] ?? '');
+          if (latestRelease != null) {
+            final latestVersion = _cleanVersionString(latestRelease['tag_name']);
+            final isPrerelease = latestRelease['prerelease'] ?? false;
             
-            _showUpdateDialog(
-              context,
-              currentVersion,
-              latestVersion,
-              apkUrl,
-              releaseTitle.isNotEmpty ? releaseTitle : AppLocalizations.of(context).updateAvailable,
-              releaseData['body'] ?? '',
-            );
+            debugPrint('Update check: Latest version = $latestVersion (prerelease: $isPrerelease)');
+            
+            // Compare versions - only show update if latest is actually newer
+            final isNewer = _isNewerVersion(currentVersion, latestVersion);
+            debugPrint('Update check: Is newer version? $isNewer');
+            
+            if (isNewer) {
+              debugPrint('Update check: New version available!');
+              
+              // Double-check: ensure we're not showing update for same or older version
+              final cleanCurrent = _sanitizeVersionString(currentVersion);
+              final cleanLatest = _sanitizeVersionString(latestVersion);
+              
+              if (cleanCurrent == cleanLatest) {
+                debugPrint('Update check: Versions are identical after sanitization - skipping update');
+                return;
+              }
+              
+              // Find the best APK download URL based on device architecture
+              final assets = latestRelease['assets'] as List;
+              String? apkUrl = await _findBestApkUrl(assets, isPrerelease);
+              
+              debugPrint('Update check: APK URL = $apkUrl');
+              
+              if (apkUrl != null && context.mounted) {
+                // Extract release title from tag name or use release name
+                final extractedTitle = _extractReleaseTitle(latestRelease['tag_name'] ?? '');
+                final releaseTitle = extractedTitle.isNotEmpty ? extractedTitle : (latestRelease['name'] ?? '');
+                
+                _showUpdateDialog(
+                  context,
+                  currentVersion,
+                  latestVersion,
+                  apkUrl,
+                  releaseTitle.isNotEmpty ? releaseTitle : AppLocalizations.of(context).updateAvailable,
+                  latestRelease['body'] ?? '',
+                );
+              } else {
+                debugPrint('Update check: No compatible APK found or context not mounted');
+              }
+            } else {
+              debugPrint('Update check: No newer version available (current: $currentVersion, latest: $latestVersion)');
+            }
+          } else {
+            debugPrint('Update check: No latest release found');
           }
+        } else {
+          debugPrint('Update check: No releases found');
         }
+      } else {
+        debugPrint('Update check: HTTP error ${response.statusCode}');
       }
     } catch (e) {
       // Silently fail - don't show error to user for update checks
       debugPrint('Update check failed: $e');
+    }
+  }
+  
+  /// Find the latest release from the releases list (including pre-releases)
+  static Map<String, dynamic>? _findLatestRelease(List releasesData) {
+    try {
+      if (releasesData.isEmpty) return null;
+      
+      // Sort releases by published_at date (most recent first)
+      releasesData.sort((a, b) {
+        final dateA = DateTime.parse(a['published_at'] ?? a['created_at'] ?? '');
+        final dateB = DateTime.parse(b['published_at'] ?? b['created_at'] ?? '');
+        return dateB.compareTo(dateA); // Descending order (newest first)
+      });
+      
+      // Return the most recent release (could be stable or pre-release)
+      return releasesData.first as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('Error finding latest release: $e');
+      return null;
     }
   }
   
@@ -62,6 +125,8 @@ class UpdateService {
       // Clean version strings to remove any non-numeric characters except dots
       final cleanCurrent = _sanitizeVersionString(current);
       final cleanLatest = _sanitizeVersionString(latest);
+      
+      debugPrint('Version comparison: current="$current" -> "$cleanCurrent", latest="$latest" -> "$cleanLatest"');
       
       final currentParts = cleanCurrent.split('.').map((part) {
         // Extract only numeric part from each segment
@@ -83,14 +148,21 @@ class UpdateService {
         latestParts.add(0);
       }
       
+      debugPrint('Version parts: current=$currentParts, latest=$latestParts');
+      
+      // Compare version parts
       for (int i = 0; i < currentParts.length; i++) {
         if (latestParts[i] > currentParts[i]) {
+          debugPrint('Latest version is newer: ${latestParts[i]} > ${currentParts[i]} at index $i');
           return true;
         } else if (latestParts[i] < currentParts[i]) {
+          debugPrint('Current version is newer: ${currentParts[i]} > ${latestParts[i]} at index $i');
           return false;
         }
       }
       
+      // Versions are equal
+      debugPrint('Versions are equal - no update needed');
       return false;
     } catch (e) {
       debugPrint('Version comparison error: $e');
@@ -104,7 +176,24 @@ class UpdateService {
     String cleaned = version
         .replaceAll(RegExp(r'^v'), '') // Remove 'v' prefix
         .replaceAll(RegExp(r'-release$'), '') // Remove '-release' suffix
-        .replaceAll(RegExp(r'-.*$'), ''); // Remove any suffix after dash
+        .replaceAll(RegExp(r'-beta$'), '') // Remove '-beta' suffix
+        .replaceAll(RegExp(r'-alpha$'), '') // Remove '-alpha' suffix
+        .replaceAll(RegExp(r'-rc\d*$'), '') // Remove '-rc' or '-rc1' suffix
+        .replaceAll(RegExp(r'-dev$'), '') // Remove '-dev' suffix
+        .replaceAll(RegExp(r'-debug$'), '') // Remove '-debug' suffix
+        .replaceAll(RegExp(r'\+.*$'), '') // Remove build metadata after '+'
+        .replaceAll(RegExp(r'-.*$'), ''); // Remove any remaining suffix after dash
+    
+    // Ensure we have at least a basic version format
+    if (!RegExp(r'^\d+(\.\d+)*$').hasMatch(cleaned)) {
+      // If sanitization resulted in invalid format, try to extract just numbers and dots
+      final matches = RegExp(r'\d+(\.\d+)*').firstMatch(version);
+      if (matches != null) {
+        cleaned = matches.group(0) ?? '0.0.0';
+      } else {
+        cleaned = '0.0.0'; // Fallback for completely invalid versions
+      }
+    }
     
     return cleaned;
   }
@@ -239,10 +328,13 @@ class UpdateService {
   }
 
   /// Find the best APK URL based on device architecture
-  static Future<String?> _findBestApkUrl(List assets) async {
+  static Future<String?> _findBestApkUrl(List assets, [bool isPrerelease = false]) async {
     try {
       // Get device architecture
       String? deviceArch = await _getDeviceArchitecture();
+      
+      // Determine APK suffix based on release type
+      final apkSuffix = isPrerelease ? 'beta.apk' : 'release.apk';
       
       // Priority order for APK selection based on architecture
       List<String> apkPriority = [];
@@ -252,40 +344,40 @@ class UpdateService {
           case 'arm64':
           case 'aarch64':
             apkPriority = [
-              'yupiread-arm64-v8a-release.apk',
-              'yupiread-armeabi-v7a-release.apk',
-              'yupiread-x86_64-release.apk'
+              'yupiread-arm64-v8a-$apkSuffix',
+              'yupiread-armeabi-v7a-$apkSuffix',
+              'yupiread-x86_64-$apkSuffix'
             ];
             break;
           case 'arm':
           case 'armv7':
             apkPriority = [
-              'yupiread-armeabi-v7a-release.apk',
-              'yupiread-arm64-v8a-release.apk',
-              'yupiread-x86_64-release.apk'
+              'yupiread-armeabi-v7a-$apkSuffix',
+              'yupiread-arm64-v8a-$apkSuffix',
+              'yupiread-x86_64-$apkSuffix'
             ];
             break;
           case 'x86_64':
           case 'x64':
             apkPriority = [
-              'yupiread-x86_64-release.apk',
-              'yupiread-arm64-v8a-release.apk',
-              'yupiread-armeabi-v7a-release.apk'
+              'yupiread-x86_64-$apkSuffix',
+              'yupiread-arm64-v8a-$apkSuffix',
+              'yupiread-armeabi-v7a-$apkSuffix'
             ];
             break;
           default:
             apkPriority = [
-              'yupiread-arm64-v8a-release.apk',
-              'yupiread-armeabi-v7a-release.apk',
-              'yupiread-x86_64-release.apk'
+              'yupiread-arm64-v8a-$apkSuffix',
+              'yupiread-armeabi-v7a-$apkSuffix',
+              'yupiread-x86_64-$apkSuffix'
             ];
         }
       } else {
         // Default priority if architecture detection fails
         apkPriority = [
-          'yupiread-arm64-v8a-release.apk',
-          'yupiread-armeabi-v7a-release.apk',
-          'yupiread-x86_64-release.apk'
+          'yupiread-arm64-v8a-$apkSuffix',
+          'yupiread-armeabi-v7a-$apkSuffix',
+          'yupiread-x86_64-$apkSuffix'
         ];
       }
 
@@ -299,7 +391,36 @@ class UpdateService {
         }
       }
 
-      // Fallback: find any APK
+      // Fallback 1: Try alternative suffix if primary search failed
+      final alternativeSuffix = isPrerelease ? 'release.apk' : 'beta.apk';
+      final alternativeApkPriority = apkPriority.map((apk) => 
+        apk.replaceAll(apkSuffix, alternativeSuffix)
+      ).toList();
+      
+      for (String preferredApk in alternativeApkPriority) {
+        for (final asset in assets) {
+          final downloadUrl = asset['browser_download_url'] as String;
+          if (downloadUrl.toLowerCase().contains(preferredApk.toLowerCase())) {
+            return downloadUrl;
+          }
+        }
+      }
+
+      // Fallback 2: Find any APK with architecture preference
+      if (deviceArch != null) {
+        final archPatterns = ['arm64-v8a', 'armeabi-v7a', 'x86_64'];
+        for (String archPattern in archPatterns) {
+          for (final asset in assets) {
+            final downloadUrl = asset['browser_download_url'] as String;
+            if (downloadUrl.toLowerCase().contains(archPattern) && 
+                downloadUrl.toLowerCase().endsWith('.apk')) {
+              return downloadUrl;
+            }
+          }
+        }
+      }
+
+      // Fallback 3: Find any APK
       for (final asset in assets) {
         final downloadUrl = asset['browser_download_url'] as String;
         if (downloadUrl.toLowerCase().endsWith('.apk')) {
@@ -348,18 +469,100 @@ class UpdateService {
     }
   }
 
-  /// Launch download URL
+  /// Launch download URL with multiple fallback options
   static Future<void> _launchDownload(String url) async {
     try {
       final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-        );
+      debugPrint('Attempting to launch download URL: $url');
+      
+      // For Android, try platform-specific method first
+      if (Platform.isAndroid) {
+        final success = await _launchDownloadAndroid(url);
+        if (success) {
+          debugPrint('Successfully launched via Android Intent');
+          return;
+        }
       }
+      
+      // Try different launch modes in order of preference
+      final launchModes = [
+        LaunchMode.externalApplication,
+        LaunchMode.platformDefault,
+        LaunchMode.externalNonBrowserApplication,
+      ];
+      
+      for (final mode in launchModes) {
+        try {
+          debugPrint('Trying launch mode: $mode');
+          
+          if (await canLaunchUrl(uri)) {
+            final success = await launchUrl(uri, mode: mode);
+            if (success) {
+              debugPrint('Successfully launched with mode: $mode');
+              return;
+            }
+          }
+        } catch (e) {
+          debugPrint('Launch mode $mode failed: $e');
+          continue;
+        }
+      }
+      
+      // Fallback: try to open GitHub releases page instead of direct download
+      try {
+        debugPrint('Direct download failed, trying GitHub releases page');
+        final releasesPageUrl = 'https://github.com/Alpinnnn/yupiread/releases';
+        final releasesUri = Uri.parse(releasesPageUrl);
+        
+        if (await canLaunchUrl(releasesUri)) {
+          await launchUrl(releasesUri, mode: LaunchMode.externalApplication);
+          debugPrint('Successfully opened GitHub releases page');
+          return;
+        }
+      } catch (e) {
+        debugPrint('GitHub releases page fallback failed: $e');
+      }
+      
+      // Final fallback: try to open in browser
+      try {
+        debugPrint('All external launches failed, trying in-app browser');
+        await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      } catch (e) {
+        debugPrint('Browser fallback also failed: $e');
+        
+        // Last resort: try with webViewConfiguration
+        try {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.inAppWebView,
+            webViewConfiguration: const WebViewConfiguration(
+              enableJavaScript: true,
+              enableDomStorage: true,
+            ),
+          );
+        } catch (e) {
+          debugPrint('All launch attempts failed: $e');
+        }
+      }
+      
     } catch (e) {
-      debugPrint('Failed to launch download URL: $e');
+      debugPrint('Failed to parse or launch download URL: $e');
+    }
+  }
+
+  /// Android-specific download launch using platform channel
+  static Future<bool> _launchDownloadAndroid(String url) async {
+    try {
+      const platform = MethodChannel('com.alpinnnn.yupiread/download');
+      
+      final result = await platform.invokeMethod('launchDownload', {
+        'url': url,
+      });
+      
+      return result == true;
+    } catch (e) {
+      debugPrint('Android platform channel failed: $e');
+      return false;
     }
   }
 }

@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/ebook_model.dart';
 import '../services/data_service.dart';
+import '../l10n/app_localizations.dart';
 import 'ebook_reader_screen.dart';
 import 'json_ebook_reader_screen.dart';
+
+// Result class for save operations
+class SaveResult {
+  final bool success;
+  final String message;
+
+  SaveResult({required this.success, required this.message});
+}
 
 class EbookSettingsScreen extends StatefulWidget {
   const EbookSettingsScreen({super.key});
@@ -59,6 +71,8 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
   }
 
   void _showEbookOptions(EbookModel ebook) {
+    final l10n = AppLocalizations.of(context);
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).cardTheme.color,
@@ -90,7 +104,7 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
             const SizedBox(height: 20),
             _buildOptionTile(
               icon: Icons.play_arrow,
-              title: 'Baca',
+              title: l10n.readAction,
               onTap: () {
                 Widget readerScreen;
                 
@@ -107,8 +121,18 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
               },
             ),
             _buildOptionTile(
+              icon: Icons.save_alt,
+              title: l10n.saveToPhone,
+              subtitle: l10n.saveToPhoneDesc,
+              color: const Color(0xFF10B981),
+              onTap: () {
+                Navigator.pop(context);
+                _saveEbookToPhone(ebook);
+              },
+            ),
+            _buildOptionTile(
               icon: Icons.select_all,
-              title: 'Pilih untuk hapus',
+              title: l10n.selectAll,
               subtitle: 'Pilih ebook ini untuk dihapus bersamaan',
               onTap: () {
                 Navigator.pop(context);
@@ -118,7 +142,7 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
             ),
             _buildOptionTile(
               icon: Icons.delete,
-              title: 'Hapus',
+              title: l10n.delete,
               color: Colors.red,
               onTap: () {
                 Navigator.pop(context);
@@ -161,16 +185,17 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
   }
 
   void _showDeleteConfirmation(List<String> ebookIds) {
+    final l10n = AppLocalizations.of(context);
     final totalItems = ebookIds.length;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Ebook'),
+        title: Text(l10n.delete + ' Ebook'),
         content: Text('Apakah Anda yakin ingin menghapus $totalItems ebook?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -178,7 +203,7 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
               _deleteSelectedEbooks(ebookIds);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Hapus'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -191,12 +216,317 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
     }
     _loadEbooks();
     _toggleSelectMode();
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${ebookIds.length} ebook berhasil dihapus'),
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+  void _showSelectedEbooksOptions() {
+    final l10n = AppLocalizations.of(context);
+    final selectedCount = _selectedEbookIds.length;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardTheme.color,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '$selectedCount ebook dipilih',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).textTheme.headlineMedium?.color,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildOptionTile(
+              icon: Icons.save_alt,
+              title: l10n.saveToPhone,
+              subtitle: l10n.saveToPhoneDesc,
+              color: const Color(0xFF10B981),
+              onTap: () {
+                Navigator.pop(context);
+                _saveSelectedEbooksToPhone();
+              },
+            ),
+            _buildOptionTile(
+              icon: Icons.delete,
+              title: l10n.delete,
+              subtitle: 'Hapus ebook yang dipilih',
+              color: Colors.red,
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(_selectedEbookIds.toList());
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Save single ebook to phone
+  void _saveEbookToPhone(EbookModel ebook) async {
+    final l10n = AppLocalizations.of(context);
+    
+    try {
+      // Check storage permission
+      final hasPermission = await _checkStoragePermission();
+      if (!hasPermission) {
+        _showPermissionDialog();
+        return;
+      }
+      
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(l10n.savingEbookToDocuments(ebook.title)),
+            ],
+          ),
+        ),
+      );
+
+      final result = await _saveEbookFileToDocuments(ebook);
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show result
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.success 
+                ? l10n.ebookSavedToDocuments 
+                : l10n.failedToSaveEbookError(result.message)),
+            backgroundColor: result.success 
+                ? const Color(0xFF10B981) 
+                : const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) Navigator.pop(context);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.failedToSaveEbookError(e.toString())),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  // Save selected ebooks to phone
+  void _saveSelectedEbooksToPhone() async {
+    final l10n = AppLocalizations.of(context);
+    
+    try {
+      // Check storage permission
+      final hasPermission = await _checkStoragePermission();
+      if (!hasPermission) {
+        _showPermissionDialog();
+        return;
+      }
+
+      final selectedEbooks = _ebooks.where((e) => _selectedEbookIds.contains(e.id)).toList();
+      
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(l10n.savingMultipleEbooksToDocuments(selectedEbooks.length)),
+            ],
+          ),
+        ),
+      );
+
+      int successCount = 0;
+      int failCount = 0;
+
+      for (EbookModel ebook in selectedEbooks) {
+        final result = await _saveEbookFileToDocuments(ebook);
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show result
+      if (mounted) {
+        String message;
+        Color backgroundColor;
+        
+        if (failCount == 0) {
+          message = l10n.ebooksSavedSummary(successCount, selectedEbooks.length);
+          backgroundColor = const Color(0xFF10B981);
+        } else if (successCount == 0) {
+          message = l10n.failedToSaveAllEbooks;
+          backgroundColor = const Color(0xFFEF4444);
+        } else {
+          message = l10n.ebooksSavedPartial(successCount, failCount);
+          backgroundColor = const Color(0xFFF59E0B);
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: backgroundColor,
+          ),
+        );
+      }
+
+      _toggleSelectMode(); // Exit selection mode
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) Navigator.pop(context);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan ebook: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  // Check storage permission
+  Future<bool> _checkStoragePermission() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.storage.status;
+      if (status.isDenied) {
+        final result = await Permission.storage.request();
+        return result.isGranted;
+      }
+      return status.isGranted;
+    }
+    return true; // iOS doesn't need explicit storage permission for Documents
+  }
+
+  // Show permission dialog
+  void _showPermissionDialog() {
+    final l10n = AppLocalizations.of(context);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.storagePermissionRequired),
+        content: Text(l10n.storagePermissionMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: Text(l10n.openSettings),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Save ebook file to Documents/Yupiread folder
+  Future<SaveResult> _saveEbookFileToDocuments(EbookModel ebook) async {
+    try {
+      // Get external storage directory (Documents)
+      Directory? documentsDir;
+      
+      if (Platform.isAndroid) {
+        documentsDir = Directory('/storage/emulated/0/Documents');
+        if (!await documentsDir.exists()) {
+          documentsDir = await getExternalStorageDirectory();
+        }
+      } else {
+        documentsDir = await getApplicationDocumentsDirectory();
+      }
+
+      if (documentsDir == null) {
+        return SaveResult(success: false, message: 'Cannot access Documents folder');
+      }
+
+      // Create Yupiread folder in Documents
+      final yupireadDir = Directory('${documentsDir.path}/Yupiread');
+      if (!await yupireadDir.exists()) {
+        await yupireadDir.create(recursive: true);
+      }
+
+      // Get source file
+      final sourceFile = File(ebook.filePath);
+      if (!await sourceFile.exists()) {
+        return SaveResult(success: false, message: 'Source file not found');
+      }
+
+      // Create destination file with safe filename
+      final safeFileName = _getSafeFileName(ebook.title, ebook.fileType);
+      final destinationPath = '${yupireadDir.path}/$safeFileName';
+
+      // Copy file
+      await sourceFile.copy(destinationPath);
+
+      return SaveResult(success: true, message: 'Saved to $destinationPath');
+    } catch (e) {
+      return SaveResult(success: false, message: e.toString());
+    }
+  }
+
+  // Get safe filename for saving
+  String _getSafeFileName(String title, String fileType) {
+    // Remove invalid characters for filename
+    String safeTitle = title
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+        .replaceAll(RegExp(r'\s+'), '_');
+    
+    // Ensure file extension
+    String extension = fileType == 'json_delta' ? 'json' : fileType;
+    if (!safeTitle.toLowerCase().endsWith('.$extension')) {
+      safeTitle += '.$extension';
+    }
+    
+    return safeTitle;
   }
 
   int _getCrossAxisCount(BuildContext context) {
@@ -231,13 +561,6 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
         centerTitle: true,
         actions: _isSelectMode
             ? [
-                if (selectedCount > 0)
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _showDeleteConfirmation(
-                      _selectedEbookIds.toList(),
-                    ),
-                  ),
                 IconButton(
                   icon: Icon(
                     _selectedEbookIds.length == _ebooks.length 
@@ -308,6 +631,13 @@ class _EbookSettingsScreenState extends State<EbookSettingsScreen> {
           ),
         ),
       ),
+      floatingActionButton: _isSelectMode && selectedCount > 0
+          ? FloatingActionButton(
+              onPressed: _showSelectedEbooksOptions,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.more_vert, color: Colors.white),
+            )
+          : null,
     );
   }
 

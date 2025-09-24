@@ -588,4 +588,23 @@ abstract class AppLocalizations {
   String streakActivityEndStreak(int days) => 'Ended reading streak of $days days';
   String streakActivityStartStreak() => 'Started a new reading streak';
   String streakActivityContinueStreak(int days) => 'Continued reading streak - Day $days';
+
+  // Save To Phone Feature
+  String get saveToPhone => 'Save To Phone';
+  String get saveToPhoneDesc => 'Save to Documents/Yupiread';
+  String get savingToDocuments => 'Saving to Documents...';
+  String savingEbookToDocuments(String title) => 'Saving $title to Documents...';
+  String savingMultipleEbooksToDocuments(int count) => 'Saving $count ebooks to Documents...';
+  String get ebookSavedToDocuments => 'Ebook successfully saved to Documents/Yupiread';
+  String get ebooksSavedToDocuments => 'Ebooks successfully saved to Documents/Yupiread';
+  String get failedToSaveEbook => 'Failed to save ebook';
+  String failedToSaveEbookError(String error) => 'Failed to save ebook: $error';
+  String ebooksSavedSummary(int success, int total) => '$success of $total ebooks saved successfully';
+  String ebooksSavedPartial(int success, int fail) => '$success successful, $fail failed to save';
+  String get failedToSaveAllEbooks => 'Failed to save all ebooks';
+  String get storagePermissionRequired => 'Storage Permission Required';
+  String get storagePermissionMessage => 'This app needs storage permission to save ebooks to your device. Please grant storage permission in app settings.';
+  String get openSettings => 'Open Settings';
+  String get cannotAccessDocuments => 'Cannot access Documents folder';
+  String get sourceFileNotFound => 'Source file not found';
 }

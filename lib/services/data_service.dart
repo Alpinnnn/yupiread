@@ -431,6 +431,14 @@ class DataService extends ChangeNotifier {
     }
   }
 
+  // Reorder ebooks and save to persistent storage
+  void reorderEbooks(List<EbookModel> reorderedEbooks) {
+    _ebooks.clear();
+    _ebooks.addAll(reorderedEbooks);
+    _saveEbooks(); // Save to persistent storage
+    notifyListeners(); // Notify UI of changes
+  }
+
   // Update ebook progress tracking
   bool updateEbookProgress(String id, int currentPage) {
     final index = _ebooks.indexWhere((ebook) => ebook.id == id);
@@ -447,6 +455,21 @@ class DataService extends ChangeNotifier {
       return true;
     }
     return false;
+  }
+
+  // Reorder folder items (photos and photo pages) and save to persistent storage
+  void reorderFolderItems(String folderName, List<PhotoPageModel> reorderedPhotoPages, List<PhotoModel> reorderedPhotos) {
+    // Update photo pages order
+    _photoPages.clear();
+    _photoPages.addAll(reorderedPhotoPages);
+    _savePhotoPages();
+    
+    // Update photos order  
+    _photos.clear();
+    _photos.addAll(reorderedPhotos);
+    _savePhotos();
+    
+    notifyListeners(); // Notify UI of changes
   }
 
   // Update ebook title by file path

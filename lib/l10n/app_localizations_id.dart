@@ -1344,4 +1344,56 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String photoAddedToFolder(String folderName) => 'Foto ditambahkan ke folder "$folderName"';
+
+  // Save To Phone Feature
+  @override
+  String get saveToPhone => 'Simpan ke HP';
+
+  @override
+  String get saveToPhoneDesc => 'Simpan ke Documents/Yupiread';
+
+  @override
+  String get savingToDocuments => 'Menyimpan ke Documents...';
+
+  @override
+  String savingEbookToDocuments(String title) => 'Menyimpan $title ke Documents...';
+
+  @override
+  String savingMultipleEbooksToDocuments(int count) => 'Menyimpan $count ebook ke Documents...';
+
+  @override
+  String get ebookSavedToDocuments => 'Ebook berhasil disimpan ke Documents/Yupiread';
+
+  @override
+  String get ebooksSavedToDocuments => 'Ebook berhasil disimpan ke Documents/Yupiread';
+
+  @override
+  String get failedToSaveEbook => 'Gagal menyimpan ebook';
+
+  @override
+  String failedToSaveEbookError(String error) => 'Gagal menyimpan ebook: $error';
+
+  @override
+  String ebooksSavedSummary(int success, int total) => '$success dari $total ebook berhasil disimpan';
+
+  @override
+  String ebooksSavedPartial(int success, int fail) => '$success berhasil, $fail gagal disimpan';
+
+  @override
+  String get failedToSaveAllEbooks => 'Gagal menyimpan semua ebook';
+
+  @override
+  String get storagePermissionRequired => 'Izin Penyimpanan Diperlukan';
+
+  @override
+  String get storagePermissionMessage => 'Aplikasi ini memerlukan izin penyimpanan untuk menyimpan ebook ke perangkat Anda. Silakan berikan izin penyimpanan di pengaturan aplikasi.';
+
+  @override
+  String get openSettings => 'Buka Pengaturan';
+
+  @override
+  String get cannotAccessDocuments => 'Tidak dapat mengakses folder Documents';
+
+  @override
+  String get sourceFileNotFound => 'File sumber tidak ditemukan';
 }
