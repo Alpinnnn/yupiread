@@ -151,14 +151,26 @@ class _MainScreenState extends State<MainScreen> {
   
   void _onDataServiceChanged() {
     setState(() {
-      // Reset current index if it's out of bounds after Tools tab is toggled
-      if (_currentIndex >= _screens.length) {
-        _currentIndex = _screens.length - 1;
+      final oldScreensLength = _screens.length;
+      final isOnProfileScreen = _currentIndex == oldScreensLength - 1;
+      
+      // Calculate new screens length after the change
+      final newScreens = _getScreensList();
+      final newScreensLength = newScreens.length;
+      
+      // If user was on Profile screen, keep them there (Profile is always last)
+      if (isOnProfileScreen) {
+        _currentIndex = newScreensLength - 1;
       }
+      // If current index is out of bounds, reset to last valid position
+      else if (_currentIndex >= newScreensLength) {
+        _currentIndex = newScreensLength - 1;
+      }
+      // Otherwise, keep current index as is
     });
   }
 
-  List<Widget> get _screens {
+  List<Widget> _getScreensList() {
     final screens = [
       const DashboardScreen(),
       const GalleryScreen(),
@@ -172,6 +184,8 @@ class _MainScreenState extends State<MainScreen> {
     screens.add(const ProfileScreen());
     return screens;
   }
+
+  List<Widget> get _screens => _getScreensList();
 
   List<BottomNavigationBarItem> _buildBottomNavItems(BuildContext context) {
     final items = <BottomNavigationBarItem>[

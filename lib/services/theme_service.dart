@@ -9,21 +9,21 @@ class ThemeService extends ChangeNotifier {
   static ThemeService? _instance;
   ThemeMode _themeMode = ThemeMode.system;
   bool _isInitialized = false;
-  
+
   // Singleton pattern
   static ThemeService get instance {
     _instance ??= ThemeService._internal();
     return _instance!;
   }
-  
+
   ThemeService._internal();
-  
+
   // Factory constructor
   factory ThemeService() => instance;
-  
+
   ThemeMode get themeMode => _themeMode;
   bool get isInitialized => _isInitialized;
-  
+
   // Light Theme
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
@@ -63,7 +63,7 @@ class ThemeService extends ChangeNotifier {
       elevation: 0,
       type: BottomNavigationBarType.fixed,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.04),
@@ -117,7 +117,7 @@ class ThemeService extends ChangeNotifier {
       elevation: 0,
       type: BottomNavigationBarType.fixed,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: const Color(0xFF1E293B),
       elevation: 4,
       shadowColor: Colors.black.withOpacity(0.3),
@@ -135,17 +135,17 @@ class ThemeService extends ChangeNotifier {
   // Initialize theme service
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final themeModeString = prefs.getString(_themeKey);
-    
+
     if (themeModeString != null) {
       _themeMode = ThemeMode.values.firstWhere(
         (mode) => mode.toString() == themeModeString,
         orElse: () => ThemeMode.system,
       );
     }
-    
+
     _isInitialized = true;
     notifyListeners();
   }

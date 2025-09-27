@@ -1496,4 +1496,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sourceFileNotFound => 'Source file not found';
+
+  // Search Feature
+  @override
+  String get searchEbooks => 'Search ebooks...';
+
+  @override
+  String get searchPhotos => 'Search photos...';
+
+  @override
+  String get searchResults => 'Search Results';
+
+  @override
+  String get noSearchResults => 'No search results found';
+
+  @override
+  String searchResultsCount(int count) => '$count results found';
+
+  @override
+  String get clearSearch => 'Clear search';
+
+  @override
+  String get searchHint => 'Type to search';
+  
+  // Additional Features
+  @override
+  String get additionalFeatures => 'Additional Features';
+
+  @override
+  String get showSearchBarInGallery => 'Show Search Bar in Gallery';
+
+  @override
+  String get showSearchBarInEbooks => 'Show Search Bar in Ebooks';
+
+  @override
+  String get searchBarVisibility => 'Search Bar Visibility';
+
+  @override
+  String get searchBarVisibilityDesc => 'Control when search bars are visible';
+
+  @override
+  String get searchBarEnabled => 'Search bar enabled';
+
+  @override
+  String get searchBarDisabled => 'Search bar disabled';
+
+  // Multiple File Import
+  @override
+  String get importFiles => 'Import Files';
+
+  @override
+  String get importFilesDesc => 'PDF & Word files';
+
+  @override
+  String get processingFiles => 'Processing files...';
+
+  @override
+  String filesImportedSuccessfully(int count) => '$count files imported successfully';
+
+  @override
+  String get failedToImportAllFiles => 'Failed to import all files';
+
+  @override
+  String importSummary(int success, int fail) => '$success successful, $fail failed';
+
+  @override
+  String get noValidFilesSelected => 'No valid files selected';
 }

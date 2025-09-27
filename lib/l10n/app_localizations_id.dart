@@ -1396,4 +1396,70 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get sourceFileNotFound => 'File sumber tidak ditemukan';
+
+  // Search Feature
+  @override
+  String get searchEbooks => 'Cari ebook...';
+
+  @override
+  String get searchPhotos => 'Cari foto...';
+
+  @override
+  String get searchResults => 'Hasil Pencarian';
+
+  @override
+  String get noSearchResults => 'Tidak ada hasil pencarian';
+
+  @override
+  String searchResultsCount(int count) => '$count hasil ditemukan';
+
+  @override
+  String get clearSearch => 'Hapus pencarian';
+
+  @override
+  String get searchHint => 'Ketik untuk mencari';
+  
+  // Additional Features
+  @override
+  String get additionalFeatures => 'Fitur Tambahan';
+
+  @override
+  String get showSearchBarInGallery => 'Tampilkan Search Bar di Galeri';
+
+  @override
+  String get showSearchBarInEbooks => 'Tampilkan Search Bar di Ebook';
+
+  @override
+  String get searchBarVisibility => 'Visibilitas Search Bar';
+
+  @override
+  String get searchBarVisibilityDesc => 'Kontrol kapan search bar terlihat';
+
+  @override
+  String get searchBarEnabled => 'Search bar diaktifkan';
+
+  @override
+  String get searchBarDisabled => 'Search bar dinonaktifkan';
+
+  // Multiple File Import
+  @override
+  String get importFiles => 'Import File';
+
+  @override
+  String get importFilesDesc => 'File PDF & Word';
+
+  @override
+  String get processingFiles => 'Memproses file...';
+
+  @override
+  String filesImportedSuccessfully(int count) => '$count file berhasil diimport';
+
+  @override
+  String get failedToImportAllFiles => 'Gagal mengimport semua file';
+
+  @override
+  String importSummary(int success, int fail) => '$success berhasil, $fail gagal';
+
+  @override
+  String get noValidFilesSelected => 'Tidak ada file valid yang dipilih';
 }

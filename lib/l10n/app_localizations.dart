@@ -607,4 +607,31 @@ abstract class AppLocalizations {
   String get openSettings => 'Open Settings';
   String get cannotAccessDocuments => 'Cannot access Documents folder';
   String get sourceFileNotFound => 'Source file not found';
+
+  // Search Feature
+  String get searchEbooks;
+  String get searchPhotos;
+  String get searchResults;
+  String get noSearchResults;
+  String searchResultsCount(int count);
+  String get clearSearch;
+  String get searchHint;
+  
+  // Additional Features
+  String get additionalFeatures;
+  String get showSearchBarInGallery;
+  String get showSearchBarInEbooks;
+  String get searchBarVisibility;
+  String get searchBarVisibilityDesc;
+  String get searchBarEnabled;
+  String get searchBarDisabled;
+
+  // Multiple File Import
+  String get importFiles;
+  String get importFilesDesc;
+  String get processingFiles;
+  String filesImportedSuccessfully(int count);
+  String get failedToImportAllFiles;
+  String importSummary(int success, int fail);
+  String get noValidFilesSelected;
 }

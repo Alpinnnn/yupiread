@@ -16,8 +16,13 @@ import 'document_scanner_screen.dart';
 
 class PhotoPageViewScreen extends StatefulWidget {
   final String photoPageId;
+  final int initialIndex;
 
-  const PhotoPageViewScreen({super.key, required this.photoPageId});
+  const PhotoPageViewScreen({
+    super.key, 
+    required this.photoPageId,
+    this.initialIndex = 0,
+  });
 
   @override
   State<PhotoPageViewScreen> createState() => _PhotoPageViewScreenState();
@@ -28,11 +33,11 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   final DataService _dataService = DataService.instance;
   PhotoPageModel? photoPage;
   bool _showBottomBar = false;
-  int _currentPhotoIndex = 0;
+  late int _currentPhotoIndex;
   late AnimationController _animationController;
   late AnimationController _bottomMenuAnimationController;
   late Animation<double> _bottomMenuAnimation;
-  final PageController _pageController = PageController();
+  late PageController _pageController;
   final List<GlobalKey<ExtendedImageGestureState>> _gestureKeys = [];
   double _dragOffset = 0.0;
   double _bottomBarHeight = 300.0;
@@ -43,6 +48,8 @@ class _PhotoPageViewScreenState extends State<PhotoPageViewScreen>
   void initState() {
     super.initState();
     photoPage = _dataService.getPhotoPage(widget.photoPageId);
+    _currentPhotoIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),

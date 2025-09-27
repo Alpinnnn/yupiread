@@ -27,7 +27,7 @@ android {
 
     defaultConfig {
         applicationId = "com.yupivfe.read"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName

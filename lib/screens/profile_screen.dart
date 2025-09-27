@@ -261,10 +261,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 _buildSettingItem(
-                  icon: Icons.build,
-                  title: l10n.toolsSettings,
+                  icon: Icons.extension,
+                  title: l10n.additionalFeatures,
                   color: const Color(0xFF8B5CF6),
-                  onTap: _showToolsSettingDialog,
+                  onTap: _showAdditionalFeaturesDialog,
                 ),
                 const SizedBox(height: 12),
                 _buildSettingItem(
@@ -687,52 +687,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showToolsSettingDialog() {
+  void _showAdditionalFeaturesDialog() {
     final l10n = AppLocalizations.of(context);
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          l10n.toolsSettings,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwitchListTile(
-              title: Text(l10n.alwaysShowToolSection),
-              subtitle: Text(l10n.toolsSectionDesc),
-              value: _dataService.showToolsSection,
-              onChanged: (bool value) async {
-                await _dataService.setShowToolsSection(value);
-                setState(() {});
-                Navigator.pop(context);
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      value 
-                        ? AppLocalizations.of(context).toolsSectionEnabled
-                        : AppLocalizations.of(context).toolsSectionDisabled,
-                    ),
-                    backgroundColor: const Color(0xFF10B981),
-                  ),
-                );
-              },
-              activeColor: Theme.of(context).colorScheme.primary,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            l10n.additionalFeatures,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Tools Section Toggle
+              SwitchListTile(
+                title: Text(l10n.alwaysShowToolSection),
+                subtitle: Text(l10n.toolsSectionDesc),
+                value: _dataService.showToolsSection,
+                onChanged: (bool value) async {
+                  await _dataService.setShowToolsSection(value);
+                  if (mounted) {
+                    setState(() {});
+                    setDialogState(() {}); // Update dialog state
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          value 
+                            ? AppLocalizations.of(context).toolsSectionEnabled
+                            : AppLocalizations.of(context).toolsSectionDisabled,
+                        ),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                },
+                activeColor: Theme.of(context).colorScheme.primary,
+              ),
+              const Divider(),
+              // Search Bar Visibility Section
+              Text(
+                l10n.searchBarVisibility,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.searchBarVisibilityDesc,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Gallery Search Bar Toggle
+              SwitchListTile(
+                title: Text(l10n.showSearchBarInGallery),
+                value: _dataService.showSearchBarInGallery,
+                onChanged: (bool value) async {
+                  await _dataService.setShowSearchBarInGallery(value);
+                  if (mounted) {
+                    setState(() {});
+                    setDialogState(() {}); // Update dialog state
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          value 
+                            ? l10n.searchBarEnabled
+                            : l10n.searchBarDisabled,
+                        ),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                },
+                activeColor: Theme.of(context).colorScheme.primary,
+              ),
+              // Ebooks Search Bar Toggle
+              SwitchListTile(
+                title: Text(l10n.showSearchBarInEbooks),
+                value: _dataService.showSearchBarInEbooks,
+                onChanged: (bool value) async {
+                  await _dataService.setShowSearchBarInEbooks(value);
+                  if (mounted) {
+                    setState(() {});
+                    setDialogState(() {}); // Update dialog state
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          value 
+                            ? l10n.searchBarEnabled
+                            : l10n.searchBarDisabled,
+                        ),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                },
+                activeColor: Theme.of(context).colorScheme.primary,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-        ],
       ),
     );
   }

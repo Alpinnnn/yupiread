@@ -27,11 +27,27 @@ class _GalleryScreenState extends State<GalleryScreen> {
   List<String> _selectedTags = [];
   bool _folderViewMode = false;
   bool _isLoading = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _initializeScreen();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+      _updateFilteredPhotos();
+    });
   }
 
   Future<void> _initializeScreen() async {
@@ -70,12 +86,28 @@ class _GalleryScreenState extends State<GalleryScreen> {
   void _updateFilteredPhotos() {
     setState(() {
       // Create mutable copies to allow reordering
-      _filteredPhotos = List<PhotoModel>.from(
+      var filteredPhotos = List<PhotoModel>.from(
         _dataService.getFilteredPhotos(_selectedTags),
       );
-      _filteredPhotoPages = List<PhotoPageModel>.from(
+      var filteredPhotoPages = List<PhotoPageModel>.from(
         _dataService.getFilteredPhotoPages(_selectedTags),
       );
+      
+      // Apply search filter if search query is not empty
+      if (_searchQuery.isNotEmpty) {
+        filteredPhotos = filteredPhotos.where((photo) {
+          return photo.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                 photo.tags.any((tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()));
+        }).toList();
+        
+        filteredPhotoPages = filteredPhotoPages.where((photoPage) {
+          return photoPage.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                 photoPage.tags.any((tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()));
+        }).toList();
+      }
+      
+      _filteredPhotos = filteredPhotos;
+      _filteredPhotoPages = filteredPhotoPages;
     });
   }
 
@@ -198,7 +230,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
     folderNames.sort();
     
     final untaggedPhotos = _dataService.getUntaggedPhotos();
-    final totalItems = folderNames.length + untaggedPhotos.length + 1; // +1 for add photo card
+    final untaggedPhotoPages = _dataService.getUntaggedPhotoPages();
+    final totalItems = folderNames.length + untaggedPhotos.length + untaggedPhotoPages.length + 1; // +1 for add photo card
 
     if (totalItems == 1) { // Only add photo card
       return _buildEmptyFolderView();
@@ -226,9 +259,15 @@ class _GalleryScreenState extends State<GalleryScreen> {
           final folderPhotos = folders[folderName]!;
           return _buildFolderCard(folderName, folderPhotos);
         } 
-        // Then show individual untagged photos
+        // Then show untagged photo pages as single cards
+        else if (adjustedIndex < folderNames.length + untaggedPhotoPages.length) {
+          final photoPageIndex = adjustedIndex - folderNames.length;
+          final photoPage = untaggedPhotoPages[photoPageIndex];
+          return _buildPhotoPageCard(context, photoPage);
+        }
+        // Finally show individual untagged photos
         else {
-          final photoIndex = adjustedIndex - folderNames.length;
+          final photoIndex = adjustedIndex - folderNames.length - untaggedPhotoPages.length;
           final photo = untaggedPhotos[photoIndex];
           return _buildPhotoCard(context, photo);
         }
@@ -516,6 +555,55 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 ],
               ),
               const SizedBox(height: 32),
+              // Search Bar (conditionally shown)
+              if (_dataService.showSearchBarInGallery) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).cardTheme.shadowColor ??
+                            Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: l10n.searchPhotos,
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Theme.of(context).textTheme.bodyMedium?.color,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).cardTheme.color,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               Expanded(
                 child:
                     _folderViewMode
@@ -595,6 +683,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Widget _buildPhotoCard(BuildContext context, PhotoModel photo) {
     return GestureDetector(
       onTap: () {
+        // Regular single photo navigation
         Navigator.push(
           context,
           MaterialPageRoute(

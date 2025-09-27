@@ -41,6 +41,8 @@ class DataService extends ChangeNotifier {
   bool _folderViewEnabled = false;
   bool _streakReminderEnabled = false;
   String _streakReminderTime = '20:00';
+  bool _showSearchBarInGallery = false;
+  bool _showSearchBarInEbooks = false;
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
   List<PhotoPageModel> get photoPages => List.unmodifiable(_photoPages);
@@ -51,6 +53,8 @@ class DataService extends ChangeNotifier {
   List<String> get customTags => List.unmodifiable(_customTags);
   bool get showToolsSection => _showToolsSection;
   bool get folderViewEnabled => _folderViewEnabled;
+  bool get showSearchBarInGallery => _showSearchBarInGallery;
+  bool get showSearchBarInEbooks => _showSearchBarInEbooks;
 
   // Initialize data when app starts
   Future<void> initializeData() async {
@@ -911,6 +915,8 @@ class DataService extends ChangeNotifier {
         'folderViewEnabled': _folderViewEnabled,
         'streakReminderEnabled': _streakReminderEnabled,
         'streakReminderTime': _streakReminderTime,
+        'showSearchBarInGallery': _showSearchBarInGallery,
+        'showSearchBarInEbooks': _showSearchBarInEbooks,
       };
 
       await prefs.setString('userProfile', jsonEncode(userProfileJson));
@@ -940,6 +946,8 @@ class DataService extends ChangeNotifier {
         _folderViewEnabled = userProfileJson['folderViewEnabled'] ?? false;
         _streakReminderEnabled = userProfileJson['streakReminderEnabled'] ?? false;
         _streakReminderTime = userProfileJson['streakReminderTime'] ?? '20:00';
+        _showSearchBarInGallery = userProfileJson['showSearchBarInGallery'] ?? false;
+        _showSearchBarInEbooks = userProfileJson['showSearchBarInEbooks'] ?? false;
       }
     } catch (e) {
       // Handle load error
@@ -1136,24 +1144,21 @@ class DataService extends ChangeNotifier {
       }
     }
     
-    // Add photo pages without tags (convert to individual photos)
+    return untaggedPhotos;
+  }
+
+  // Get photo pages without tags for folder view
+  List<PhotoPageModel> getUntaggedPhotoPages() {
+    final List<PhotoPageModel> untaggedPhotoPages = [];
+    
+    // Add photo pages without tags
     for (final photoPage in _photoPages) {
       if (photoPage.tags.isEmpty) {
-        for (int i = 0; i < photoPage.imagePaths.length; i++) {
-          final photo = PhotoModel(
-            id: '${photoPage.id}_$i',
-            title: '${photoPage.title} - ${i + 1}',
-            imagePath: photoPage.imagePaths[i],
-            createdAt: photoPage.createdAt,
-            tags: photoPage.tags,
-            description: photoPage.description,
-          );
-          untaggedPhotos.add(photo);
-        }
+        untaggedPhotoPages.add(photoPage);
       }
     }
     
-    return untaggedPhotos;
+    return untaggedPhotoPages;
   }
 
   // Get photos for a specific folder (tag)
@@ -1361,5 +1366,18 @@ class DataService extends ChangeNotifier {
     } catch (e) {
       // Ignore save errors
     }
+  }
+
+  // Search bar visibility settings
+  Future<void> setShowSearchBarInGallery(bool show) async {
+    _showSearchBarInGallery = show;
+    await _saveUserProfile();
+    notifyListeners();
+  }
+
+  Future<void> setShowSearchBarInEbooks(bool show) async {
+    _showSearchBarInEbooks = show;
+    await _saveUserProfile();
+    notifyListeners();
   }
 }

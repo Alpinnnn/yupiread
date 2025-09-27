@@ -89,17 +89,43 @@ class _EbookScreenState extends State<EbookScreen> {
   List<EbookModel> _ebooks = [];
   List<String> _selectedTags = [];
   List<EbookModel> _filteredEbooks = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _updateFilteredEbooks();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+      _updateFilteredEbooks();
+    });
   }
 
   void _updateFilteredEbooks() {
     setState(() {
       _ebooks = _dataService.ebooks;
-      _filteredEbooks = _dataService.getFilteredEbooks(_selectedTags);
+      var filtered = _dataService.getFilteredEbooks(_selectedTags);
+      
+      // Apply search filter if search query is not empty
+      if (_searchQuery.isNotEmpty) {
+        filtered = filtered.where((ebook) {
+          return ebook.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                 ebook.tags.any((tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()));
+        }).toList();
+      }
+      
+      _filteredEbooks = filtered;
     });
   }
 
@@ -262,6 +288,55 @@ class _EbookScreenState extends State<EbookScreen> {
                 ],
               ),
               const SizedBox(height: 32),
+              // Search Bar (conditionally shown)
+              if (_dataService.showSearchBarInEbooks) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).cardTheme.shadowColor ??
+                            Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: l10n.searchEbooks,
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Theme.of(context).textTheme.bodyMedium?.color,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).cardTheme.color,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               Expanded(
                 child:
                     _filteredEbooks.isEmpty
@@ -428,7 +503,7 @@ class _EbookScreenState extends State<EbookScreen> {
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
@@ -482,11 +557,8 @@ class _EbookScreenState extends State<EbookScreen> {
                     value: ebook.progress,
                     backgroundColor:
                         Theme.of(context).brightness == Brightness.dark
-                            ? Theme.of(
-                                  context,
-                                ).cardTheme.color?.withOpacity(0.3) ??
-                                Colors.grey[800]
-                            : Theme.of(context).colorScheme.surfaceVariant,
+                            ? Colors.grey[700]
+                            : Colors.grey[300],
                     valueColor: AlwaysStoppedAnimation<Color>(categoryColor),
                     minHeight: 3,
                   ),
@@ -535,7 +607,7 @@ class _EbookScreenState extends State<EbookScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Impor Ebook',
+                  AppLocalizations.of(context).addNewEbook,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -544,43 +616,27 @@ class _EbookScreenState extends State<EbookScreen> {
                 ),
                 const SizedBox(height: 24),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Expanded(
-                      child: _buildImportOption(
-                        icon: Icons.picture_as_pdf,
-                        title: AppLocalizations.of(context).pdfFile,
-                        subtitle:
-                            AppLocalizations.of(context).importPdfDocument,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _importPdfFile();
-                        },
-                      ),
+                    _buildImportOption(
+                      icon: Icons.file_upload,
+                      title: AppLocalizations.of(context).importFiles,
+                      subtitle: AppLocalizations.of(context).importFilesDesc,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _importMultipleFiles();
+                      },
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildImportOption(
-                        icon: Icons.description,
-                        title: AppLocalizations.of(context).wordFile,
-                        subtitle:
-                            AppLocalizations.of(context).importWordDocument,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _importWordFile();
-                        },
-                      ),
+                    _buildImportOption(
+                      icon: Icons.edit_note,
+                      title: AppLocalizations.of(context).textEbook,
+                      subtitle: AppLocalizations.of(context).createNewTextEbook,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _navigateToTextEditor();
+                      },
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                _buildImportOption(
-                  icon: Icons.edit_note,
-                  title: AppLocalizations.of(context).textEbook,
-                  subtitle: AppLocalizations.of(context).createNewTextEbook,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToTextEditor();
-                  },
                 ),
                 const SizedBox(height: 20),
               ],
@@ -598,31 +654,35 @@ class _EbookScreenState extends State<EbookScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+            Icon(icon, size: 28, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 8),
             Text(
               title,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 10,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -1562,5 +1622,161 @@ class _EbookScreenState extends State<EbookScreen> {
                 ),
           ),
     );
+  }
+
+  Future<void> _importMultipleFiles() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'docx'],
+        allowMultiple: true, // Enable multiple file selection
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final selectedFiles = result.files.where((file) => file.path != null).toList();
+        
+        if (selectedFiles.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context).noValidFilesSelected),
+                backgroundColor: const Color(0xFFF59E0B),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Show progress dialog
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('${AppLocalizations.of(context).processingFiles} ${selectedFiles.length} files...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        int successCount = 0;
+        int failCount = 0;
+        
+        // Process each file
+        for (int i = 0; i < selectedFiles.length; i++) {
+          final file = selectedFiles[i];
+          final filePath = file.path!;
+          final fileName = file.name;
+          
+          try {
+            if (fileName.toLowerCase().endsWith('.pdf')) {
+              // Process PDF file
+              await _processPdfFile(filePath, fileName);
+              successCount++;
+            } else if (fileName.toLowerCase().endsWith('.docx')) {
+              // Process Word file
+              await _processWordFile(filePath, fileName);
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch (e) {
+            failCount++;
+          }
+        }
+
+        // Close progress dialog
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        // Show result
+        if (mounted) {
+          String message;
+          Color backgroundColor;
+          
+          if (failCount == 0) {
+            message = AppLocalizations.of(context).filesImportedSuccessfully(successCount);
+            backgroundColor = const Color(0xFF10B981);
+          } else if (successCount == 0) {
+            message = AppLocalizations.of(context).failedToImportAllFiles;
+            backgroundColor = const Color(0xFFEF4444);
+          } else {
+            message = AppLocalizations.of(context).importSummary(successCount, failCount);
+            backgroundColor = const Color(0xFFF59E0B);
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: backgroundColor,
+            ),
+          );
+        }
+
+        // Refresh the ebook list
+        _updateFilteredEbooks();
+      }
+    } catch (e) {
+      // Close progress dialog if still open
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error importing files: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _processPdfFile(String filePath, String fileName) async {
+    // Save file to app directory
+    final savedPath = await _dataService.saveEbookFile(filePath);
+
+    // Get PDF page count
+    int totalPages = await _getPdfPageCount(savedPath);
+
+    // Create ebook with default metadata
+    final ebookTitle = fileName.replaceAll('.pdf', '');
+    await _dataService.addEbook(
+      title: ebookTitle,
+      filePath: savedPath,
+      fileType: 'pdf',
+      totalPages: totalPages,
+      tags: [], // Default empty tags
+    );
+  }
+
+  Future<void> _processWordFile(String filePath, String fileName) async {
+    // Convert Word to PDF
+    final pdfPath = await _convertWordToPdf(filePath, fileName);
+
+    if (pdfPath != null) {
+      // Get PDF page count
+      int totalPages = await _getPdfPageCount(pdfPath);
+
+      // Create ebook with default metadata
+      final ebookTitle = fileName.replaceAll('.docx', '');
+      await _dataService.addEbook(
+        title: ebookTitle,
+        filePath: pdfPath,
+        fileType: 'pdf', // Converted to PDF
+        totalPages: totalPages,
+        tags: [], // Default empty tags
+      );
+    } else {
+      throw Exception('Failed to convert Word file to PDF');
+    }
   }
 }
