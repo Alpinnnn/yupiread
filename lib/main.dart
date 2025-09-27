@@ -7,6 +7,7 @@ import 'services/shared_file_handler.dart';
 import 'services/language_service.dart';
 import 'services/update_service.dart';
 import 'services/backup_service.dart';
+import 'services/notification_service.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/gallery_screen.dart';
@@ -28,6 +29,9 @@ void main() async {
   final dataService = DataService();
   await dataService.initializeData();
   
+  // Check streak status on app startup
+  await dataService.checkStreakStatus();
+  
   final themeService = theme_service.ThemeService.instance;
   await themeService.initialize();
   
@@ -40,6 +44,11 @@ void main() async {
   // Initialize backup service for OAuth session persistence
   final backupService = BackupService.instance;
   await backupService.initialize();
+
+  // Initialize notification service and set up streak reminders
+  final notificationService = NotificationService.instance;
+  await notificationService.initialize();
+  await notificationService.updateStreakReminder();
 
   // Initialize shared file handler
   SharedFileHandler.initialize();

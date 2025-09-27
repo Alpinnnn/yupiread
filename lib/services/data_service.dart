@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/photo_model.dart';
 import '../models/ebook_model.dart';
 import '../models/activity_type.dart';
+import 'notification_service.dart';
 
 class DataService extends ChangeNotifier {
   static final DataService _instance = DataService._internal();
@@ -455,6 +456,9 @@ class DataService extends ChangeNotifier {
 
       _ebooks[index] = newEbook;
       _saveEbooks(); // Save to persistent storage
+
+      // Update reading streak when user makes reading progress
+      addReadingTime(1); // Add 1 minute of reading time to trigger streak update
 
       return true;
     }
@@ -1218,7 +1222,29 @@ class DataService extends ChangeNotifier {
           type: ActivityType.streakContinue,
           parameters: {'streakDays': _readingStreak},
         );
+        
+        // Show milestone notification for significant streaks
+        if (_readingStreak % 7 == 0) { // Weekly milestones
+          _showStreakMilestoneNotification(_readingStreak);
+        }
       } else {
+        // Log streak end if there was a previous streak
+        if (_readingStreak > 0) {
+          final endedStreak = _readingStreak;
+          // Log streak end activity
+          _logActivity(
+            title: 'Reading Streak Ended',
+            description: 'Ended reading streak of $endedStreak days',
+            type: ActivityType.streakEnd,
+            parameters: {'streakDays': endedStreak},
+          );
+          
+          // Show streak ended notification if streak was significant
+          if (endedStreak >= 3) {
+            _showStreakEndedNotification(endedStreak);
+          }
+        }
+        
         // Reset streak but check if it was longer than previous longest
         if (_readingStreak > _longestStreak) {
           _longestStreak = _readingStreak;
@@ -1273,6 +1299,44 @@ class DataService extends ChangeNotifier {
     _streakReminderTime = time;
     await _saveUserProfile();
     notifyListeners();
+  }
+
+  // Check if streak should be ended (called when app starts)
+  Future<void> checkStreakStatus() async {
+    if (_readingStreak > 0 && _lastReadingDate != null) {
+      final today = DateTime.now();
+      final daysSinceLastRead = today.difference(_lastReadingDate!).inDays;
+      
+      // If more than 1 day has passed without reading, end the streak
+      if (daysSinceLastRead > 1) {
+        final endedStreak = _readingStreak;
+        
+        // Log streak end activity
+        _logActivity(
+          title: 'Reading Streak Ended',
+          description: 'Ended reading streak of $endedStreak days due to inactivity',
+          type: ActivityType.streakEnd,
+          parameters: {'streakDays': endedStreak},
+        );
+        
+        // Show streak ended notification if streak was significant
+        if (endedStreak >= 3) {
+          _showStreakEndedNotification(endedStreak);
+        }
+        
+        // Update longest streak if current is longer
+        if (_readingStreak > _longestStreak) {
+          _longestStreak = _readingStreak;
+        }
+        
+        // Reset streak
+        _readingStreak = 0;
+        _lastReadingDate = null;
+        
+        await _saveUserProfile();
+        notifyListeners();
+      }
+    }
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {
@@ -1379,5 +1443,22 @@ class DataService extends ChangeNotifier {
     _showSearchBarInEbooks = show;
     await _saveUserProfile();
     notifyListeners();
+  }
+
+  // Notification methods for streak events
+  void _showStreakMilestoneNotification(int streakDays) {
+    final notificationService = NotificationService.instance;
+    notificationService.showStreakMilestoneNotification(
+      title: 'Streak Milestone! 🎉',
+      body: 'Congratulations! You\'ve reached a $streakDays-day reading streak!',
+    );
+  }
+
+  void _showStreakEndedNotification(int streakDays) {
+    final notificationService = NotificationService.instance;
+    notificationService.showStreakEndedNotification(
+      title: 'Streak Ended 😔',
+      body: 'Your $streakDays-day reading streak has ended. Start a new one today!',
+    );
   }
 }
