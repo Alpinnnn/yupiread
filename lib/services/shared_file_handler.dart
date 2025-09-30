@@ -28,30 +28,43 @@ class SharedFileHandler {
 
   static Future<void> _handleMethodCall(MethodCall call) async {
     print('SharedFileHandler: Received method call: ${call.method}');
-    switch (call.method) {
-      case 'handleSharedFile':
-      case 'handleOpenWithFile':
-        final String? filePath = call.arguments['filePath'];
-        final String? mimeType = call.arguments['mimeType'];
-        final String? action = call.arguments['action'] ?? 'SEND';
-        
-        print('SharedFileHandler: filePath=$filePath, mimeType=$mimeType, action=$action, hasContext=${_currentContext != null}');
-        
-        if (filePath != null && mimeType != null) {
-          if (_currentContext != null) {
-            print('SharedFileHandler: Processing ${action == 'VIEW' ? 'open with' : 'shared'} file immediately');
-            await _processSharedFile(filePath, mimeType, action == 'VIEW');
-          } else {
-            print('SharedFileHandler: Storing file for later processing');
-            // Store for later processing when context is available
-            _pendingFiles.add({
-              'filePath': filePath, 
-              'mimeType': mimeType,
-              'isOpenWith': (action == 'VIEW').toString()
-            });
+    try {
+      switch (call.method) {
+        case 'handleSharedFile':
+        case 'handleOpenWithFile':
+          final String? filePath = call.arguments['filePath'];
+          final String? mimeType = call.arguments['mimeType'];
+          final String? action = call.arguments['action'] ?? 'SEND';
+          
+          print('SharedFileHandler: filePath=$filePath, mimeType=$mimeType, action=$action, hasContext=${_currentContext != null}');
+          
+          if (filePath != null && mimeType != null) {
+            // Check if this file is already pending (avoid duplicates)
+            final isDuplicate = _pendingFiles.any((file) => 
+              file['filePath'] == filePath && file['mimeType'] == mimeType);
+            
+            if (isDuplicate) {
+              print('SharedFileHandler: Skipping duplicate file');
+              return;
+            }
+            
+            if (_currentContext != null) {
+              print('SharedFileHandler: Processing ${action == 'VIEW' ? 'open with' : 'shared'} file immediately');
+              await _processSharedFile(filePath, mimeType, action == 'VIEW');
+            } else {
+              print('SharedFileHandler: Storing file for later processing');
+              // Store for later processing when context is available
+              _pendingFiles.add({
+                'filePath': filePath, 
+                'mimeType': mimeType,
+                'isOpenWith': (action == 'VIEW').toString()
+              });
+            }
           }
-        }
-        break;
+          break;
+      }
+    } catch (e) {
+      print('SharedFileHandler: Error handling method call: $e');
     }
   }
 

@@ -14,7 +14,7 @@ class MainActivity : FlutterActivity() {
     private val DOWNLOAD_CHANNEL = "com.alpinnnn.yupiread/download"
     private var methodChannel: MethodChannel? = null
     private var downloadChannel: MethodChannel? = null
-    private var hasProcessedIntent = false
+    private var processedIntentTimestamp: Long = 0
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -42,8 +42,9 @@ class MainActivity : FlutterActivity() {
             }
         }
         
-        // Handle shared files when Flutter engine is ready
-        if (!hasProcessedIntent) {
+        // Handle intent only if it's a share/view intent
+        val action = intent?.action
+        if (action == Intent.ACTION_SEND || action == Intent.ACTION_VIEW) {
             handleSharedIntent(intent)
         }
     }
@@ -51,7 +52,10 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleSharedIntent(intent)
+        // Only handle share/view intents, not regular app launches
+        if (intent.action == Intent.ACTION_SEND || intent.action == Intent.ACTION_VIEW) {
+            handleSharedIntent(intent)
+        }
     }
 
     private fun handleSharedIntent(intent: Intent?) {
@@ -63,6 +67,8 @@ class MainActivity : FlutterActivity() {
                 val mimeType = intent.type
                 android.util.Log.d("MainActivity", "Found shared file: uri=$uri, mimeType=$mimeType")
                 processFile(uri, mimeType, "SEND")
+                // Clear the intent extras to prevent reprocessing
+                intent.removeExtra(Intent.EXTRA_STREAM)
             }
             Intent.ACTION_VIEW -> {
                 val uri = intent.data
@@ -70,6 +76,8 @@ class MainActivity : FlutterActivity() {
                     val mimeType = intent.type ?: contentResolver.getType(uri)
                     android.util.Log.d("MainActivity", "Found open with file: uri=$uri, mimeType=$mimeType")
                     processFile(uri, mimeType, "VIEW")
+                    // Clear the intent data to prevent reprocessing
+                    intent.data = null
                 } else {
                     android.util.Log.w("MainActivity", "VIEW intent received but no data URI found")
                 }
@@ -80,10 +88,19 @@ class MainActivity : FlutterActivity() {
     private fun processFile(uri: Uri?, mimeType: String?, action: String) {
         if (uri != null && mimeType != null) {
             try {
+                // Get current timestamp
+                val currentTimestamp = System.currentTimeMillis()
+                
+                // Check if we've already processed this intent recently (within 2 seconds)
+                if (currentTimestamp - processedIntentTimestamp < 2000) {
+                    android.util.Log.d("MainActivity", "Skipping duplicate intent processing")
+                    return
+                }
+                
                 // Copy file to app's internal storage
                 val inputStream: InputStream? = contentResolver.openInputStream(uri)
                 if (inputStream != null) {
-                    val fileName = "${action.lowercase()}_${System.currentTimeMillis()}"
+                    val fileName = "${action.lowercase()}_${currentTimestamp}"
                     val extension = when {
                         mimeType.startsWith("image/") -> ".jpg"
                         mimeType == "application/pdf" -> ".pdf"
@@ -100,6 +117,9 @@ class MainActivity : FlutterActivity() {
                     inputStream.close()
                     outputStream.close()
                     
+                    // Update timestamp before sending to Flutter
+                    processedIntentTimestamp = currentTimestamp
+                    
                     // Send file path to Flutter with delay to ensure Flutter is ready
                     android.util.Log.d("MainActivity", "Sending to Flutter: ${file.absolutePath}")
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
@@ -111,11 +131,9 @@ class MainActivity : FlutterActivity() {
                             "action" to action
                         ))
                     }, 1000) // 1 second delay
-                    
-                    // Mark intent as processed
-                    hasProcessedIntent = true
                 }
             } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Error processing file", e)
                 e.printStackTrace()
             }
         }

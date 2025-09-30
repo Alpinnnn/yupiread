@@ -827,6 +827,90 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deselectAll => 'Deselect All';
 
+  @override
+  String get pdfScanner => 'PDF Scanner';
+
+  @override
+  String get pdfScannerDesc => 'Scan documents and convert to PDF';
+
+  @override
+  String get scanToPdf => 'Scan to PDF';
+
+  @override
+  String get scanning => 'Scanning...';
+
+  @override
+  String get scanComplete => 'Scan completed successfully';
+
+  @override
+  String get scanFailed => 'Scan failed';
+
+  @override
+  String get noImagesScanned => 'No images scanned';
+
+  @override
+  String get scanAtLeastOnePage => 'Please scan at least one page';
+
+  @override
+  String get convertingToPdf => 'Converting to PDF...';
+
+  @override
+  String get pdfCreated => 'PDF created successfully';
+
+  @override
+  String get pdfCreationFailed => 'PDF creation failed';
+
+  @override
+  String pagesScanned(int count) => '$count pages scanned';
+
+  @override
+  String get addMorePages => 'Add More Pages';
+
+  @override
+  String get createPdf => 'Create PDF';
+
+  @override
+  String get retakePage => 'Retake';
+
+  @override
+  String get deletePage => 'Delete';
+
+  @override
+  String get scannedFiles => 'Scanned Files';
+
+  @override
+  String get noScannedFilesYet => 'No scanned files yet';
+
+  @override
+  String get startScanning => 'Start scanning documents';
+
+  @override
+  String get scanNewDocument => 'Scan New Document';
+
+  @override
+  String get scannedDocuments => 'Scanned Documents';
+
+  @override
+  String get viewDocument => 'View Document';
+
+  @override
+  String get deleteDocument => 'Delete Document';
+
+  @override
+  String get savePdf => 'Save PDF';
+
+  @override
+  String get savingPdf => 'Saving PDF...';
+
+  @override
+  String get pdfSavedSuccessfully => 'PDF saved successfully';
+
+  @override
+  String get pdfSavedTo => 'PDF saved to';
+
+  @override
+  String get failedToSavePdf => 'Failed to save PDF';
+
   // Language Selection Dialog
   @override
   String get selectLanguageTitle => 'Select Language';

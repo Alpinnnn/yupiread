@@ -349,8 +349,10 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
         _isLoading = true;
       });
 
-      // Use cunning document scanner
-      List<String> pictures = await CunningDocumentScanner.getPictures() ?? [];
+      // Use cunning document scanner with gallery option enabled
+      List<String> pictures = await CunningDocumentScanner.getPictures(
+        isGalleryImportAllowed: true, // Allow importing from gallery
+      ) ?? [];
       
       if (pictures.isNotEmpty) {
         List<String> savedPaths = [];

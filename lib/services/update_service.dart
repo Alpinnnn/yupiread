@@ -6,6 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../l10n/app_localizations.dart';
 
 class UpdateService {
@@ -294,7 +298,7 @@ class UpdateService {
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.of(context).pop();
-              await _launchDownload(downloadUrl);
+              await _downloadAndInstallApk(context, downloadUrl, latestVersion);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -564,5 +568,272 @@ class UpdateService {
       debugPrint('Android platform channel failed: $e');
       return false;
     }
+  }
+
+  /// Download APK with progress bar and auto-install
+  static Future<void> _downloadAndInstallApk(
+    BuildContext context,
+    String downloadUrl,
+    String version,
+  ) async {
+    try {
+      // No permission check needed here
+      // Android will automatically prompt for "Install unknown apps" permission
+      // when we try to open the APK file via OpenFilex
+      
+      // Get temporary directory for download (doesn't require storage permission)
+      final tempDir = await getTemporaryDirectory();
+      final savePath = '${tempDir.path}/yupiread_v$version.apk';
+
+      debugPrint('Download will save to: $savePath');
+
+      // Show progress dialog
+      if (!context.mounted) return;
+      _showDownloadDialog(context, downloadUrl, savePath, version);
+    } catch (e) {
+      debugPrint('Error initiating download: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Show download progress dialog
+  static void _showDownloadDialog(
+    BuildContext context,
+    String downloadUrl,
+    String savePath,
+    String version,
+  ) {
+    final ValueNotifier<double> progressNotifier = ValueNotifier(0.0);
+    final ValueNotifier<String> statusNotifier = ValueNotifier('Preparing download...');
+    bool isDownloading = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => WillPopScope(
+        onWillPop: () async => !isDownloading,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.download,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              const Text('Downloading Update'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ValueListenableBuilder<String>(
+                valueListenable: statusNotifier,
+                builder: (context, status, child) {
+                  return Text(
+                    status,
+                    style: const TextStyle(fontSize: 14),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              ValueListenableBuilder<double>(
+                valueListenable: progressNotifier,
+                builder: (context, progress, child) {
+                  return Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey[300],
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${(progress * 100).toStringAsFixed(0)}%',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Start download in the dialog context
+    _performDownload(
+      downloadUrl,
+      savePath,
+      progressNotifier,
+      statusNotifier,
+      context,
+      () => isDownloading = false,
+    );
+  }
+
+  /// Perform the actual download
+  static Future<void> _performDownload(
+    String downloadUrl,
+    String savePath,
+    ValueNotifier<double> progressNotifier,
+    ValueNotifier<String> statusNotifier,
+    BuildContext mainContext,
+    VoidCallback onDownloadComplete,
+  ) async {
+    try {
+      final dio = Dio();
+      
+      statusNotifier.value = 'Downloading...';
+      
+      await dio.download(
+        downloadUrl,
+        savePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            final progress = received / total;
+            progressNotifier.value = progress;
+            
+            // Show download speed info
+            final receivedMB = (received / 1024 / 1024).toStringAsFixed(1);
+            final totalMB = (total / 1024 / 1024).toStringAsFixed(1);
+            statusNotifier.value = 'Downloading... $receivedMB MB / $totalMB MB';
+          }
+        },
+      );
+
+      // Download complete
+      onDownloadComplete();
+      statusNotifier.value = 'Download complete! Installing...';
+      progressNotifier.value = 1.0;
+
+      // Small delay to show completion
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Close dialog using Navigator
+      if (mainContext.mounted) {
+        Navigator.of(mainContext, rootNavigator: true).pop();
+      }
+
+      // Install APK
+      await _installApk(mainContext, savePath);
+    } catch (e) {
+      debugPrint('Download error: $e');
+      onDownloadComplete();
+      
+      if (mainContext.mounted) {
+        Navigator.of(mainContext, rootNavigator: true).pop();
+        
+        ScaffoldMessenger.of(mainContext).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Install downloaded APK
+  static Future<void> _installApk(BuildContext context, String apkPath) async {
+    try {
+      final file = File(apkPath);
+      
+      if (!await file.exists()) {
+        throw Exception('APK file not found at: $apkPath');
+      }
+
+      debugPrint('Opening APK file for installation: $apkPath');
+      debugPrint('File size: ${await file.length()} bytes');
+
+      // Open APK file to trigger Android install prompt
+      // Android will automatically handle "Install unknown apps" permission
+      final result = await OpenFilex.open(
+        apkPath,
+        type: 'application/vnd.android.package-archive',
+      );
+      
+      debugPrint('Open file result: ${result.type} - ${result.message}');
+      
+      // Check result
+      if (result.type == ResultType.done) {
+        debugPrint('APK install prompt opened successfully');
+        // Android will show install prompt or request "Install unknown apps" permission automatically
+      } else if (result.type == ResultType.fileNotFound) {
+        throw Exception('APK file not found');
+      } else if (result.type == ResultType.noAppToOpen) {
+        throw Exception('Unable to open APK installer');
+      } else if (result.type == ResultType.permissionDenied) {
+        // This will happen if user denies "Install unknown apps" permission
+        if (context.mounted) {
+          _showInstallPermissionDialog(context);
+        }
+        return;
+      } else if (result.type == ResultType.error) {
+        throw Exception(result.message);
+      }
+    } catch (e) {
+      debugPrint('Installation error: $e');
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open installer: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Settings',
+              textColor: Colors.white,
+              onPressed: () => openAppSettings(),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Show install permission dialog when permission is denied
+  static void _showInstallPermissionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permission Required'),
+        content: const Text(
+          'To install updates, you need to allow this app to install unknown apps.\n\n'
+          'Android will ask for this permission when you try to install the update. '
+          'Please tap "Allow" when prompted.\n\n'
+          'If the permission prompt doesn\'t appear, you can enable it manually in:\n'
+          'Settings → Apps → Yupiread → Install unknown apps',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 }

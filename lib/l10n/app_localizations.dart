@@ -366,6 +366,34 @@ abstract class AppLocalizations {
   String pdfsSelected(int count) => '$count PDFs selected';
   String get selectAll => 'Select All';
   String get deselectAll => 'Deselect All';
+  String get pdfScanner => 'PDF Scanner';
+  String get pdfScannerDesc => 'Scan documents and convert to PDF';
+  String get scanToPdf => 'Scan to PDF';
+  String get scanning => 'Scanning...';
+  String get scanComplete => 'Scan completed successfully';
+  String get scanFailed => 'Scan failed';
+  String get noImagesScanned => 'No images scanned';
+  String get scanAtLeastOnePage => 'Please scan at least one page';
+  String get convertingToPdf => 'Converting to PDF...';
+  String get pdfCreated => 'PDF created successfully';
+  String get pdfCreationFailed => 'PDF creation failed';
+  String pagesScanned(int count) => '$count pages scanned';
+  String get addMorePages => 'Add More Pages';
+  String get createPdf => 'Create PDF';
+  String get retakePage => 'Retake';
+  String get deletePage => 'Delete';
+  String get scannedFiles => 'Scanned Files';
+  String get noScannedFilesYet => 'No scanned files yet';
+  String get startScanning => 'Start scanning documents';
+  String get scanNewDocument => 'Scan New Document';
+  String get scannedDocuments => 'Scanned Documents';
+  String get viewDocument => 'View Document';
+  String get deleteDocument => 'Delete Document';
+  String get savePdf => 'Save PDF';
+  String get savingPdf => 'Saving PDF...';
+  String get pdfSavedSuccessfully => 'PDF saved successfully';
+  String get pdfSavedTo => 'PDF saved to';
+  String get failedToSavePdf => 'Failed to save PDF';
 
   // Language Selection Dialog
   String get selectLanguageTitle => 'Select Language';

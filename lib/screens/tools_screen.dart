@@ -3,6 +3,7 @@ import '../l10n/app_localizations.dart';
 import 'pdf_compress_screen.dart';
 import 'pdf_merge_screen.dart';
 import 'image_to_pdf_screen.dart';
+import 'pdf_scanner_screen.dart';
 
 class ToolsScreen extends StatefulWidget {
   const ToolsScreen({super.key});
@@ -53,9 +54,23 @@ class _ToolsScreenState extends State<ToolsScreen> {
                     mainAxisSpacing: 16,
                     childAspectRatio: 1.0,
                   ),
-                  itemCount: 3,
+                  itemCount: 4,
                   itemBuilder: (context, index) {
                     final tools = [
+                      {
+                        'icon': Icons.document_scanner,
+                        'title': l10n.pdfScanner,
+                        'description': l10n.pdfScannerDesc,
+                        'color': const Color(0xFF8B5CF6),
+                        'onTap': () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PdfScannerScreen(),
+                            ),
+                          );
+                        },
+                      },
                       {
                         'icon': Icons.compress,
                         'title': l10n.compressPdf,

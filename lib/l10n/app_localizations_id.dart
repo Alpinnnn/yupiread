@@ -806,17 +806,94 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String pdfsSelected(int count) => '$count PDF dipilih';
-
-  @override
   String get selectAll => 'Pilih Semua';
 
   @override
-  String get deselectAll => 'Batalkan Semua';
+  String get deselectAll => 'Batalkan Pilihan';
 
-  // Language Selection Dialog
   @override
-  String get selectLanguageTitle => 'Pilih Bahasa';
-  
+  String get pdfScanner => 'Pemindai PDF';
+
+  @override
+  String get pdfScannerDesc => 'Pindai dokumen dan konversi ke PDF';
+
+  @override
+  String get scanToPdf => 'Pindai ke PDF';
+
+  @override
+  String get scanning => 'Memindai...';
+
+  @override
+  String get scanComplete => 'Pemindaian berhasil';
+
+  @override
+  String get scanFailed => 'Pemindaian gagal';
+
+  @override
+  String get noImagesScanned => 'Tidak ada gambar yang dipindai';
+
+  @override
+  String get scanAtLeastOnePage => 'Silakan pindai minimal satu halaman';
+
+  @override
+  String get convertingToPdf => 'Mengkonversi ke PDF...';
+
+  @override
+  String get pdfCreated => 'PDF berhasil dibuat';
+
+  @override
+  String get pdfCreationFailed => 'Pembuatan PDF gagal';
+
+  @override
+  String pagesScanned(int count) => '$count halaman dipindai';
+
+  @override
+  String get addMorePages => 'Tambah Halaman';
+
+  @override
+  String get createPdf => 'Buat PDF';
+
+  @override
+  String get retakePage => 'Ulangi';
+
+  @override
+  String get deletePage => 'Hapus';
+
+  @override
+  String get scannedFiles => 'File Pindaian';
+
+  @override
+  String get noScannedFilesYet => 'Belum ada file pindaian';
+
+  @override
+  String get startScanning => 'Mulai pindai dokumen';
+
+  @override
+  String get scanNewDocument => 'Pindai Dokumen Baru';
+
+  @override
+  String get scannedDocuments => 'Dokumen Pindaian';
+
+  @override
+  String get viewDocument => 'Lihat Dokumen';
+
+  @override
+  String get deleteDocument => 'Hapus Dokumen';
+
+  @override
+  String get savePdf => 'Simpan PDF';
+
+  @override
+  String get savingPdf => 'Menyimpan PDF...';
+
+  @override
+  String get pdfSavedSuccessfully => 'PDF berhasil disimpan';
+
+  @override
+  String get pdfSavedTo => 'PDF disimpan ke';
+
+  @override
+  String get failedToSavePdf => 'Gagal menyimpan PDF';
   @override
   String get indonesianLanguage => 'Bahasa Indonesia';
   
